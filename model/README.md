@@ -49,7 +49,7 @@ No formula names a version. Closing a month is a data change. Load the month's a
 
 The plan works like this.
 
-- **Volume.** A planner sets a yearly target per customer group and category. The model spreads it to customers, products and months by last year's mix. Where there is no target, volume is last year's volume times planned growth. A planner can also type the volume of one customer, product and month. That value wins.
+- **Volume.** A planner sets a yearly target per customer group and category. The model phases it to customers, products and months by last year's mix over the whole year. Each version keeps only its plan months. So a forecast with six months of actuals takes the target's share of the last six months. Where there is no target, volume is last year's volume times planned growth. A planner can also type the volume of one customer, product and month. That value wins.
 - **Price.** The last known list price, held flat, times a planned increase.
 - **Everything else.** Discount and rebate rates, trade fees, standard costs, marketing spend and operating expenses are planner inputs.
 
@@ -187,7 +187,7 @@ Every system must give the same numbers as the model. These rules decide the num
 
 **`+` and `-` count a missing value as 0.** The result has a cell wherever either side has one.
 
-**`*` and `/` need both sides.** If either side is missing, there is no cell. Every division in a stored variable first checks that its denominator is above zero.
+**`*` and `/` need both sides.** If either side is missing, there is no cell. The KPI measures follow this rule too. Every division in a stored variable checks its denominator first, and its numerator decides where the cells are. So no stored division ever meets a missing numerator.
 
 **Conditions.** `if(c, x)` has a cell only where `c` holds and `x` has a value. In this model, a condition on a missing value is false.
 

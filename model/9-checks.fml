@@ -39,6 +39,12 @@
   @folder "Checks"
   @readonly true
 
+"CHECK Marketing Split" { Brand, Versions, Years, Months } = "Marketing Spend PLAN" - "Marketing PLAN part"
+  @rollup sum
+  @folder "Checks"
+  @notes "Planned marketing spend that the typed country split loses. Zero when every brand's split adds up to 1."
+  @readonly true
+
 # --- Every cost reaches EBIT ---------------------------------------------------------------------
 
 "CHECK OPEX in EBIT" { Versions, Years, Months } = "OPEX" - "Overheads" - "Logistics Cost" - "Sales Force Cost"
@@ -51,6 +57,12 @@
   @rollup sum
   @folder "Checks"
   @notes "Actual units of SKUs without a standard cost, usually material codes missing from master data. Their COGS is missing, so gross margin is too high."
+  @readonly true
+
+"CHECK Uncosted Plan Volume" { Customer, SKU, Versions, Years, Months } = if(not(hasValue("Standard Cost IN")), "Volume PLAN part")
+  @rollup sum
+  @folder "Checks"
+  @notes "Planned units of SKUs without a planned standard cost. Their COGS is missing, so planned gross margin is too high."
   @readonly true
 
 # --- Every planned unit has a price ------------------------------------------------------------

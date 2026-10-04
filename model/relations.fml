@@ -1,7 +1,7 @@
 # ============================================================================
 # Hierarchies of the benchmark model. Every link is many-to-one and every
-# path is balanced. Members and their parents live in the dataset, not here.
-# Fixed member lists that belong to the model are in dimensions/*.csv.
+# path is balanced. Members and their parents live in the benchmark dataset,
+# not here. Fixed member lists that belong to the model are in dimensions/*.csv.
 # ============================================================================
 
 # Product. A Material is one ERP code, for example a promo pack or a new

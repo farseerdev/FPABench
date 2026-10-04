@@ -3,7 +3,7 @@
 #
 # Each input sits at the grain the business decides at, which is mostly
 # coarser than the sales grain. Formulas carry the values down.
-# The dataset ships values for Budget and Forecast.
+# The benchmark dataset ships values for Budget and Forecast.
 # ============================================================================
 
 # --- Volume -------------------------------------------------------------------
@@ -17,7 +17,7 @@
 "Volume Target IN" { "Customer Group", Category, Versions, Years }
   @rollup sum
   @folder "Inputs"
-  @notes "Annual volume target in units for a chain or buying group and a category. Cascaded to customers, SKUs and months by last year's mix. Where it exists it replaces the growth baseline."
+  @notes "Annual volume target in units for a chain or buying group and a category. Phased to customers, SKUs and months by last year's full-year mix. A version takes only the share of its plan months, so a forecast adds the rest of the target to its actuals. Where it exists it replaces the growth baseline."
 
 "Volume Override IN" { Customer, SKU, Versions, Years, Months }
   @rollup sum
@@ -71,7 +71,7 @@
   @rollup sum
   @format percentage
   @folder "Inputs"
-  @notes "Hand-entered allocation key: share of each brand's spend that goes to each country. Sums to 1 per brand. Summing over countries is the meaningful roll-up."
+  @notes "Hand-entered allocation key: share of each brand's spend that goes to each country. Must add up to 1 per brand. CHECK Marketing Split shows the spend lost where it does not."
 
 "OPEX IN" { "Cost Center", Account, Versions, Years, Months }
   @rollup sum

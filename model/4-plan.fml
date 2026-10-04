@@ -25,21 +25,26 @@
   @notes "Last year times planned growth. Empty where no growth is planned for the brand and channel."
   @readonly true
 
-# Top-down: the target of a group and category, spread by last year's mix of
-# customers, SKUs and months inside that group and category.
-"Volume LY Plan by Group Category" { "Customer Group", Category, Versions, Years } = "Volume LY Plan"
+# Top-down: the annual target of a group and category, phased by last year's
+# full-year mix of customers, SKUs and months inside that group and category.
+# Each version keeps only its plan months. A 6+6 forecast so gets the target's
+# share of July to December, on top of its actuals for January to June.
+"Volume LY by Group Category" { "Customer Group", Category, Years } = "Volume LY"
   @rollup sum
   @folder "Plan"
+  @notes "Last year's volume for the whole year, per group and category. The same in every version."
   @readonly true
 
-"Volume Target Key" { Customer, SKU, Versions, Years, Months } = if(gt("Volume LY Plan by Group Category", 0), "Volume LY Plan" / "Volume LY Plan by Group Category")
+"Volume Target Key" { Customer, SKU, Versions, Years, Months } = if(gt("Volume LY by Group Category", 0), "Volume LY Plan" / "Volume LY by Group Category")
   @rollup sum
   @folder "Plan"
+  @notes "Share of the annual target that falls on one customer, SKU and plan month: last year's volume there over the group and category's full year. Over twelve plan months the shares add up to 1."
   @readonly true
 
 "Volume Target Cascade" { Customer, SKU, Versions, Years, Months } = "Volume Target IN" * "Volume Target Key"
   @rollup sum
   @folder "Plan"
+  @notes "The annual target, phased. Only plan months get a cell, so a forecast plans the rest of the year and keeps its actuals."
   @readonly true
 
 "Volume Baseline" { Customer, SKU, Versions, Years, Months } = if(hasValue("Volume Target Cascade"), "Volume Target Cascade", "Volume Growth Baseline")
