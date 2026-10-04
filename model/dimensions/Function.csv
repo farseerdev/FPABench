@@ -1,0 +1,6 @@
+Function,@description
+Logistics,Warehousing and transport. Allocated by shipped kg.
+Sales,Sales teams. Allocated by invoice sales.
+Marketing,Marketing staff. Overhead.
+Administration,Finance HR IT and management. Overhead.
+NULL (Function),No function

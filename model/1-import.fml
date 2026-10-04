@@ -1,0 +1,103 @@
+# ============================================================================
+# Layer 1. Import interface for actuals.
+#
+# The loader fills these from the raw ERP export. They have no
+# Versions dimension: an actual is a fact, not a version. The merge layer
+# shows them in every version that knows the month.
+#
+# Signs are business-natural. Sales and quantities are positive. Returns
+# arrive as negative invoice lines and net out in the monthly sums.
+# Discounts, deductions and costs are positive amounts that get subtracted.
+# All amounts are in one currency, EUR.
+#
+# Invoice lines carry the ERP material code, not the planning SKU. Layer 2
+# sums materials into SKUs before anything else reads them.
+# ============================================================================
+
+# --- Invoice lines, summed per customer, material and month -----------------
+
+"IMPORT Volume" { Customer, Material, Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Units sold, net of returns."
+  @readonly true
+
+"IMPORT Gross Sales" { Customer, Material, Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Invoiced amount at list price before any discount, net of returns."
+  @readonly true
+
+"IMPORT Standard Discounts" { Customer, Material, Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Agreed trade discount, deducted on the invoice."
+  @readonly true
+
+"IMPORT Promo Discounts" { Customer, Material, Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Temporary promotional price cut, deducted on the invoice."
+  @readonly true
+
+# --- Documents after the invoice ---------------------------------------------
+
+"IMPORT Rebates" { Customer, Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Rebates and bonuses settled by credit note. The ERP knows the customer but not the SKU."
+  @readonly true
+
+"IMPORT Trade Fees" { "Customer Group", Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Listing, shelf, catalogue and promotion fees invoiced by a chain or buying group."
+  @readonly true
+
+# --- Master data -------------------------------------------------------------
+
+"IMPORT List Price" { SKU, Years, Months }
+  @rollup average
+  @folder "Import"
+  @notes "List price per unit in force in the month."
+  @readonly true
+
+"IMPORT Standard Cost" { SKU, Years }
+  @rollup average
+  @folder "Import"
+  @notes "Standard production or purchase cost per unit, set once a year."
+  @readonly true
+
+"IMPORT Unit Weight" { SKU }
+  @rollup average
+  @folder "Import"
+  @notes "Shipping weight of one unit in kg."
+  @readonly true
+
+"IMPORT Handling Factor" { "Temperature Zone" }
+  @rollup average
+  @folder "Import"
+  @notes "Handling cost of one kg relative to ambient goods, from logistics costing. Chilled and frozen goods cost more to store and move."
+  @readonly true
+
+# --- General ledger and marketing spend --------------------------------------
+
+"IMPORT OPEX" { "Cost Center", Account, Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Operating expenses posted in the general ledger."
+  @readonly true
+
+"IMPORT Marketing" { Brand, Country, Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Advertising and promotion spend, booked per brand and country."
+  @readonly true
+
+# --- Load manifest -----------------------------------------------------------
+
+"IMPORT Control Total" { Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Gross sales per month as stated by the export itself. Checks that the load lost nothing."
+  @readonly true

@@ -1,0 +1,62 @@
+# ============================================================================
+# Layer 9. Controls. On a healthy model every check is empty or zero.
+# They double as correctness tests for the benchmark.
+# ============================================================================
+
+# --- The load lost nothing --------------------------------------------------------------
+
+"CHECK Import Total" { Years, Months } = "IMPORT Control Total" - "IMPORT Gross Sales"
+  @rollup sum
+  @folder "Checks"
+  @notes "Control total of the export minus what was loaded. Zero after a correct load."
+  @readonly true
+
+# --- Allocations are complete ---------------------------------------------------------------
+
+"CHECK Rebates Allocation" { Customer, Years, Months } = "IMPORT Rebates" - "Rebates ACT"
+  @rollup sum
+  @folder "Checks"
+  @notes "Rebate credit notes that found no SKU to land on. Happens when the customer had no positive sales that month."
+  @readonly true
+
+"CHECK Trade Fees Allocation" { "Customer Group", Versions, Years, Months } = "Trade Fees Pool" - "Trade Fees"
+  @rollup sum
+  @folder "Checks"
+  @readonly true
+
+"CHECK Logistics Allocation" { Country, Versions, Years, Months } = "Logistics Pool" - "Logistics Cost"
+  @rollup sum
+  @folder "Checks"
+  @readonly true
+
+"CHECK Sales Force Allocation" { Channel, Country, Versions, Years, Months } = "Sales Force Pool" - "Sales Force Cost"
+  @rollup sum
+  @folder "Checks"
+  @readonly true
+
+"CHECK Marketing Allocation" { Brand, Country, Versions, Years, Months } = "Marketing Pool" - "Marketing Cost"
+  @rollup sum
+  @folder "Checks"
+  @readonly true
+
+# --- Every cost reaches EBIT ---------------------------------------------------------------------
+
+"CHECK OPEX in EBIT" { Versions, Years, Months } = "OPEX" - "Overheads" - "Logistics Cost" - "Sales Force Cost"
+  @rollup sum
+  @folder "Checks"
+  @notes "Operating expenses that never reach EBIT, because a pool found nothing to allocate to. Zero when healthy."
+  @readonly true
+
+"CHECK Uncosted Volume" { Customer, SKU, Years, Months } = if(not(hasValue("IMPORT Standard Cost")), "Volume ACT")
+  @rollup sum
+  @folder "Checks"
+  @notes "Actual units of SKUs without a standard cost, usually material codes missing from master data. Their COGS is missing, so gross margin is too high."
+  @readonly true
+
+# --- Every planned unit has a price ------------------------------------------------------------
+
+"CHECK Unpriced Volume" { Customer, SKU, Versions, Years, Months } = if(not(hasValue("List Price Plan")), "Volume PLAN part")
+  @rollup sum
+  @folder "Checks"
+  @notes "Planned units of SKUs without a list price. Their sales would silently go missing."
+  @readonly true

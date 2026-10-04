@@ -1,0 +1,7 @@
+Channel,@description
+MT,Modern Trade (retail chains)
+TT,Traditional Trade (independent shops)
+WS,Wholesale
+HC,HoReCa (hotels restaurants cafes)
+EC,E-commerce
+NULL (Channel),No channel

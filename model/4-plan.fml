@@ -1,0 +1,138 @@
+# ============================================================================
+# Layer 4. Plan path. Computes the plan lines on the months each version
+# plans ("FC Plan" = 1). Everything here has the Versions dimension.
+#
+# Gating happens once, on volume and on the spend inputs. Every later plan
+# line multiplies a gated variable, so it stays on plan months only.
+# ============================================================================
+
+# --- Volume: a target cascade, else last year times growth, unless a planner typed a value
+
+"Volume LY Plan" { Customer, SKU, Versions, Years, Months } = if(eq("FC Plan", 1), "Volume LY")
+  @rollup sum
+  @folder "Plan"
+  @notes "Last year's volume, placed on each version's plan months."
+  @readonly true
+
+"Volume Growth Factor" { Brand, Channel, Versions, Years } = 1 + "Volume Growth IN"
+  @rollup average
+  @folder "Plan"
+  @readonly true
+
+"Volume Growth Baseline" { Customer, SKU, Versions, Years, Months } = "Volume LY Plan" * "Volume Growth Factor"
+  @rollup sum
+  @folder "Plan"
+  @notes "Last year times planned growth. Empty where no growth is planned for the brand and channel."
+  @readonly true
+
+# Top-down: the target of a group and category, spread by last year's mix of
+# customers, SKUs and months inside that group and category.
+"Volume LY Plan by Group Category" { "Customer Group", Category, Versions, Years } = "Volume LY Plan"
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Volume Target Key" { Customer, SKU, Versions, Years, Months } = if(gt("Volume LY Plan by Group Category", 0), "Volume LY Plan" / "Volume LY Plan by Group Category")
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Volume Target Cascade" { Customer, SKU, Versions, Years, Months } = "Volume Target IN" * "Volume Target Key"
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Volume Baseline" { Customer, SKU, Versions, Years, Months } = if(hasValue("Volume Target Cascade"), "Volume Target Cascade", "Volume Growth Baseline")
+  @rollup sum
+  @folder "Plan"
+  @notes "The target cascade where a target exists, else the growth baseline."
+  @readonly true
+
+"Volume Planned" { Customer, SKU, Versions, Years, Months } = if(hasValue("Volume Override IN"), "Volume Override IN", "Volume Baseline")
+  @rollup sum
+  @folder "Plan"
+  @notes "The override wins where a planner typed a value."
+  @readonly true
+
+"Volume PLAN part" { Customer, SKU, Versions, Years, Months } = if(eq("FC Plan", 1), "Volume Planned")
+  @rollup sum
+  @folder "Plan"
+  @notes "Planned volume on plan months only. Drops overrides typed into months the version does not plan."
+  @readonly true
+
+# --- List price: carry the last known price forward, then apply the increase ------
+
+"List Price Reset" { SKU, Versions, Years, Months } = if(eq("FC Known IN", 1), "IMPORT List Price")
+  @rollup average
+  @folder "Plan"
+  @notes "Actual list price on the months the version knows."
+  @readonly true
+
+"List Price Carry" { SKU, Versions, Years, Months } = cumsum(0, 0, "List Price Reset")
+  @rollup average
+  @folder "Plan"
+  @notes "Holds the last known list price flat into later months."
+  @readonly true
+
+"List Price Plan" { SKU, Versions, Years, Months } = "List Price Carry" * (1 + "Price Increase IN")
+  @rollup average
+  @folder "Plan"
+  @readonly true
+
+# --- Gross-to-net ------------------------------------------------------------------
+
+"Gross Sales PLAN part" { Customer, SKU, Versions, Years, Months } = "Volume PLAN part" * "List Price Plan"
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Standard Discounts PLAN part" { Customer, SKU, Versions, Years, Months } = "Gross Sales PLAN part" * "Standard Discount IN"
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Promo Discounts PLAN part" { Customer, SKU, Versions, Years, Months } = "Gross Sales PLAN part" * "Promo Discount IN"
+  @rollup sum
+  @folder "Plan"
+  @notes "Only in promotion months. The rate is empty elsewhere, so the cell is too."
+  @readonly true
+
+"Rebates PLAN part" { Customer, SKU, Versions, Years, Months } = ("Gross Sales PLAN part" - "Standard Discounts PLAN part" - "Promo Discounts PLAN part") * "Rebate Rate IN"
+  @rollup sum
+  @folder "Plan"
+  @notes "Rebate on invoice sales. The base excludes the on-invoice discounts."
+  @readonly true
+
+"COGS PLAN part" { Customer, SKU, Versions, Years, Months } = "Volume PLAN part" * "Standard Cost IN"
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+# --- Amounts planned above the sales grain ---------------------------------------------
+
+"Trade Fees PLAN part" { "Customer Group", Versions, Years, Months } = if(eq("FC Plan", 1), "Trade Fees IN")
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Marketing Spend PLAN" { Brand, Versions, Years, Months } = if(eq("FC Plan", 1), "Marketing Spend IN")
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Marketing Split Monthly" { Brand, Country, Versions, Years, Months } = "Marketing Split IN"
+  @rollup sum
+  @folder "Plan"
+  @notes "The annual key repeated on every month, so one operand of the split carries the whole grain."
+  @readonly true
+
+"Marketing PLAN part" { Brand, Country, Versions, Years, Months } = "Marketing Split Monthly" * "Marketing Spend PLAN"
+  @rollup sum
+  @folder "Plan"
+  @notes "Brand spend split to countries by the hand-entered key."
+  @readonly true
+
+"OPEX PLAN part" { "Cost Center", Account, Versions, Years, Months } = if(eq("FC Plan", 1), "OPEX IN")
+  @rollup sum
+  @folder "Plan"
+  @readonly true

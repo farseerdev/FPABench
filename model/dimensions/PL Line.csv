@@ -1,0 +1,11 @@
+PL Line,@description
+P100,Gross Sales
+P110,Standard Discounts
+P120,Promo Discounts
+P130,Rebates
+P140,Trade Fees
+P150,Cost of Goods Sold
+P170,Logistics
+P180,Sales Force
+P190,Marketing
+P210,Overheads

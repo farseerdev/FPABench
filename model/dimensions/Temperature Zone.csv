@@ -1,0 +1,5 @@
+Temperature Zone,@description
+Ambient,Ambient
+Chilled,Chilled
+Frozen,Frozen
+NULL (Temperature Zone),No temperature zone

@@ -1,0 +1,69 @@
+# ============================================================================
+# Layer 2. Actuals leveling. Still no Versions dimension.
+#
+# Sums ERP materials into planning SKUs, brings actuals that arrive at a
+# coarser grain down to the sales grain, and prepares last year's volume
+# for the plan.
+# ============================================================================
+
+# --- Materials to planning SKUs -----------------------------------------------------
+
+"Volume ACT" { Customer, SKU, Years, Months } = "IMPORT Volume"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Actual units per planning SKU, summed over its materials. Unknown materials land on NULL (SKU)."
+  @readonly true
+
+"Gross Sales ACT" { Customer, SKU, Years, Months } = "IMPORT Gross Sales"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+"Standard Discounts ACT" { Customer, SKU, Years, Months } = "IMPORT Standard Discounts"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+"Promo Discounts ACT" { Customer, SKU, Years, Months } = "IMPORT Promo Discounts"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+# --- Invoice sales and the rebates spread ----------------------------------------------
+
+"Invoice Sales ACT" { Customer, SKU, Years, Months } = "Gross Sales ACT" - "Standard Discounts ACT" - "Promo Discounts ACT"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Actual invoiced sales after on-invoice discounts."
+  @readonly true
+
+"Invoice Sales ACT by Customer" { Customer, Years, Months } = "Invoice Sales ACT"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Denominator of the rebates key."
+  @readonly true
+
+# Allocation key, computed ratio: each SKU's share of the customer's month.
+"Rebates ACT Key" { Customer, SKU, Years, Months } = if(gt("Invoice Sales ACT by Customer", 0), "Invoice Sales ACT" / "Invoice Sales ACT by Customer")
+  @rollup sum
+  @folder "Actuals"
+  @notes "Share of the SKU in the customer's invoice sales of the month. Empty when the customer has no positive sales."
+  @readonly true
+
+"Rebates ACT" { Customer, SKU, Years, Months } = "IMPORT Rebates" * "Rebates ACT Key"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Actual rebate credit notes spread to SKUs by invoice sales."
+  @readonly true
+
+"COGS ACT" { Customer, SKU, Years, Months } = "Volume ACT" * "IMPORT Standard Cost"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Actual cost of goods sold at standard cost."
+  @readonly true
+
+"Volume LY" { Customer, SKU, Years, Months } = delay("Volume ACT", 12)
+  @rollup sum
+  @folder "Actuals"
+  @notes "Actual volume of the same month last year."
+  @readonly true

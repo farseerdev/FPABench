@@ -1,0 +1,19 @@
+Account,@description,Account Group
+6100,Salaries,Personnel
+6110,Social security,Personnel
+6120,Bonuses,Personnel
+6200,Rent,Facilities
+6210,Utilities,Facilities
+6220,Maintenance,Facilities
+6300,Freight out,Transport
+6310,Fuel,Transport
+6320,Vehicle leasing,Transport
+6400,Software,IT
+6410,Hardware,IT
+6500,Consulting,Services
+6510,Legal and audit,Services
+6520,Insurance,Services
+6600,Travel,Other
+6610,Training,Other
+6900,Other expenses,Other
+NULL (Account),Unmapped account,NULL (Account Group)

@@ -1,0 +1,118 @@
+# ============================================================================
+# Layer 5. Merge actuals and plan into one value per version.
+#
+# For every primary line: ACT part + PLAN part. "FC Actual" and "FC Plan"
+# never overlap, so the sum never double counts. The ACT part broadcasts a
+# version-free actual onto each version that knows the month.
+# Everything downstream reads only these merged lines, so it serves all
+# versions with one formula.
+# ============================================================================
+
+# --- Volume ---------------------------------------------------------------------
+
+"Volume ACT part" { Customer, SKU, Versions, Years, Months } = if(eq("FC Actual", 1), "Volume ACT")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"Volume" { Customer, SKU, Versions, Years, Months } = "Volume ACT part" + "Volume PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @notes "Units sold. Actual or plan, depending on the version and month."
+  @readonly true
+
+# --- Gross sales ------------------------------------------------------------------
+
+"Gross Sales ACT part" { Customer, SKU, Versions, Years, Months } = if(eq("FC Actual", 1), "Gross Sales ACT")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"Gross Sales" { Customer, SKU, Versions, Years, Months } = "Gross Sales ACT part" + "Gross Sales PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+# --- On-invoice discounts -----------------------------------------------------------
+
+"Standard Discounts ACT part" { Customer, SKU, Versions, Years, Months } = if(eq("FC Actual", 1), "Standard Discounts ACT")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"Standard Discounts" { Customer, SKU, Versions, Years, Months } = "Standard Discounts ACT part" + "Standard Discounts PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"Promo Discounts ACT part" { Customer, SKU, Versions, Years, Months } = if(eq("FC Actual", 1), "Promo Discounts ACT")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"Promo Discounts" { Customer, SKU, Versions, Years, Months } = "Promo Discounts ACT part" + "Promo Discounts PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+# --- Rebates ------------------------------------------------------------------------
+
+"Rebates ACT part" { Customer, SKU, Versions, Years, Months } = if(eq("FC Actual", 1), "Rebates ACT")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"Rebates" { Customer, SKU, Versions, Years, Months } = "Rebates ACT part" + "Rebates PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+# --- Cost of goods sold ---------------------------------------------------------------
+
+"COGS ACT part" { Customer, SKU, Versions, Years, Months } = if(eq("FC Actual", 1), "COGS ACT")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"COGS" { Customer, SKU, Versions, Years, Months } = "COGS ACT part" + "COGS PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+# --- Trade fees, per customer group ------------------------------------------------------
+
+"Trade Fees ACT part" { "Customer Group", Versions, Years, Months } = if(eq("FC Actual", 1), "IMPORT Trade Fees")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"Trade Fees Pool" { "Customer Group", Versions, Years, Months } = "Trade Fees ACT part" + "Trade Fees PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @notes "Trade fees to spread to the group's customers and SKUs."
+  @readonly true
+
+# --- Marketing spend, per brand and country -------------------------------------------
+
+"Marketing ACT part" { Brand, Country, Versions, Years, Months } = if(eq("FC Actual", 1), "IMPORT Marketing")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"Marketing Pool" { Brand, Country, Versions, Years, Months } = "Marketing ACT part" + "Marketing PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @notes "Marketing spend to allocate to customers and SKUs."
+  @readonly true
+
+# --- Operating expenses ------------------------------------------------------------------
+
+"OPEX ACT part" { "Cost Center", Account, Versions, Years, Months } = if(eq("FC Actual", 1), "IMPORT OPEX")
+  @rollup sum
+  @folder "Merge"
+  @readonly true
+
+"OPEX" { "Cost Center", Account, Versions, Years, Months } = "OPEX ACT part" + "OPEX PLAN part"
+  @rollup sum
+  @folder "Merge"
+  @readonly true

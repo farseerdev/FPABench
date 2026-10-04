@@ -1,0 +1,7 @@
+Pack Format,@description
+Single,Single unit
+Multipack,Multipack
+Family pack,Family or value pack
+Catering pack,Catering pack for HoReCa
+Display pack,Display or promotion pack
+NULL (Pack Format),No pack format

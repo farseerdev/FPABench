@@ -1,0 +1,79 @@
+# ============================================================================
+# Layer 3. Planner inputs. These are the cells planners write.
+#
+# Each input sits at the grain the business decides at, which is mostly
+# coarser than the sales grain. Formulas carry the values down.
+# The dataset ships values for Budget and Forecast.
+# ============================================================================
+
+# --- Volume -------------------------------------------------------------------
+
+"Volume Growth IN" { Brand, Channel, Versions, Years }
+  @rollup average
+  @format percentage
+  @folder "Inputs"
+  @notes "Planned volume growth against the same month last year."
+
+"Volume Target IN" { "Customer Group", Category, Versions, Years }
+  @rollup sum
+  @folder "Inputs"
+  @notes "Annual volume target in units for a chain or buying group and a category. Cascaded to customers, SKUs and months by last year's mix. Where it exists it replaces the growth baseline."
+
+"Volume Override IN" { Customer, SKU, Versions, Years, Months }
+  @rollup sum
+  @folder "Inputs"
+  @notes "Volume typed by a key account manager. Replaces the baseline in that cell. Sparse."
+
+# --- Price and gross-to-net ------------------------------------------------------
+
+"Price Increase IN" { Brand, Versions, Years }
+  @rollup average
+  @format percentage
+  @folder "Inputs"
+  @notes "List price increase on top of the last known list price."
+
+"Standard Discount IN" { "Customer Group", Brand, Versions, Years }
+  @rollup average
+  @format percentage
+  @folder "Inputs"
+  @notes "Agreed on-invoice discount, as a share of gross sales. Annual trade terms."
+
+"Promo Discount IN" { "Customer Group", Brand, Versions, Years, Months }
+  @rollup average
+  @format percentage
+  @folder "Inputs"
+  @notes "Promotional on-invoice discount, as a share of gross sales. Sparse promotion calendar."
+
+"Rebate Rate IN" { "Customer Group", Versions, Years }
+  @rollup average
+  @format percentage
+  @folder "Inputs"
+  @notes "Off-invoice rebate, as a share of invoice sales."
+
+"Trade Fees IN" { "Customer Group", Versions, Years, Months }
+  @rollup sum
+  @folder "Inputs"
+  @notes "Planned listing, shelf and promotion fees per chain or buying group. An amount, not a rate."
+
+# --- Cost ---------------------------------------------------------------------------
+
+"Standard Cost IN" { SKU, Versions, Years }
+  @rollup average
+  @folder "Inputs"
+  @notes "Planned standard cost per unit."
+
+"Marketing Spend IN" { Brand, Versions, Years, Months }
+  @rollup sum
+  @folder "Inputs"
+  @notes "Planned advertising and promotion spend per brand."
+
+"Marketing Split IN" { Brand, Country, Versions, Years }
+  @rollup sum
+  @format percentage
+  @folder "Inputs"
+  @notes "Hand-entered allocation key: share of each brand's spend that goes to each country. Sums to 1 per brand. Summing over countries is the meaningful roll-up."
+
+"OPEX IN" { "Cost Center", Account, Versions, Years, Months }
+  @rollup sum
+  @folder "Inputs"
+  @notes "Planned operating expenses, entered by cost center managers."
