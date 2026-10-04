@@ -1,0 +1,132 @@
+# ============================================================================
+# Layer 6. Gross-to-net subtotals and cost allocation, down to
+# contribution margin per customer, SKU, version and month.
+#
+# Four pools are allocated, each with its own key. Trade fees are a pool per
+# customer group, allocated by invoice sales. Logistics is a pool per
+# country, allocated by shipped kg weighted by temperature zone. Sales force
+# is a pool per channel and
+# country, allocated by invoice sales. Marketing is a pool per brand and
+# country, allocated by net sales.
+#
+# Each allocation is the same three steps: total of the key at the pool
+# grain, the key itself (share of the total), and pool times key.
+# ============================================================================
+
+# --- Invoice sales ----------------------------------------------------------------------
+
+"Invoice Sales" { Customer, SKU, Versions, Years, Months } = "Gross Sales" - "Standard Discounts" - "Promo Discounts"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+# --- Trade fees: pool per customer group, key = invoice sales -----------------------------
+
+"Invoice Sales by Customer Group" { "Customer Group", Versions, Years, Months } = "Invoice Sales"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Trade Fees Key" { Customer, SKU, Versions, Years, Months } = if(gt("Invoice Sales by Customer Group", 0), "Invoice Sales" / "Invoice Sales by Customer Group")
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Trade Fees" { Customer, SKU, Versions, Years, Months } = "Trade Fees Pool" * "Trade Fees Key"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+# --- Net sales and gross margin ------------------------------------------------------------
+
+"Net Sales" { Customer, SKU, Versions, Years, Months } = "Invoice Sales" - "Rebates" - "Trade Fees"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Gross Margin" { Customer, SKU, Versions, Years, Months } = "Net Sales" - "COGS"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Volume KG" { Customer, SKU, Versions, Years, Months } = "Volume" * "IMPORT Unit Weight"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Handling KG" { Customer, SKU, Versions, Years, Months } = "Volume KG" * "IMPORT Handling Factor"
+  @rollup sum
+  @folder "Margin"
+  @notes "Shipped kg weighted by temperature zone. A frozen kg counts as more than an ambient one."
+  @readonly true
+
+# --- Logistics: pool per country, key = handling kg --------------------------------------
+
+"Logistics Pool" { Country, Versions, Years, Months } = sum("OPEX", Function>Logistics)
+  @rollup sum
+  @folder "Margin"
+  @notes "Warehouse and transport cost centers of the country."
+  @readonly true
+
+"Handling KG by Country" { Country, Versions, Years, Months } = "Handling KG"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Logistics Key" { Customer, SKU, Versions, Years, Months } = if(gt("Handling KG by Country", 0), "Handling KG" / "Handling KG by Country")
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Logistics Cost" { Customer, SKU, Versions, Years, Months } = "Logistics Pool" * "Logistics Key"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+# --- Sales force: pool per channel and country, key = invoice sales --------------------
+
+"Sales Force Pool" { Channel, Country, Versions, Years, Months } = sum("OPEX", Function>Sales)
+  @rollup sum
+  @folder "Margin"
+  @notes "Sales team cost centers. Each serves one channel in one country."
+  @readonly true
+
+"Invoice Sales by Channel Country" { Channel, Country, Versions, Years, Months } = "Invoice Sales"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Sales Force Key" { Customer, SKU, Versions, Years, Months } = if(gt("Invoice Sales by Channel Country", 0), "Invoice Sales" / "Invoice Sales by Channel Country")
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Sales Force Cost" { Customer, SKU, Versions, Years, Months } = "Sales Force Pool" * "Sales Force Key"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+# --- Marketing: pool per brand and country, key = net sales -----------------------------
+
+"Net Sales by Brand Country" { Brand, Country, Versions, Years, Months } = "Net Sales"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Marketing Key" { Customer, SKU, Versions, Years, Months } = if(gt("Net Sales by Brand Country", 0), "Net Sales" / "Net Sales by Brand Country")
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+"Marketing Cost" { Customer, SKU, Versions, Years, Months } = "Marketing Pool" * "Marketing Key"
+  @rollup sum
+  @folder "Margin"
+  @readonly true
+
+# --- Contribution margin ------------------------------------------------------------------
+
+"Contribution Margin" { Customer, SKU, Versions, Years, Months } = "Gross Margin" - "Logistics Cost" - "Sales Force Cost" - "Marketing Cost"
+  @rollup sum
+  @folder "Margin"
+  @notes "Margin after the cost to serve the customer and to market the brand."
+  @readonly true

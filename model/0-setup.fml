@@ -1,0 +1,38 @@
+# ============================================================================
+# Layer 0. Version setup.
+#
+# Versions: Actual, Budget, Forecast. Two small inputs decide, for every
+# version and month, whether the month shows actuals, plan, or nothing.
+# Formulas never name a version. Moving the actuals cutoff is a data write.
+#
+# Reference data (Years Y2024..Y2026, actuals up to Y2026 M6):
+#   Actual    known Y2024 M1..Y2026 M6   horizon Y2024 M1..Y2026 M6
+#   Budget    known Y2024 M1..Y2025 M12  horizon Y2026 M1..M12
+#   Forecast  known Y2024 M1..Y2026 M6   horizon Y2026 M1..M12
+# ============================================================================
+
+"FC Known IN" { Versions, Years, Months }
+  @type integer
+  @rollup average
+  @folder "Setup"
+  @notes "1 on every month whose actuals the version knows. This is the actuals cutoff of the version. Empty elsewhere."
+
+"FC Horizon IN" { Versions, Years, Months }
+  @type integer
+  @rollup average
+  @folder "Setup"
+  @notes "1 on every month the version reports. Empty elsewhere."
+
+"FC Actual" { Versions, Years, Months } = "FC Horizon IN" * "FC Known IN"
+  @type integer
+  @rollup average
+  @folder "Setup"
+  @notes "1 where the version shows actuals: inside its horizon and already known."
+  @readonly true
+
+"FC Plan" { Versions, Years, Months } = if(not(hasValue("FC Known IN")), "FC Horizon IN")
+  @type integer
+  @rollup average
+  @folder "Setup"
+  @notes "1 where the version shows plan: inside its horizon and not yet known."
+  @readonly true

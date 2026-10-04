@@ -1,0 +1,25 @@
+# ============================================================================
+# Layer 7. Overheads and operating profit per country.
+#
+# Logistics and sales cost centers are allocated in layer 6. Everything else
+# stays as overhead: marketing staff, administration, and cost centers that
+# are missing from master data.
+# ============================================================================
+
+"Overheads" { Country, Versions, Years, Months } = sum("OPEX", not(or(Function>Logistics, Function>Sales)))
+  @rollup sum
+  @folder "EBIT"
+  @notes "Every operating expense that is not allocated to customers. That includes cost centers missing from master data, which load under NULL (Function) and NULL (Country)."
+  @readonly true
+
+"Contribution Margin by Country" { Country, Versions, Years, Months } = "Contribution Margin"
+  @rollup sum
+  @folder "EBIT"
+  @notes "Brings contribution margin to the country grain, so the EBIT sum has two operands at the same grain."
+  @readonly true
+
+"EBIT OUT" { Country, Versions, Years, Months } = "Contribution Margin by Country" - "Overheads"
+  @rollup sum
+  @folder "EBIT"
+  @notes "Operating profit."
+  @readonly true

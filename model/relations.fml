@@ -1,0 +1,49 @@
+# ============================================================================
+# Hierarchies of the benchmark model. Every link is many-to-one and every
+# path is balanced. Members and their parents live in the benchmark dataset,
+# not here. Fixed member lists that belong to the model are in dimensions/*.csv.
+# ============================================================================
+
+# Product. A Material is one ERP code, for example a promo pack or a new
+# artwork. Several materials make one planning SKU, the level plans use.
+link Material -> SKU : n:1
+
+# Category path: SKU -> Product Line -> Subcategory -> Category -> Division
+link SKU -> "Product Line" : n:1
+link "Product Line" -> Subcategory : n:1
+link Subcategory -> Category : n:1
+link Category -> Division : n:1
+
+# Brand path, from the product line, so one brand can span categories
+link "Product Line" -> Brand : n:1
+link Brand -> "Brand Group" : n:1
+link Brand -> "Brand Type" : n:1
+
+# SKU attributes. Temperature zone also weights the logistics allocation.
+link SKU -> "Pack Format" : n:1
+link SKU -> "Size Band" : n:1
+link SKU -> "Price Tier" : n:1
+link SKU -> "Temperature Zone" : n:1
+link SKU -> "Lifecycle Status" : n:1
+link SKU -> Plant : n:1
+link Plant -> "Supply Type" : n:1
+# No Plant -> Country link on purpose. It would give the sales grain a second
+# path to Country, next to Customer -> Region -> Country, and the engine then
+# rolls customer sales up by the plant's country without any warning.
+
+# Customer has two parallel hierarchies.
+# Trade:     Customer -> Customer Group -> Channel
+# Geography: Customer -> Region -> Country
+link Customer -> "Customer Group" : n:1
+link "Customer Group" -> Channel : n:1
+link Customer -> Region : n:1
+link Region -> Country : n:1
+
+# A cost center has three parents. Channel is NULL (Channel) unless the
+# cost center is a sales team that serves one channel.
+link "Cost Center" -> Function : n:1
+link "Cost Center" -> Country : n:1
+link "Cost Center" -> Channel : n:1
+
+# General ledger accounts for operating expenses
+link Account -> "Account Group" : n:1

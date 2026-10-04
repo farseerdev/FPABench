@@ -1,0 +1,105 @@
+# ============================================================================
+# Layer 8. Reports.
+#
+# 1. One P&L variable, many report lines. Each of the ten lines is a posting variable
+#    whose grain pins a member of "PL Line". The amount comes from the
+#    formula, the pin decides where it lands. Deductions and costs post with
+#    a negative sign, so the sum over all lines is EBIT.
+# 2. KPI measures. A measure has an empty grain and is computed at query
+#    time, at whatever level is asked. Ratios therefore come out as a ratio
+#    of sums, never a sum of ratios. Nothing reads a measure.
+# ============================================================================
+
+# --- Postings -------------------------------------------------------------------------
+
+"PL Gross Sales" { "PL Line" = P100, Brand, Channel, Country, Versions, Years, Months } = "Gross Sales"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Standard Discounts" { "PL Line" = P110, Brand, Channel, Country, Versions, Years, Months } = -1 * "Standard Discounts"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Promo Discounts" { "PL Line" = P120, Brand, Channel, Country, Versions, Years, Months } = -1 * "Promo Discounts"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Rebates" { "PL Line" = P130, Brand, Channel, Country, Versions, Years, Months } = -1 * "Rebates"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Trade Fees" { "PL Line" = P140, Brand, Channel, Country, Versions, Years, Months } = -1 * "Trade Fees"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL COGS" { "PL Line" = P150, Brand, Channel, Country, Versions, Years, Months } = -1 * "COGS"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Logistics" { "PL Line" = P170, Brand, Channel, Country, Versions, Years, Months } = -1 * "Logistics Cost"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Sales Force" { "PL Line" = P180, Brand, Channel, Country, Versions, Years, Months } = -1 * "Sales Force Cost"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Marketing" { "PL Line" = P190, Brand, Channel, Country, Versions, Years, Months } = -1 * "Marketing Cost"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+# Overheads have no brand and no channel. They land on the NULL members.
+"PL Overheads" { "PL Line" = P210, Brand = "NULL (Brand)", Channel = "NULL (Channel)", Country, Versions, Years, Months } = -1 * "Overheads"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+# --- The P&L --------------------------------------------------------------------------
+
+"PL OUT" { "PL Line", Brand, Channel, Country, Versions, Years, Months } =
+    "PL Gross Sales" + "PL Standard Discounts" + "PL Promo Discounts" + "PL Rebates" + "PL Trade Fees"
+  + "PL COGS" + "PL Logistics" + "PL Sales Force" + "PL Marketing" + "PL Overheads"
+  @rollup sum
+  @folder "Report"
+  @notes "Management P&L by brand, channel and country. Summed over all lines it is EBIT."
+  @readonly true
+
+# --- KPI measures ------------------------------------------------------------------------
+
+"Net Price per Unit" { } = "Net Sales" / "Volume"
+  @rollup formula
+  @folder "Report"
+  @readonly true
+
+"Invoice Discount %" { } = ("Standard Discounts" + "Promo Discounts") / "Gross Sales"
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Gross-to-Net %" { } = ("Gross Sales" - "Net Sales") / "Gross Sales"
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Gross Margin %" { } = "Gross Margin" / "Net Sales"
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Contribution Margin %" { } = "Contribution Margin" / "Net Sales"
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
