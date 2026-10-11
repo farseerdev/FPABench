@@ -3,16 +3,21 @@
 #
 # Each input sits at the grain the business decides at, which is mostly
 # coarser than the sales grain. Formulas carry the values down.
-# The benchmark dataset ships values for Budget and Forecast.
+# The benchmark dataset ships values for every plan version.
+# Amounts are in local currency, except standard cost and the central
+# marketing budget, which are in EUR.
 # ============================================================================
 
 # --- Volume -------------------------------------------------------------------
+# Volume comes from a target, else from last year times growth. Both are
+# driver-based choices of this benchmark. Many real models type volume at the
+# sales grain instead, which Volume Override IN covers.
 
 "Volume Growth IN" { Brand, Channel, Versions, Years }
   @rollup average
   @format percentage
   @folder "Inputs"
-  @notes "Planned volume growth against the same month last year."
+  @notes "Planned volume growth against the same month last year. A blank means no growth."
 
 "Volume Target IN" { "Customer Group", Category, Versions, Years }
   @rollup sum
@@ -30,13 +35,13 @@
   @rollup average
   @format percentage
   @folder "Inputs"
-  @notes "List price increase on top of the last known list price."
+  @notes "List price increase on top of the list price of the last closed month."
 
-"Standard Discount IN" { "Customer Group", Brand, Versions, Years }
+"Standard Discount IN" { "Customer Group", Brand, Versions, Years, Months }
   @rollup average
   @format percentage
   @folder "Inputs"
-  @notes "Agreed on-invoice discount, as a share of gross sales. Annual trade terms."
+  @notes "Agreed on-invoice discount rate, as a share of gross sales. Where it is empty, the last actual rate carries forward."
 
 "Promo Discount IN" { "Customer Group", Brand, Versions, Years, Months }
   @rollup average
@@ -44,28 +49,56 @@
   @folder "Inputs"
   @notes "Promotional on-invoice discount, as a share of gross sales. Sparse promotion calendar."
 
-"Rebate Rate IN" { "Customer Group", Versions, Years }
+"Logistics Discount IN" { "Customer Group", Versions, Years, Months }
   @rollup average
   @format percentage
   @folder "Inputs"
-  @notes "Off-invoice rebate, as a share of invoice sales."
+  @notes "On-invoice discount for full pallets delivered to the group's own warehouse, as a share of gross sales. Where nobody typed a rate, the plan keeps the group's last actual rate."
 
-"Trade Fees IN" { "Customer Group", Versions, Years, Months }
+"Rebate Rate IN" { "Customer Group", Versions, Years, Months }
+  @rollup average
+  @format percentage
+  @folder "Inputs"
+  @notes "Off-invoice rebate, as a share of invoice sales. Where it is empty, the last actual rate carries forward."
+
+"Growth Bonus Rate IN" { "Customer Group", Versions, Years }
+  @rollup average
+  @format percentage
+  @folder "Inputs"
+  @notes "Bonus as a share of invoice sales, for the whole year, if the group grows by more than its threshold. Type 0 for a group that will not earn it, which releases what the books accrued. A blank is no decision yet. The plan then keeps the accrual, and CHECK Growth Bonus shows it."
+
+"Growth Bonus Threshold IN" { "Customer Group", Versions, Years }
+  @rollup average
+  @format percentage
+  @folder "Inputs"
+  @notes "Growth over last year's invoice sales that the group must beat to earn the bonus."
+
+"Trade Fees IN" { "Customer Group", Brand, Versions, Years, Months }
   @rollup sum
   @folder "Inputs"
-  @notes "Planned listing, shelf and promotion fees per chain or buying group. An amount, not a rate."
+  @notes "Planned listing, shelf, leaflet and promotion fees per group and brand. An amount, not a rate."
 
-# --- Cost ---------------------------------------------------------------------------
+"Promo Funding IN" { Customer, SKU, Versions, Years, Months }
+  @rollup sum
+  @folder "Inputs"
+  @notes "Planned promotion payments per customer, SKU and month. Sparse."
+
+# --- Cost and currency --------------------------------------------------------------
 
 "Standard Cost IN" { SKU, Versions, Years }
   @rollup average
   @folder "Inputs"
-  @notes "Planned standard cost per unit."
+  @notes "Planned standard cost per unit, in EUR. Where nobody typed one, the plan uses the SKU's actual standard cost of the year."
+
+"FX Rate IN" { Currency, Versions, Years, Months }
+  @rollup average
+  @folder "Inputs"
+  @notes "Planning rate, units of local currency per EUR. Where nobody typed a rate, the plan keeps the last actual rate."
 
 "Marketing Spend IN" { Brand, Versions, Years, Months }
   @rollup sum
   @folder "Inputs"
-  @notes "Planned advertising and promotion spend per brand."
+  @notes "Planned advertising and promotion spend per brand, in EUR."
 
 "Marketing Split IN" { Brand, Country, Versions, Years }
   @rollup sum

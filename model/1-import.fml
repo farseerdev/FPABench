@@ -1,14 +1,17 @@
 # ============================================================================
 # Layer 1. Import interface for actuals.
 #
-# The loader fills these from the raw ERP export. They have no
-# Versions dimension: an actual is a fact, not a version. The merge layer
-# shows them in every version that knows the month.
+# The loader fills these from the raw ERP export. They have no Versions
+# dimension: an actual is a fact, not a version. The merge layer shows them
+# in every version where the month is closed.
 #
 # Signs are business-natural. Sales and quantities are positive. Returns
 # arrive as negative invoice lines and net out in the monthly sums.
 # Discounts, deductions and costs are positive amounts that get subtracted.
-# All amounts are in one currency, EUR.
+#
+# Amounts are in the local currency of the customer's or the cost center's
+# country. Standard costs and central marketing budgets are in EUR. Rates are
+# units of local currency per EUR, the way the ECB quotes them.
 #
 # Invoice lines carry the ERP material code, not the planning SKU. Layer 2
 # sums materials into SKUs before anything else reads them.
@@ -40,32 +43,59 @@
   @notes "Temporary promotional price cut, deducted on the invoice."
   @readonly true
 
-# --- Documents after the invoice ---------------------------------------------
-
-"IMPORT Rebates" { Customer, Years, Months }
+"IMPORT Logistics Discounts" { Customer, Material, Years, Months }
   @rollup sum
   @folder "Import"
-  @notes "Rebates and bonuses settled by credit note. The ERP knows the customer but not the SKU."
+  @notes "Discount for full pallets delivered to the customer's own warehouse, deducted on the invoice."
   @readonly true
 
-"IMPORT Trade Fees" { "Customer Group", Years, Months }
+# --- Deductions booked after the invoice ---------------------------------------
+# These are the amounts the books charge to each month, accruals included.
+# A credit note only settles an accrual that the books already hold, so it is
+# not loaded.
+
+"IMPORT Promo Funding" { Customer, Material, Years, Months }
   @rollup sum
   @folder "Import"
-  @notes "Listing, shelf, catalogue and promotion fees invoiced by a chain or buying group."
+  @notes "Promotion payments per unit sold, settled with the customer after the promotion."
   @readonly true
 
-# --- Master data -------------------------------------------------------------
+"IMPORT Rebates" { "Customer Group", Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Rebate accrual booked for the month, at the agreed rate. True-ups load in IMPORT Rebate True-ups. The agreement is with the group's head office, so the amount carries no customer and no SKU."
+  @readonly true
 
-"IMPORT List Price" { SKU, Years, Months }
+"IMPORT Rebate True-ups" { "Customer Group", Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "One-off corrections of earlier rebate accruals, booked in the month they were made. They count in the P&L. They stay out of the rate the plan carries forward, so a one-off does not repeat in every plan month."
+  @readonly true
+
+"IMPORT Growth Bonus" { "Customer Group", Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Growth bonus expense booked for the month. A group that is expected to beat its growth threshold accrues the bonus every month. True-ups follow when the expectation changes."
+  @readonly true
+
+"IMPORT Trade Fees" { "Customer Group", Brand, Years, Months }
+  @rollup sum
+  @folder "Import"
+  @notes "Listing, shelf, leaflet and promotion fees, invoiced by the group's head office for one brand."
+  @readonly true
+
+# --- Master data and rates -----------------------------------------------------
+
+"IMPORT List Price" { SKU, Country, Years, Months }
   @rollup average
   @folder "Import"
-  @notes "List price per unit in force in the month."
+  @notes "List price per unit in force in the month, in the country's currency."
   @readonly true
 
 "IMPORT Standard Cost" { SKU, Years }
   @rollup average
   @folder "Import"
-  @notes "Standard production or purchase cost per unit, set once a year."
+  @notes "Standard production or purchase cost per unit in EUR, set once a year."
   @readonly true
 
 "IMPORT Unit Weight" { SKU }
@@ -80,24 +110,30 @@
   @notes "Handling cost of one kg relative to ambient goods, from logistics costing. Chilled and frozen goods cost more to store and move."
   @readonly true
 
+"IMPORT FX Rate" { Currency, Years, Months }
+  @rollup average
+  @folder "Import"
+  @notes "Average rate of the month, units of local currency per EUR. Every rate must be above 0, and EUR itself is always 1."
+  @readonly true
+
 # --- General ledger and marketing spend --------------------------------------
 
 "IMPORT OPEX" { "Cost Center", Account, Years, Months }
   @rollup sum
   @folder "Import"
-  @notes "Operating expenses posted in the general ledger."
+  @notes "Operating expenses posted to cost centers, in the country's currency. Includes the marketing team's own costs. Excludes advertising and promotion spend, which loads in IMPORT Marketing, and deductions given to customers, which load above. Excludes factory overhead that the standard cost already covers. Loading any of these here too would count it twice."
   @readonly true
 
 "IMPORT Marketing" { Brand, Country, Years, Months }
   @rollup sum
   @folder "Import"
-  @notes "Advertising and promotion spend, booked per brand and country."
+  @notes "Advertising and promotion spend, booked per brand and country in the country's currency. Only spend on media, agencies, samples and displays. The marketing team's salaries are OPEX."
   @readonly true
 
 # --- Load manifest -----------------------------------------------------------
 
-"IMPORT Control Total" { Years, Months }
+"IMPORT Control Total" { Country, Years, Months }
   @rollup sum
   @folder "Import"
-  @notes "Gross sales per month as stated by the export itself. Checks that the load lost nothing."
+  @notes "Gross sales per country and month as stated by the export itself. Checks that the load lost nothing."
   @readonly true

@@ -28,16 +28,31 @@ link SKU -> "Lifecycle Status" : n:1
 link SKU -> Plant : n:1
 link Plant -> "Supply Type" : n:1
 # No Plant -> Country link on purpose. It would give the sales grain a second
-# path to Country, next to Customer -> Region -> Country, and the engine then
-# rolls customer sales up by the plant's country without any warning.
+# path to Country, next to Customer -> Customer Group -> Country. The engine
+# then rolls customer sales up by the plant's country without any warning.
 
-# Customer has two parallel hierarchies.
-# Trade:     Customer -> Customer Group -> Channel
-# Geography: Customer -> Region -> Country
+# Customer is the sold-to account, the party that places the order. A chain's
+# buying company is one account. Its warehouses and stores are delivery
+# addresses and are not in the model. A shop, kiosk or restaurant that orders
+# for itself is its own account.
+# Customer Group is the node that holds the trade agreement, inside one
+# country. It is a chain's head office, a buying group, a wholesaler or a
+# cluster of independent shops. Rates, fees and deductions sit here.
+# The group fixes the country and so the currency. Amounts booked only on the
+# group, such as a fee for a brand nobody bought yet, still reach the right
+# country this way.
+# Region is the sales territory, inside one country.
+#
+# Trade and geography: Customer -> Customer Group -> Channel
+#                      Customer -> Customer Group -> Country -> Currency
+# Territory:           Customer -> Region
 link Customer -> "Customer Group" : n:1
 link "Customer Group" -> Channel : n:1
+link "Customer Group" -> Country : n:1
+link Country -> Currency : n:1
 link Customer -> Region : n:1
-link Region -> Country : n:1
+# No Region -> Country link on purpose. It would give the sales grain a second
+# path to Country, and the engine would then pick one of them without a warning.
 
 # A cost center has three parents. Channel is NULL (Channel) unless the
 # cost center is a sales team that serves one channel.

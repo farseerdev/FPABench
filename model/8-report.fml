@@ -1,16 +1,23 @@
 # ============================================================================
 # Layer 8. Reports.
 #
-# 1. One P&L variable, many report lines. Each of the ten lines is a posting variable
-#    whose grain pins a member of "PL Line". The amount comes from the
-#    formula, the pin decides where it lands. Deductions and costs post with
-#    a negative sign, so the sum over all lines is EBIT.
-# 2. KPI measures. A measure has an empty grain and is computed at query
-#    time, at whatever level is asked. Ratios therefore come out as a ratio
-#    of sums, never a sum of ratios. Nothing reads a measure.
+# 1. One P&L variable, many report lines. Each posting variable pins a member
+#    of "PL Line". The amount comes from the formula, the pin decides where it
+#    lands. Deductions and costs post with a negative sign, so the sum over all
+#    lines is EBIT. Amounts that no customer could carry post to the same lines,
+#    on NULL (Brand) or NULL (Channel) where their pool has no brand or channel.
+# 2. The same P&L in EUR, so countries with different currencies add up.
+# 3. KPI measures, read from the EUR P&L. A measure has an empty grain and is
+#    computed at query time, at whatever level is asked. Ratios therefore come
+#    out as a ratio of sums, never a sum of ratios. Nothing reads a measure.
+#    The P&L has no customer and no product below brand. So a measure can only
+#    be filtered by the P&L's own dimensions and their parents. Those are Brand,
+#    Channel, Country, versions and time, plus Brand Group, Brand Type and
+#    Currency. PL Line is out too, because each measure picks its own lines.
+#    tools/run.mjs refuses any other filter.
 # ============================================================================
 
-# --- Postings -------------------------------------------------------------------------
+# --- Postings, in the country's currency -----------------------------------------------
 
 "PL Gross Sales" { "PL Line" = P100, Brand, Channel, Country, Versions, Years, Months } = "Gross Sales"
   @rollup sum
@@ -27,12 +34,27 @@
   @folder "Report"
   @readonly true
 
+"PL Logistics Discounts" { "PL Line" = P125, Brand, Channel, Country, Versions, Years, Months } = -1 * "Logistics Discounts"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
 "PL Rebates" { "PL Line" = P130, Brand, Channel, Country, Versions, Years, Months } = -1 * "Rebates"
   @rollup sum
   @folder "Report"
   @readonly true
 
+"PL Growth Bonus" { "PL Line" = P135, Brand, Channel, Country, Versions, Years, Months } = -1 * "Growth Bonus"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
 "PL Trade Fees" { "PL Line" = P140, Brand, Channel, Country, Versions, Years, Months } = -1 * "Trade Fees"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Promo Funding" { "PL Line" = P145, Brand, Channel, Country, Versions, Years, Months } = -1 * "Promo Funding"
   @rollup sum
   @folder "Report"
   @readonly true
@@ -63,42 +85,181 @@
   @folder "Report"
   @readonly true
 
-# --- The P&L --------------------------------------------------------------------------
+# --- Amounts that no customer could carry --------------------------------------------------
 
-"PL OUT" { "PL Line", Brand, Channel, Country, Versions, Years, Months } =
-    "PL Gross Sales" + "PL Standard Discounts" + "PL Promo Discounts" + "PL Rebates" + "PL Trade Fees"
-  + "PL COGS" + "PL Logistics" + "PL Sales Force" + "PL Marketing" + "PL Overheads"
+"PL Rebates Unallocated" { "PL Line" = P130, Brand = "NULL (Brand)", Channel, Country, Versions, Years, Months } = -1 * "Rebates Unallocated"
   @rollup sum
   @folder "Report"
-  @notes "Management P&L by brand, channel and country. Summed over all lines it is EBIT."
   @readonly true
 
-# --- KPI measures ------------------------------------------------------------------------
-
-"Net Price per Unit" { } = "Net Sales" / "Volume"
-  @rollup formula
+"PL Growth Bonus Unallocated" { "PL Line" = P135, Brand = "NULL (Brand)", Channel, Country, Versions, Years, Months } = -1 * "Growth Bonus Unallocated"
+  @rollup sum
   @folder "Report"
   @readonly true
 
-"Invoice Discount %" { } = ("Standard Discounts" + "Promo Discounts") / "Gross Sales"
+"PL Trade Fees Unallocated" { "PL Line" = P140, Brand, Channel, Country, Versions, Years, Months } = -1 * "Trade Fees Unallocated"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Logistics Unallocated" { "PL Line" = P170, Brand = "NULL (Brand)", Channel = "NULL (Channel)", Country, Versions, Years, Months } = -1 * "Logistics Unallocated"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Sales Force Unallocated" { "PL Line" = P180, Brand = "NULL (Brand)", Channel, Country, Versions, Years, Months } = -1 * "Sales Force Unallocated"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"PL Marketing Unallocated" { "PL Line" = P190, Brand, Channel = "NULL (Channel)", Country, Versions, Years, Months } = -1 * "Marketing Unallocated"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+# --- The P&L ------------------------------------------------------------------------------
+
+"PL OUT" { "PL Line", Brand, Channel, Country, Versions, Years, Months } =
+    "PL Gross Sales" + "PL Standard Discounts" + "PL Promo Discounts" + "PL Logistics Discounts"
+  + "PL Rebates" + "PL Growth Bonus" + "PL Trade Fees" + "PL Promo Funding" + "PL COGS"
+  + "PL Logistics" + "PL Sales Force" + "PL Marketing" + "PL Overheads"
+  + "PL Rebates Unallocated" + "PL Growth Bonus Unallocated" + "PL Trade Fees Unallocated"
+  + "PL Logistics Unallocated" + "PL Sales Force Unallocated" + "PL Marketing Unallocated"
+  @rollup sum
+  @folder "Report"
+  @notes "Management P&L by brand, channel and country, in the country's currency. Summed over all lines it is EBIT."
+  @readonly true
+
+"PL EUR OUT" { "PL Line", Brand, Channel, Country, Versions, Years, Months } = if(gt("FX Rate", 0), "PL OUT" / "FX Rate")
+  @rollup sum
+  @folder "Report"
+  @notes "The P&L in EUR, at the actual rate on actual months and at the version's planning rate on plan months. Countries can be added up here."
+  @readonly true
+
+# --- Units for the KPIs ---------------------------------------------------------------------
+
+"Volume by Brand Channel Country" { Brand, Channel, Country, Versions, Years, Months } = "Volume"
+  @rollup sum
+  @folder "Report"
+  @readonly true
+
+"Volume for KPIs" { Brand, Channel, Country, Versions, Years, Months } = if(gt("FX Rate", 0), "Volume by Brand Channel Country")
+  @rollup sum
+  @folder "Report"
+  @notes "Units at the grain of the P&L, only where the country has a rate for the month. So the net price per unit divides EUR sales by the units of the same countries."
+  @readonly true
+
+# --- KPI measures, in EUR -------------------------------------------------------------------
+# Net sales are lines P100 to P145. Gross margin adds P150. Contribution margin
+# adds P170 to P190. All lines together are EBIT.
+
+"Net Price per Unit" { } = sum("PL EUR OUT", or("PL Line">P100, "PL Line">P110, "PL Line">P120, "PL Line">P125, "PL Line">P130, "PL Line">P135, "PL Line">P140, "PL Line">P145)) / "Volume for KPIs"
+  @rollup formula
+  @folder "Report"
+  @notes "Net sales in EUR per unit sold."
+  @readonly true
+
+"Gross-to-Net %" { } = -1 * sum("PL EUR OUT", or("PL Line">P110, "PL Line">P120, "PL Line">P125, "PL Line">P130, "PL Line">P135, "PL Line">P140, "PL Line">P145)) / sum("PL EUR OUT", "PL Line">P100)
   @rollup formula
   @format percentage
   @folder "Report"
   @readonly true
 
-"Gross-to-Net %" { } = ("Gross Sales" - "Net Sales") / "Gross Sales"
+"Gross Margin %" { } = sum("PL EUR OUT", or("PL Line">P100, "PL Line">P110, "PL Line">P120, "PL Line">P125, "PL Line">P130, "PL Line">P135, "PL Line">P140, "PL Line">P145, "PL Line">P150)) / sum("PL EUR OUT", or("PL Line">P100, "PL Line">P110, "PL Line">P120, "PL Line">P125, "PL Line">P130, "PL Line">P135, "PL Line">P140, "PL Line">P145))
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @notes "Gross margin over net sales. Gross margin is a management margin at standard cost, after allocated trade deductions."
+  @readonly true
+
+"Contribution Margin II %" { } = sum("PL EUR OUT", not(or("PL Line">P190, "PL Line">P210))) / sum("PL EUR OUT", or("PL Line">P100, "PL Line">P110, "PL Line">P120, "PL Line">P125, "PL Line">P130, "PL Line">P135, "PL Line">P140, "PL Line">P145))
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @notes "Contribution margin II over net sales. It is gross margin after the cost to serve, logistics and the sales force."
+  @readonly true
+
+"Contribution Margin III %" { } = sum("PL EUR OUT", not(or("PL Line">P210))) / sum("PL EUR OUT", or("PL Line">P100, "PL Line">P110, "PL Line">P120, "PL Line">P125, "PL Line">P130, "PL Line">P135, "PL Line">P140, "PL Line">P145))
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @notes "Contribution margin III over net sales. It is contribution margin II after marketing."
+  @readonly true
+
+"EBIT %" { } = "PL EUR OUT" / sum("PL EUR OUT", or("PL Line">P100, "PL Line">P110, "PL Line">P120, "PL Line">P125, "PL Line">P130, "PL Line">P135, "PL Line">P140, "PL Line">P145))
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @notes "EBIT over net sales. Overheads and costs that no customer could carry sit on NULL (Brand), so one brand or channel shows its margin after allocated costs only."
+  @readonly true
+
+"Standard Discounts % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P110) / sum("PL EUR OUT", "PL Line">P100)
   @rollup formula
   @format percentage
   @folder "Report"
   @readonly true
 
-"Gross Margin %" { } = "Gross Margin" / "Net Sales"
+"Promo Discounts % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P120) / sum("PL EUR OUT", "PL Line">P100)
   @rollup formula
   @format percentage
   @folder "Report"
   @readonly true
 
-"Contribution Margin %" { } = "Contribution Margin" / "Net Sales"
+"Logistics Discounts % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P125) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Rebates % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P130) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Growth Bonus % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P135) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Trade Fees % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P140) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Promo Funding % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P145) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"COGS % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P150) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Logistics % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P170) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Sales Force % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P180) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Marketing % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P190) / sum("PL EUR OUT", "PL Line">P100)
+  @rollup formula
+  @format percentage
+  @folder "Report"
+  @readonly true
+
+"Overheads % of Gross Sales" { } = -1 * sum("PL EUR OUT", "PL Line">P210) / sum("PL EUR OUT", "PL Line">P100)
   @rollup formula
   @format percentage
   @folder "Report"

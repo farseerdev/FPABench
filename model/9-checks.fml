@@ -5,52 +5,43 @@
 
 # --- The load lost nothing --------------------------------------------------------------
 
-"CHECK Import Total" { Years, Months } = "IMPORT Control Total" - "IMPORT Gross Sales"
+"Gross Sales Loaded by Country" { Country, Years, Months } = "IMPORT Gross Sales"
   @rollup sum
   @folder "Checks"
-  @notes "Control total of the export minus what was loaded. Zero after a correct load."
+  @notes "What the load put into each country. It has its own cells, so the check below shows a country that has sales but no control total."
   @readonly true
 
-# --- Allocations are complete ---------------------------------------------------------------
-
-"CHECK Rebates Allocation" { Customer, Years, Months } = "IMPORT Rebates" - "Rebates ACT"
+"CHECK Import Total" { Country, Years, Months } = "IMPORT Control Total" - "Gross Sales Loaded by Country"
   @rollup sum
   @folder "Checks"
-  @notes "Rebate credit notes that found no SKU to land on. Happens when the customer had no positive sales that month."
+  @notes "Control total of the export minus what was loaded, per country. Zero after a correct load. Sales without a control total show with a minus sign. So do customers missing from master data, under NULL (Country)."
   @readonly true
 
-"CHECK Trade Fees Allocation" { "Customer Group", Versions, Years, Months } = "Trade Fees Pool" - "Trade Fees"
+# --- Plans add up -------------------------------------------------------------------------
+
+"CHECK Marketing Split" { Brand, Versions, Years, Months } = "Marketing Spend Plan" - "Marketing Plan EUR"
   @rollup sum
   @folder "Checks"
+  @notes "Planned marketing spend, in EUR, that the typed country split loses. Zero when every brand's split adds up to 1."
   @readonly true
 
-"CHECK Logistics Allocation" { Country, Versions, Years, Months } = "Logistics Pool" - "Logistics Cost"
+"CHECK Growth Bonus" { "Customer Group", Versions, Years } = if(gt("FC Plan Months", 0), "Growth Bonus Entitlement" - "Growth Bonus Booked" - "Growth Bonus Plan" - "Growth Bonus Plan Unallocated")
   @rollup sum
   @folder "Checks"
-  @readonly true
-
-"CHECK Sales Force Allocation" { Channel, Country, Versions, Years, Months } = "Sales Force Pool" - "Sales Force Cost"
-  @rollup sum
-  @folder "Checks"
-  @readonly true
-
-"CHECK Marketing Allocation" { Brand, Country, Versions, Years, Months } = "Marketing Pool" - "Marketing Cost"
-  @rollup sum
-  @folder "Checks"
-  @readonly true
-
-"CHECK Marketing Split" { Brand, Versions, Years, Months } = "Marketing Spend PLAN" - "Marketing PLAN part"
-  @rollup sum
-  @folder "Checks"
-  @notes "Planned marketing spend that the typed country split loses. Zero when every brand's split adds up to 1."
+  @notes "The year's bonus entitlement minus what the year books and plans, in every version that plans part of the year. Zero when the plan months carry the rest. A group with booked bonus but no typed rate shows its booked amount with a minus sign, because a blank rate is no decision."
   @readonly true
 
 # --- Every cost reaches EBIT ---------------------------------------------------------------------
 
-"CHECK OPEX in EBIT" { Versions, Years, Months } = "OPEX" - "Overheads" - "Logistics Cost" - "Sales Force Cost"
+"OPEX by Country" { Country, Versions, Years, Months } = "OPEX"
   @rollup sum
   @folder "Checks"
-  @notes "Operating expenses that never reach EBIT, because a pool found nothing to allocate to. Zero when healthy."
+  @readonly true
+
+"CHECK OPEX in EBIT" { Country, Versions, Years, Months } = "OPEX by Country" - "Overheads" - "Logistics Cost" - "Logistics Unallocated" - "Sales Force Cost" - "Sales Force Unallocated"
+  @rollup sum
+  @folder "Checks"
+  @notes "Operating expenses that never reach EBIT. Zero when healthy."
   @readonly true
 
 "CHECK Uncosted Volume" { Customer, SKU, Years, Months } = if(not(hasValue("IMPORT Standard Cost")), "Volume ACT")
@@ -59,16 +50,40 @@
   @notes "Actual units of SKUs without a standard cost, usually material codes missing from master data. Their COGS is missing, so gross margin is too high."
   @readonly true
 
-"CHECK Uncosted Plan Volume" { Customer, SKU, Versions, Years, Months } = if(not(hasValue("Standard Cost IN")), "Volume PLAN part")
+"CHECK Uncosted Plan Volume" { Customer, SKU, Versions, Years, Months } = if(not(hasValue("Standard Cost Plan")), "Volume Plan")
   @rollup sum
   @folder "Checks"
-  @notes "Planned units of SKUs without a planned standard cost. Their COGS is missing, so planned gross margin is too high."
+  @notes "Planned units of SKUs with no standard cost at all, typed or actual. Their COGS is missing, so planned gross margin is too high."
   @readonly true
 
-# --- Every planned unit has a price ------------------------------------------------------------
+# --- Every planned unit has a price, and every amount a rate ----------------------------------------
 
-"CHECK Unpriced Volume" { Customer, SKU, Versions, Years, Months } = if(not(hasValue("List Price Plan")), "Volume PLAN part")
+"CHECK Unpriced Volume" { Customer, SKU, Versions, Years, Months } = if(not(hasValue("List Price Plan")), "Volume Plan")
   @rollup sum
   @folder "Checks"
-  @notes "Planned units of SKUs without a list price. Their sales would silently go missing."
+  @notes "Planned units of SKUs without a list price in the customer's country. Their sales would silently go missing."
+  @readonly true
+
+"CHECK Volume without FX Rate" { Customer, SKU, Versions, Years, Months } = if(not(gt("FX Rate", 0)), "Volume")
+  @rollup sum
+  @folder "Checks"
+  @notes "Units in a version and month without a valid rate for the customer's currency. A missing, zero or negative rate all count. Their COGS and their EUR figures go missing. Customers missing from master data have no currency and show here too."
+  @readonly true
+
+"CHECK Marketing without FX Rate" { Brand, Country, Versions, Years, Months } = if(not(gt("FX Rate Plan", 0)), "Marketing Plan EUR")
+  @rollup sum
+  @folder "Checks"
+  @notes "Planned marketing in EUR that cannot convert, because the country has no valid planning rate for the month. It is missing from the country's costs."
+  @readonly true
+
+"CHECK PL without FX Rate" { "PL Line", Brand, Channel, Country, Versions, Years, Months } = if(not(gt("FX Rate", 0)), abs("PL OUT"))
+  @rollup sum
+  @folder "Checks"
+  @notes "Size of every P&L line that the EUR P&L leaves out, because the country has no valid rate for the month. Shown as a positive amount, so lines cannot cancel each other out. Customers and cost centers missing from master data have no country, so they show here under NULL (Country)."
+  @readonly true
+
+"CHECK EUR Rate" { Currency, Versions, Years, Months } = if(hasDMember(Currency>EUR), "FX Rate" - 1)
+  @rollup sum
+  @folder "Checks"
+  @notes "The EUR rate minus 1. Zero when healthy. Every EUR amount assumes its rate is exactly 1."
   @readonly true

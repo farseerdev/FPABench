@@ -1,0 +1,6 @@
+Currency,@description
+EUR,Euro
+PLN,Polish zloty
+CZK,Czech koruna
+HUF,Hungarian forint
+NULL (Currency),No currency

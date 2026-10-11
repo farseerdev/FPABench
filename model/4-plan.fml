@@ -2,11 +2,12 @@
 # Layer 4. Plan path. Computes the plan lines on the months each version
 # plans ("FC Plan" = 1). Everything here has the Versions dimension.
 #
-# Gating happens once, on volume and on the spend inputs. Every later plan
-# line multiplies a gated variable, so it stays on plan months only.
+# Gating happens once, on volume, on invoice sales and on the typed amounts.
+# Every later plan line multiplies a gated variable, so it stays on plan
+# months only.
 # ============================================================================
 
-# --- Volume: a target cascade, else last year times growth, unless a planner typed a value
+# --- Volume: a target, else last year times growth, unless a planner typed a value -----
 
 "Volume LY Plan" { Customer, SKU, Versions, Years, Months } = if(eq("FC Plan", 1), "Volume LY")
   @rollup sum
@@ -14,15 +15,12 @@
   @notes "Last year's volume, placed on each version's plan months."
   @readonly true
 
-"Volume Growth Factor" { Brand, Channel, Versions, Years } = 1 + "Volume Growth IN"
-  @rollup average
-  @folder "Plan"
-  @readonly true
-
-"Volume Growth Baseline" { Customer, SKU, Versions, Years, Months } = "Volume LY Plan" * "Volume Growth Factor"
+# The growth sits inside the formula, so last year's volume creates the cells.
+# A brand and channel with no typed growth then plans flat volume.
+"Volume Growth Baseline" { Customer, SKU, Versions, Years, Months } = "Volume LY Plan" * (1 + "Volume Growth IN")
   @rollup sum
   @folder "Plan"
-  @notes "Last year times planned growth. Empty where no growth is planned for the brand and channel."
+  @notes "Last year times planned growth. A blank growth means flat volume."
   @readonly true
 
 # Top-down: the annual target of a group and category, phased by last year's
@@ -59,68 +57,226 @@
   @notes "The override wins where a planner typed a value."
   @readonly true
 
-"Volume PLAN part" { Customer, SKU, Versions, Years, Months } = if(eq("FC Plan", 1), "Volume Planned")
+"Volume Plan" { Customer, SKU, Versions, Years, Months } = if(eq("FC Plan", 1), "Volume Planned")
   @rollup sum
   @folder "Plan"
   @notes "Planned volume on plan months only. Drops overrides typed into months the version does not plan."
   @readonly true
 
-# --- List price: carry the last known price forward, then apply the increase ------
+# --- List price, per SKU and country: carry the price of the last closed month forward, then apply the increase
 
-"List Price Reset" { SKU, Versions, Years, Months } = if(eq("FC Known IN", 1), "IMPORT List Price")
+"List Price Reset" { SKU, Country, Versions, Years, Months } = if(eq("FC Closed IN", 1), "IMPORT List Price")
   @rollup average
   @folder "Plan"
-  @notes "Actual list price on the months the version knows."
+  @notes "Actual list price on the months that are closed for the version."
   @readonly true
 
-"List Price Carry" { SKU, Versions, Years, Months } = cumsum(0, 0, "List Price Reset")
+"List Price Carry" { SKU, Country, Versions, Years, Months } = cumsum(0, 0, "List Price Reset")
   @rollup average
   @folder "Plan"
-  @notes "Holds the last known list price flat into later months."
+  @notes "Holds the list price of the last closed month flat into later months."
   @readonly true
 
-"List Price Plan" { SKU, Versions, Years, Months } = "List Price Carry" * (1 + "Price Increase IN")
+"List Price Plan" { SKU, Country, Versions, Years, Months } = "List Price Carry" * (1 + "Price Increase IN")
   @rollup average
   @folder "Plan"
   @readonly true
 
-# --- Gross-to-net ------------------------------------------------------------------
+# --- Rates: the typed rate where there is one, else the last actual rate carried forward
 
-"Gross Sales PLAN part" { Customer, SKU, Versions, Years, Months } = "Volume PLAN part" * "List Price Plan"
+"Standard Discount Rate Reset" { "Customer Group", Brand, Versions, Years, Months } = if(eq("FC Closed IN", 1), "Standard Discount Rate ACT")
+  @rollup average
+  @folder "Plan"
+  @readonly true
+
+"Standard Discount Rate Carry" { "Customer Group", Brand, Versions, Years, Months } = cumsum(0, 0, "Standard Discount Rate Reset")
+  @rollup average
+  @folder "Plan"
+  @notes "The last actual standard discount rate, held flat into later months."
+  @readonly true
+
+"Standard Discount Rate" { "Customer Group", Brand, Versions, Years, Months } = if(hasValue("Standard Discount IN"), "Standard Discount IN", "Standard Discount Rate Carry")
+  @rollup average
+  @format percentage
+  @folder "Plan"
+  @notes "The rate the plan uses: typed where a planner typed one, else the last actual rate."
+  @readonly true
+
+"Rebate Rate Reset" { "Customer Group", Versions, Years, Months } = if(eq("FC Closed IN", 1), "Rebate Rate ACT")
+  @rollup average
+  @folder "Plan"
+  @readonly true
+
+"Rebate Rate Carry" { "Customer Group", Versions, Years, Months } = cumsum(0, 0, "Rebate Rate Reset")
+  @rollup average
+  @folder "Plan"
+  @notes "The last actual rebate rate, held flat into later months."
+  @readonly true
+
+"Rebate Rate" { "Customer Group", Versions, Years, Months } = if(hasValue("Rebate Rate IN"), "Rebate Rate IN", "Rebate Rate Carry")
+  @rollup average
+  @format percentage
+  @folder "Plan"
+  @notes "The rate the plan uses: typed where a planner typed one, else the last actual rate."
+  @readonly true
+
+"Logistics Discount Rate Reset" { "Customer Group", Versions, Years, Months } = if(eq("FC Closed IN", 1), "Logistics Discount Rate ACT")
+  @rollup average
+  @folder "Plan"
+  @readonly true
+
+"Logistics Discount Rate Carry" { "Customer Group", Versions, Years, Months } = cumsum(0, 0, "Logistics Discount Rate Reset")
+  @rollup average
+  @folder "Plan"
+  @notes "The last actual logistics discount rate, held flat into later months."
+  @readonly true
+
+"Logistics Discount Rate" { "Customer Group", Versions, Years, Months } = if(hasValue("Logistics Discount IN"), "Logistics Discount IN", "Logistics Discount Rate Carry")
+  @rollup average
+  @format percentage
+  @folder "Plan"
+  @notes "The rate the plan uses: typed where a planner typed one, else the last actual rate."
+  @readonly true
+
+"FX Rate Reset" { Currency, Versions, Years, Months } = if(eq("FC Closed IN", 1), "IMPORT FX Rate")
+  @rollup average
+  @folder "Plan"
+  @readonly true
+
+"FX Rate Carry" { Currency, Versions, Years, Months } = cumsum(0, 0, "FX Rate Reset")
+  @rollup average
+  @folder "Plan"
+  @notes "The last actual exchange rate, held flat into later months."
+  @readonly true
+
+"FX Rate Plan" { Currency, Versions, Years, Months } = if(eq("FC Plan", 1), if(hasValue("FX Rate IN"), "FX Rate IN", "FX Rate Carry"))
+  @rollup average
+  @folder "Plan"
+  @notes "The planning rate on plan months: typed where a planner typed one, else the last actual rate."
+  @readonly true
+
+# --- Gross-to-net per customer and SKU ------------------------------------------------------
+
+"Gross Sales Plan" { Customer, SKU, Versions, Years, Months } = "Volume Plan" * "List Price Plan"
+  @rollup sum
+  @folder "Plan"
+  @notes "Planned units at the list price of the customer's country."
+  @readonly true
+
+"Standard Discounts Plan" { Customer, SKU, Versions, Years, Months } = "Gross Sales Plan" * "Standard Discount Rate"
   @rollup sum
   @folder "Plan"
   @readonly true
 
-"Standard Discounts PLAN part" { Customer, SKU, Versions, Years, Months } = "Gross Sales PLAN part" * "Standard Discount IN"
-  @rollup sum
-  @folder "Plan"
-  @readonly true
-
-"Promo Discounts PLAN part" { Customer, SKU, Versions, Years, Months } = "Gross Sales PLAN part" * "Promo Discount IN"
+"Promo Discounts Plan" { Customer, SKU, Versions, Years, Months } = "Gross Sales Plan" * "Promo Discount IN"
   @rollup sum
   @folder "Plan"
   @notes "Only in promotion months. The rate is empty elsewhere, so the cell is too."
   @readonly true
 
-"Rebates PLAN part" { Customer, SKU, Versions, Years, Months } = ("Gross Sales PLAN part" - "Standard Discounts PLAN part" - "Promo Discounts PLAN part") * "Rebate Rate IN"
-  @rollup sum
-  @folder "Plan"
-  @notes "Rebate on invoice sales. The base excludes the on-invoice discounts."
-  @readonly true
-
-"COGS PLAN part" { Customer, SKU, Versions, Years, Months } = "Volume PLAN part" * "Standard Cost IN"
+"Logistics Discounts Plan" { Customer, SKU, Versions, Years, Months } = "Gross Sales Plan" * "Logistics Discount Rate"
   @rollup sum
   @folder "Plan"
   @readonly true
 
-# --- Amounts planned above the sales grain ---------------------------------------------
-
-"Trade Fees PLAN part" { "Customer Group", Versions, Years, Months } = if(eq("FC Plan", 1), "Trade Fees IN")
+"Promo Funding Plan" { Customer, SKU, Versions, Years, Months } = if(eq("FC Plan", 1), "Promo Funding IN")
   @rollup sum
   @folder "Plan"
   @readonly true
 
-"Marketing Spend PLAN" { Brand, Versions, Years, Months } = if(eq("FC Plan", 1), "Marketing Spend IN")
+"Standard Cost Plan" { SKU, Versions, Years } = if(hasValue("Standard Cost IN"), "Standard Cost IN", "IMPORT Standard Cost")
+  @rollup average
+  @folder "Plan"
+  @optimizeCalculation false
+  @notes "The standard cost per unit the plan uses, in EUR: typed where a planner typed one, else the SKU's actual standard cost of the year. The actual cost has no versions, so the setting keeps it in every version."
+  @readonly true
+
+"COGS Plan" { Customer, SKU, Versions, Years, Months } = "Volume Plan" * "Standard Cost Plan" * "FX Rate Plan"
+  @rollup sum
+  @folder "Plan"
+  @notes "Planned units at the planned standard cost, converted from EUR at the version's rate."
+  @readonly true
+
+# --- Off-invoice per customer and SKU ---------------------------------------------------------
+
+"Invoice Sales Plan" { Customer, SKU, Versions, Years, Months } = if(eq("FC Plan", 1), "Invoice Sales")
+  @rollup sum
+  @folder "Plan"
+  @notes "The base of the plan's rebates and growth bonus."
+  @readonly true
+
+"Rebates Plan" { Customer, SKU, Versions, Years, Months } = "Invoice Sales Plan" * "Rebate Rate"
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Invoice Sales by Group Year" { "Customer Group", Versions, Years } = "Invoice Sales"
+  @rollup sum
+  @folder "Plan"
+  @notes "The group's invoice sales for the whole year in the version. A forecast adds its actual months to its plan months."
+  @readonly true
+
+"Growth Bonus Rate" { "Customer Group", Versions, Years } = if(hasValue("Growth Bonus Rate IN"), if(gt("Invoice Sales LY by Group", 0), if(gt("Invoice Sales by Group Year", "Invoice Sales LY by Group" * (1 + "Growth Bonus Threshold IN")), "Growth Bonus Rate IN", 0), 0))
+  @rollup average
+  @format percentage
+  @folder "Plan"
+  @notes "The typed bonus rate where the group beats last year by more than its threshold, else 0. Empty where no rate is typed. A change in any month's sales can switch it for the whole year."
+  @readonly true
+
+# The bonus is earned on the whole year. Closed months already booked part of
+# it, at whatever rate the books expected then. The plan months carry the rest,
+# so the year adds up to the entitlement. If the group no longer qualifies,
+# the rest is negative and releases what was booked. A group with no planned
+# sales left still gets the rest, spread evenly over the plan months at group
+# level. A blank rate is no decision, so nothing is released.
+"Growth Bonus Entitlement" { "Customer Group", Versions, Years } = if(hasValue("Growth Bonus Rate"), if(gt("Growth Bonus Rate", 0), "Invoice Sales by Group Year" * "Growth Bonus Rate", 0))
+  @rollup sum
+  @folder "Plan"
+  @notes "The bonus the group earns on the whole year's invoice sales, closed months and plan months together. Zero when it misses its threshold, also when it has no sales this year at all. Empty when no rate is typed."
+  @readonly true
+
+"Growth Bonus Booked Monthly" { "Customer Group", Versions, Years, Months } = if(eq("FC Actual", 1), "IMPORT Growth Bonus")
+  @rollup sum
+  @folder "Plan"
+  @notes "Growth bonus the books already charged, in the months the version shows actuals."
+  @readonly true
+
+"Growth Bonus Booked" { "Customer Group", Versions, Years } = "Growth Bonus Booked Monthly"
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Invoice Sales Plan by Group Year" { "Customer Group", Versions, Years } = "Invoice Sales Plan"
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Growth Bonus Remaining" { "Customer Group", Versions, Years } = if(gt("FC Plan Months", 0), if(hasValue("Growth Bonus Entitlement"), "Growth Bonus Entitlement" - "Growth Bonus Booked"))
+  @rollup sum
+  @folder "Plan"
+  @notes "What the plan months still have to carry. It is the year's entitlement less what the closed months booked. Negative when the group booked more than it now earns. Empty when no rate is typed, or when the version plans no month of the year."
+  @readonly true
+
+"Growth Bonus Plan" { Customer, SKU, Versions, Years, Months } = if(gt("Invoice Sales Plan by Group Year", 0), "Growth Bonus Remaining" * ("Invoice Sales Plan" / "Invoice Sales Plan by Group Year"))
+  @rollup sum
+  @folder "Plan"
+  @notes "The remaining bonus, spread over the plan months by planned invoice sales."
+  @readonly true
+
+"Growth Bonus Plan Unallocated" { "Customer Group", Versions, Years, Months } = if(and(eq("FC Plan", 1), not(gt("Invoice Sales Plan by Group Year", 0))), "Growth Bonus Remaining" * (1 / "FC Plan Months"))
+  @rollup sum
+  @folder "Plan"
+  @notes "The remaining bonus of a group with no planned sales left, spread evenly over the plan months. No customer can carry it, so it stays at group level. A plan month means the year has at least one, so the division is safe. The remainder multiplies the share, so a group without one gets no cell."
+  @readonly true
+
+# --- Amounts planned above the sales grain -------------------------------------------------------
+
+"Trade Fees Plan" { "Customer Group", Brand, Versions, Years, Months } = if(eq("FC Plan", 1), "Trade Fees IN")
+  @rollup sum
+  @folder "Plan"
+  @readonly true
+
+"Marketing Spend Plan" { Brand, Versions, Years, Months } = if(eq("FC Plan", 1), "Marketing Spend IN")
   @rollup sum
   @folder "Plan"
   @readonly true
@@ -131,13 +287,19 @@
   @notes "The annual key repeated on every month, so one operand of the split carries the whole grain."
   @readonly true
 
-"Marketing PLAN part" { Brand, Country, Versions, Years, Months } = "Marketing Split Monthly" * "Marketing Spend PLAN"
+"Marketing Plan EUR" { Brand, Country, Versions, Years, Months } = "Marketing Split Monthly" * "Marketing Spend Plan"
   @rollup sum
   @folder "Plan"
-  @notes "Brand spend split to countries by the hand-entered key."
+  @notes "Brand spend split to countries by the hand-entered key, still in EUR."
   @readonly true
 
-"OPEX PLAN part" { "Cost Center", Account, Versions, Years, Months } = if(eq("FC Plan", 1), "OPEX IN")
+"Marketing Plan" { Brand, Country, Versions, Years, Months } = "Marketing Plan EUR" * "FX Rate Plan"
+  @rollup sum
+  @folder "Plan"
+  @notes "The country's share of the brand spend, in the country's currency."
+  @readonly true
+
+"OPEX Plan" { "Cost Center", Account, Versions, Years, Months } = if(eq("FC Plan", 1), "OPEX IN")
   @rollup sum
   @folder "Plan"
   @readonly true
