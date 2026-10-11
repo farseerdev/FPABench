@@ -1,0 +1,414 @@
+/* Colors are roles. Light is the default. Dark follows the system unless the
+   visitor picks a theme, which site.js stores as data-theme on <html>. */
+:root {
+    color-scheme: light;
+    --bg: #ffffff;
+    --text: #000000;
+    --text-2: #555555;
+    --link: #0c5fc2;
+    --border: rgba(127, 127, 127, 0.3);
+    --row: rgba(127, 127, 127, 0.08);
+    --code: rgba(127, 127, 127, 0.12);
+    --note: #fff1cf;
+    --chip-on: #ffcf8a;
+    --chip-on-text: #000000;
+    --chip-off: #ececec;
+    --chip-off-text: #333333;
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #121212;
+    --text: #ececec;
+    --text-2: #a8a8a8;
+    --link: #7fb4ff;
+    --border: rgba(255, 255, 255, 0.2);
+    --row: rgba(255, 255, 255, 0.05);
+    --code: rgba(255, 255, 255, 0.09);
+    --note: #3a2e10;
+    --chip-on: #8a5a14;
+    --chip-on-text: #ffffff;
+    --chip-off: #2a2a2a;
+    --chip-off-text: #d0d0d0;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        color-scheme: dark;
+        --bg: #121212;
+        --text: #ececec;
+        --text-2: #a8a8a8;
+        --link: #7fb4ff;
+        --border: rgba(255, 255, 255, 0.2);
+        --row: rgba(255, 255, 255, 0.05);
+        --code: rgba(255, 255, 255, 0.09);
+        --note: #3a2e10;
+        --chip-on: #8a5a14;
+        --chip-on-text: #ffffff;
+        --chip-off: #2a2a2a;
+        --chip-off-text: #d0d0d0;
+        }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 14px max(16px, 3vw) 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+}
+
+a {
+    color: var(--link);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+main,
+.site-footer {
+    max-width: 1080px;
+}
+
+/* --- header ------------------------------------------------------------------------------ */
+
+.site-header {
+    margin-bottom: 28px;
+}
+
+.title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.site-title {
+    margin: 16px 0 12px;
+    font-size: 2rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.site-title a {
+    color: inherit;
+}
+
+.theme-switch {
+    display: flex;
+    gap: 4px;
+    margin-top: 12px;
+}
+
+.theme-switch button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: none;
+    color: var(--text-2);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.theme-switch button:hover {
+    color: var(--text);
+}
+
+.nav {
+    color: var(--text-2);
+}
+
+.nav a[aria-current='page'] {
+    color: var(--text);
+}
+
+main {
+    padding-bottom: 48px;
+}
+
+/* --- text -------------------------------------------------------------------------------- */
+
+h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 36px 0 10px;
+}
+
+h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 28px 0 8px;
+}
+
+h4 {
+    font-size: 1rem;
+    margin: 20px 0 6px;
+}
+
+p,
+ul,
+ol,
+blockquote,
+pre,
+.table-wrap {
+    max-width: 860px;
+}
+
+p,
+ul,
+ol {
+    margin: 0 0 14px;
+}
+
+li {
+    margin-bottom: 4px;
+}
+
+blockquote {
+    margin: 20px 0;
+    padding: 10px 14px;
+    background: var(--note);
+    border-radius: 8px;
+}
+
+blockquote p {
+    margin: 0;
+}
+
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.88em;
+    background: var(--code);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+
+pre {
+    background: var(--code);
+    padding: 10px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    line-height: 1.45;
+    margin: 0 0 14px;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+}
+
+/* --- tables ------------------------------------------------------------------------------ */
+
+.table-wrap {
+    overflow-x: auto;
+    margin: 0 0 14px;
+}
+
+table {
+    border-collapse: collapse;
+}
+
+.table-wrap table {
+    width: 100%;
+}
+
+.table-wrap td:first-child {
+    white-space: nowrap;
+}
+
+th,
+td {
+    text-align: left;
+    vertical-align: top;
+    padding: 4px 16px 4px 6px;
+}
+
+th {
+    font-weight: 600;
+}
+
+.table-wrap tbody tr:nth-child(odd) {
+    background: var(--row);
+}
+
+/* --- filters ----------------------------------------------------------------------------- */
+
+.selectors {
+    margin: 16px 0 8px;
+}
+
+.selectors th {
+    font-weight: 400;
+    white-space: nowrap;
+    padding: 6px 12px 0 0;
+}
+
+.selectors td {
+    padding: 0;
+}
+
+.chip {
+    display: inline-block;
+    margin: 2px 6px 4px 0;
+    padding: 3px 9px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--chip-off);
+    color: var(--chip-off-text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+    background: var(--chip-on);
+    color: var(--chip-on-text);
+}
+
+/* --- results ----------------------------------------------------------------------------- */
+
+blockquote.demo {
+    margin-top: 0;
+}
+
+.method,
+.empty {
+    color: var(--text-2);
+    font-size: 0.9rem;
+}
+
+.summary {
+    width: 100%;
+    max-width: 1080px;
+    margin: 4px 0 8px;
+}
+
+.summary tbody tr:nth-child(odd) {
+    background: var(--row);
+}
+
+.summary td {
+    padding: 3px 8px;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.summary .name {
+    width: 1%;
+    text-align: right;
+}
+
+.summary .bar-cell {
+    width: 100%;
+}
+
+.bar {
+    display: block;
+    height: 14px;
+    border-radius: 3px;
+    background: var(--chip-on);
+}
+
+.summary .date {
+    color: var(--text-2);
+    font-size: 0.85rem;
+}
+
+.summary .score {
+    text-align: right;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.machine {
+    color: var(--text-2);
+    font-weight: 400;
+}
+
+.table-wrap.wide {
+    max-width: none;
+}
+
+.details {
+    font-size: 0.9rem;
+}
+
+.details th,
+.details td {
+    white-space: nowrap;
+    padding: 3px 10px;
+}
+
+.details thead th.entry {
+    text-align: right;
+    vertical-align: bottom;
+}
+
+.details .entry .machine {
+    display: block;
+    font-size: 0.8rem;
+}
+
+.details .category th {
+    padding-top: 14px;
+}
+
+.details th.test {
+    font-weight: 400;
+    cursor: help;
+}
+
+.details td.cell {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.details .x {
+    margin-left: 6px;
+    color: var(--text-2);
+    font-size: 0.8rem;
+}
+
+.details td.fail {
+    text-align: right;
+    color: var(--text-2);
+}
+
+/* --- footer ------------------------------------------------------------------------------ */
+
+.site-footer {
+    padding: 14px 0 28px;
+    border-top: 1px solid var(--border);
+    color: var(--text-2);
+    font-size: 0.9rem;
+}
+
+.site-footer p {
+    margin: 0;
+}
+
+main.wide {
+    max-width: none;
+}
+
+@media (max-width: 600px) {
+    .site-title {
+        font-size: 1.5rem;
+    }
+
+    .summary .date {
+        display: none;
+    }
+
+    .summary td.name {
+        white-space: normal;
+    }
+}
