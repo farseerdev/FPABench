@@ -3,7 +3,9 @@
 #
 # Logistics and sales cost centers are allocated in layer 6. Everything else
 # stays as overhead: marketing staff, administration, and cost centers that
-# are missing from master data.
+# are missing from master data. Amounts that no customer could carry still
+# count against the country's profit, so EBIT holds every source amount once.
+# EBIT is in the country's currency, and again in EUR at the version's rate.
 # ============================================================================
 
 "Overheads" { Country, Versions, Years, Months } = sum("OPEX", not(or(Function>Logistics, Function>Sales)))
@@ -12,14 +14,46 @@
   @notes "Every operating expense that is not allocated to customers. That includes cost centers missing from master data, which load under NULL (Function) and NULL (Country)."
   @readonly true
 
-"Contribution Margin by Country" { Country, Versions, Years, Months } = "Contribution Margin"
+"Contribution Margin III by Country" { Country, Versions, Years, Months } = "Contribution Margin III"
   @rollup sum
   @folder "EBIT"
-  @notes "Brings contribution margin to the country grain, so the EBIT sum has two operands at the same grain."
+  @notes "Brings contribution margin III to the country grain, so the EBIT sum has operands at the same grain."
   @readonly true
 
-"EBIT OUT" { Country, Versions, Years, Months } = "Contribution Margin by Country" - "Overheads"
+# --- What no customer could carry, per country ---------------------------------------------
+# The group-level amounts reach their country through Customer Group -> Country.
+
+"Trade Fees Unallocated by Country" { Country, Versions, Years, Months } = "Trade Fees Unallocated"
   @rollup sum
   @folder "EBIT"
-  @notes "Operating profit."
+  @readonly true
+
+"Rebates Unallocated by Country" { Country, Versions, Years, Months } = "Rebates Unallocated"
+  @rollup sum
+  @folder "EBIT"
+  @readonly true
+
+"Growth Bonus Unallocated by Country" { Country, Versions, Years, Months } = "Growth Bonus Unallocated"
+  @rollup sum
+  @folder "EBIT"
+  @readonly true
+
+"Unallocated by Country" { Country, Versions, Years, Months } = "Rebates Unallocated by Country" + "Growth Bonus Unallocated by Country" + "Trade Fees Unallocated by Country" + "Logistics Unallocated" + "Sales Force Unallocated" + "Marketing Unallocated"
+  @rollup sum
+  @folder "EBIT"
+  @notes "Deductions and costs that no customer could carry. Customer profitability leaves them out, but the country's profit must not."
+  @readonly true
+
+# --- Operating profit -------------------------------------------------------------------------
+
+"EBIT OUT" { Country, Versions, Years, Months } = "Contribution Margin III by Country" - "Overheads" - "Unallocated by Country"
+  @rollup sum
+  @folder "EBIT"
+  @notes "Operating profit, in the country's currency."
+  @readonly true
+
+"EBIT EUR OUT" { Country, Versions, Years, Months } = if(gt("FX Rate", 0), "EBIT OUT" / "FX Rate")
+  @rollup sum
+  @folder "EBIT"
+  @notes "Operating profit in EUR, at the actual rate on actual months and at the version's planning rate on plan months. Countries without a rate stay empty."
   @readonly true

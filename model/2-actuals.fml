@@ -1,8 +1,9 @@
 # ============================================================================
 # Layer 2. Actuals leveling. Still no Versions dimension.
 #
-# Sums ERP materials into planning SKUs, brings actuals that arrive at a
-# coarser grain down to the sales grain, and prepares last year's volume
+# Sums ERP materials into planning SKUs, spreads the deductions booked on the
+# customer group to its customers and SKUs, works out the actual rates
+# from the actual amounts, prices actual COGS and shifts last year's figures
 # for the plan.
 # ============================================================================
 
@@ -29,41 +30,129 @@
   @folder "Actuals"
   @readonly true
 
-# --- Invoice sales and the rebates spread ----------------------------------------------
-
-"Invoice Sales ACT" { Customer, SKU, Years, Months } = "Gross Sales ACT" - "Standard Discounts ACT" - "Promo Discounts ACT"
+"Logistics Discounts ACT" { Customer, SKU, Years, Months } = "IMPORT Logistics Discounts"
   @rollup sum
   @folder "Actuals"
-  @notes "Actual invoiced sales after on-invoice discounts."
   @readonly true
 
-"Invoice Sales ACT by Customer" { Customer, Years, Months } = "Invoice Sales ACT"
+"Promo Funding ACT" { Customer, SKU, Years, Months } = "IMPORT Promo Funding"
   @rollup sum
   @folder "Actuals"
-  @notes "Denominator of the rebates key."
   @readonly true
 
-# Allocation key, computed ratio: each SKU's share of the customer's month.
-"Rebates ACT Key" { Customer, SKU, Years, Months } = if(gt("Invoice Sales ACT by Customer", 0), "Invoice Sales ACT" / "Invoice Sales ACT by Customer")
+"Invoice Sales ACT" { Customer, SKU, Years, Months } = "Gross Sales ACT" - "Standard Discounts ACT" - "Promo Discounts ACT" - "Logistics Discounts ACT"
   @rollup sum
   @folder "Actuals"
-  @notes "Share of the SKU in the customer's invoice sales of the month. Empty when the customer has no positive sales."
+  @notes "Actual invoiced sales after the on-invoice discounts."
   @readonly true
 
-"Rebates ACT" { Customer, SKU, Years, Months } = "IMPORT Rebates" * "Rebates ACT Key"
+# --- Deductions booked on the group, spread to its customers and SKUs -------------------
+# A rebate or bonus is a share of invoice sales, so each SKU's part is exact.
+
+"Invoice Sales ACT by Group" { "Customer Group", Years, Months } = "Invoice Sales ACT"
   @rollup sum
   @folder "Actuals"
-  @notes "Actual rebate credit notes spread to SKUs by invoice sales."
   @readonly true
 
-"COGS ACT" { Customer, SKU, Years, Months } = "Volume ACT" * "IMPORT Standard Cost"
+"Group Key ACT" { Customer, SKU, Years, Months } = if(gt("Invoice Sales ACT by Group", 0), "Invoice Sales ACT" / "Invoice Sales ACT by Group")
   @rollup sum
   @folder "Actuals"
-  @notes "Actual cost of goods sold at standard cost."
+  @notes "Share of one customer and SKU in its group's invoice sales of the month. Empty when the group has no positive sales."
+  @readonly true
+
+"Rebate Expense ACT" { "Customer Group", Years, Months } = "IMPORT Rebates" + "IMPORT Rebate True-ups"
+  @rollup sum
+  @folder "Actuals"
+  @notes "The rebate expense of the month: the regular accrual plus any true-up."
+  @readonly true
+
+"Rebates ACT" { Customer, SKU, Years, Months } = "Rebate Expense ACT" * "Group Key ACT"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+"Growth Bonus ACT" { Customer, SKU, Years, Months } = "IMPORT Growth Bonus" * "Group Key ACT"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+"Rebates Unallocated ACT" { "Customer Group", Years, Months } = "Rebate Expense ACT" - "Rebates ACT"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Rebate expense of a month in which the group had no positive sales, so no customer can carry it. It still counts against the country's profit."
+  @readonly true
+
+"Growth Bonus Unallocated ACT" { "Customer Group", Years, Months } = "IMPORT Growth Bonus" - "Growth Bonus ACT"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Growth bonus expense of a month in which the group had no positive sales. It still counts against the country's profit."
+  @readonly true
+
+# --- Actual rates, worked out from actual amounts ---------------------------------------
+
+"Gross Sales ACT by Group Brand" { "Customer Group", Brand, Years, Months } = "Gross Sales ACT"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+"Standard Discounts ACT by Group Brand" { "Customer Group", Brand, Years, Months } = "Standard Discounts ACT"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+"Standard Discount Rate ACT" { "Customer Group", Brand, Years, Months } = if(gt("Gross Sales ACT by Group Brand", 0), "Standard Discounts ACT by Group Brand" / "Gross Sales ACT by Group Brand")
+  @rollup average
+  @format percentage
+  @folder "Actuals"
+  @notes "The standard discount the group actually got on the brand, as a share of gross sales. A brand the group bought without a discount has a rate of 0."
+  @readonly true
+
+"Rebate Rate ACT" { "Customer Group", Years, Months } = if(gt("Invoice Sales ACT by Group", 0), "IMPORT Rebates" / "Invoice Sales ACT by Group")
+  @rollup average
+  @format percentage
+  @folder "Actuals"
+  @notes "The group's regular rebate accrual, as a share of its invoice sales. True-ups are left out, so a one-off correction does not become the plan's rate. A month with sales but no accrual has a rate of 0."
+  @readonly true
+
+"Gross Sales ACT by Group" { "Customer Group", Years, Months } = "Gross Sales ACT"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+"Logistics Discounts ACT by Group" { "Customer Group", Years, Months } = "Logistics Discounts ACT"
+  @rollup sum
+  @folder "Actuals"
+  @readonly true
+
+"Logistics Discount Rate ACT" { "Customer Group", Years, Months } = if(gt("Gross Sales ACT by Group", 0), "Logistics Discounts ACT by Group" / "Gross Sales ACT by Group")
+  @rollup average
+  @format percentage
+  @folder "Actuals"
+  @notes "The logistics discount the group actually got, as a share of gross sales. A month with sales but no logistics discount has a rate of 0."
+  @readonly true
+
+# --- Cost and last year --------------------------------------------------------------------
+
+"COGS ACT" { Customer, SKU, Years, Months } = "Volume ACT" * "IMPORT Standard Cost" * "IMPORT FX Rate"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Actual cost of goods sold at standard cost, converted from EUR at the month's actual rate."
   @readonly true
 
 "Volume LY" { Customer, SKU, Years, Months } = delay("Volume ACT", 12)
   @rollup sum
   @folder "Actuals"
   @notes "Actual volume of the same month last year."
+  @readonly true
+
+"Invoice Sales ACT LY" { Customer, SKU, Years, Months } = delay("Invoice Sales ACT", 12)
+  @rollup sum
+  @folder "Actuals"
+  @notes "Actual invoice sales of the same month last year."
+  @readonly true
+
+"Invoice Sales LY by Group" { "Customer Group", Years } = "Invoice Sales ACT LY"
+  @rollup sum
+  @folder "Actuals"
+  @notes "Last year's invoice sales of the group, for the growth bonus threshold."
   @readonly true

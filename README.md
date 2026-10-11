@@ -4,7 +4,7 @@ An open performance benchmark for planning engines.
 
 FP&A stands for financial planning and analysis. It is the budgets, forecasts and reports a company is run on. FPABench measures how fast FP&A, EPM and planning software loads, recalculates and queries a realistic P&L model.
 
-> **Status: early draft, version 0.1-draft.** The model is here. The data, the tests, the systems and the results are not. Everything can still change.
+> **Status: early draft, version 0.4-draft.** The model is here. The data, the tests, the systems and the results are not. Everything can still change.
 
 ## Why
 
@@ -23,18 +23,20 @@ FPABench follows the example of [ClickBench](https://github.com/ClickHouse/Click
 
 ## The model
 
-A consumer goods company sells food, drinks, home care and personal care products in six euro countries. The model plans and reports its P&L per customer, product and month, from gross sales down to contribution margin and EBIT. Actual, budget and forecast sit side by side.
+A consumer goods company sells food, drinks, home care and personal care products in six countries with four currencies. The model plans and reports its P&L per customer, product and month, from gross sales down to contribution margin and EBIT, in each country's currency and in euros. Actual, budget, two forecasts and a what-if sit side by side.
 
-The model is written in FML, the Financial Modeling Language. FML is a small language for planning models. [model/README.md](model/README.md) explains the business, the calculation and how to read FML.
+The model is written in FML, the Financial Modeling Language. FML is a small language for planning models. [The model description](model/README.md) explains the business, the calculation and how to read FML.
 
 ## The repo
 
 | Path | What it holds |
 | --- | --- |
 | [`model/`](model/) | The model in FML, and the members of its fixed dimensions |
+| [`website/`](website/) | The website. `node website/build.mjs` builds it from these docs and the model into `website/dist/`. |
+| [`scripts/`](scripts/) | Tools for the model, such as the FML reader |
 | [`CHANGELOG.md`](CHANGELOG.md) | Every change to the model, the data, the tests or the method |
 
-Data, tests, systems and the website get their own folders as they arrive.
+Data, tests and systems get their own folders as they arrive.
 
 ## Who made this
 

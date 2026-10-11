@@ -2,8 +2,11 @@ PL Line,@description
 P100,Gross Sales
 P110,Standard Discounts
 P120,Promo Discounts
+P125,Logistics Discounts
 P130,Rebates
+P135,Growth Bonus
 P140,Trade Fees
+P145,Promo Funding
 P150,Cost of Goods Sold
 P170,Logistics
 P180,Sales Force
