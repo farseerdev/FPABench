@@ -2,6 +2,11 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
+## 0.5-draft, 2026-10-11
+
+- First draft of the tests, in `tests/`. There are 27 timed tests: 3 loads, 10 writes, 10 reads and 4 model changes. Three more checks run without a timer. Each test has a proving read and an expected result. Two of them wait on the model or the data.
+- First draft of the method, in `tests/method.md`. Every test is timed on the client. A write is timed until a read shows its effect. Systems run on one `n2d-standard-4` machine on Google Cloud. Each test scores against the fastest system, with a 10 ms constant. There is one score each for loads, writes, reads and model changes.
+
 ## 0.4-draft, 2026-10-11
 
 - A brand and channel with no planned volume growth keeps last year's volume. Before, it got no planned volume unless a planner typed a growth of 0 %. The growth now sits inside the volume formula, and the separate growth factor variable is gone.

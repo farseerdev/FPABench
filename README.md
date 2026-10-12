@@ -4,7 +4,7 @@ An open performance benchmark for planning engines.
 
 FP&A stands for financial planning and analysis. It is the budgets, forecasts and reports a company is run on. FPABench measures how fast FP&A, EPM and planning software loads, recalculates and queries a realistic P&L model.
 
-> **Status: early draft, version 0.4-draft.** The model is here. The data, the tests, the systems and the results are not. Everything can still change.
+> **Status: early draft, version 0.5-draft.** The model is here, and so is a first draft of the tests and the method. The data, the systems and the results are not. Everything can still change.
 
 ## Why
 
@@ -32,15 +32,16 @@ The model is written in FML, the Financial Modeling Language. FML is a small lan
 | Path | What it holds |
 | --- | --- |
 | [`model/`](model/) | The model in FML, and the members of its fixed dimensions |
+| [`tests/`](tests/) | The tests, their expected results, and the method that times and checks them |
 | [`website/`](website/) | The website. `node website/build.mjs` builds it from these docs and the model into `website/dist/`. |
 | [`scripts/`](scripts/) | Tools for the model, such as the FML reader |
 | [`CHANGELOG.md`](CHANGELOG.md) | Every change to the model, the data, the tests or the method |
 
-Data, tests and systems get their own folders as they arrive.
+Data and systems get their own folders as they arrive.
 
 ## Who made this
 
-FPABench is made by Farseer. Farseer's own engine will be one of the entries. That is a good reason to check our work. Everything needed to do so will be in this repo.
+FPABench is made by Farseer. Farseer's own engine, RAMA, will be one of the entries. That is a good reason to check our work. Everything needed to do so will be in this repo.
 
 ## Licence
 

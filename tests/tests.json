@@ -1,0 +1,428 @@
+{
+    "version": "0.5-draft",
+    "about": "The FPABench tests, for the runner. README.md describes them for people and method.md says how they are timed and checked. A pick gives a rule. The runner lists every match, sorts it by member codes and lets the seed choose. $pick.X is the member X of the picked cell. $old is the value before the write and $new the value written. A test with \"timed\": false is a check without a timer.",
+    "defaults": {
+        "version": "FC 6+6",
+        "year": "Y2026",
+        "planMonths": ["M7", "M8", "M9", "M10", "M11", "M12"],
+        "closedMonths": ["M1", "M2", "M3", "M4", "M5", "M6"],
+        "seed": 1,
+        "tolerance": {
+            "amountAbsolute": 0.01,
+            "amountRelative": 1e-9,
+            "ratioRelative": 1e-6
+        },
+        "runs": {
+            "read": { "cold": 1, "warm": 5 },
+            "write": { "repeats": 20, "warmup": 1 },
+            "bulk": { "repeats": 3, "from": "snapshot" },
+            "load": { "repeats": 3, "from": "snapshot" },
+            "model": { "repeats": 3, "from": "snapshot" }
+        },
+        "scales": {
+            "everyTest": ["SF1", "SF10"],
+            "loadsAndReadsOnly": ["SF100", "SF1000"]
+        }
+    },
+    "invariants": [
+        { "id": "I1", "rule": "Every CHECK variable equals its published value for the dataset." },
+        { "id": "I2", "rule": "PL OUT summed over PL Line equals EBIT OUT, per Country, Versions, Years and Months." },
+        { "id": "I3", "rule": "EBIT OUT equals the sum of the source amounts before allocation, per Country, Versions, Years and Months." },
+        { "id": "I4", "rule": "Each cost pool equals its allocated cells plus its unallocated rest: Trade Fees Pool, Logistics Pool, Sales Force Pool, Marketing Pool." },
+        { "id": "I5", "rule": "In a month where FC Actual is 1, each merged line in 5-merge.fml equals its actual." }
+    ],
+    "tests": [
+        {
+            "id": "L1",
+            "name": "Initial load",
+            "kind": "load",
+            "status": "ready",
+            "start": "empty",
+            "action": { "load": "all", "files": ["base"] },
+            "prove": { "variable": "EBIT EUR OUT", "by": ["Country", "Versions", "Years", "Months"] },
+            "expect": [
+                { "kind": "value" },
+                { "kind": "invariant", "ids": ["I1", "I2", "I3", "I4", "I5"] }
+            ]
+        },
+        {
+            "id": "L2",
+            "name": "Monthly close",
+            "kind": "load",
+            "status": "waiting on the data",
+            "needs": ["The actuals of Y2026 M7 as an increment file"],
+            "start": "base",
+            "action": {
+                "load": "increment",
+                "files": ["actuals-Y2026-M7"],
+                "then": [
+                    { "write": "FC Closed IN", "at": { "Versions": "Actual", "Years": "Y2026", "Months": "M7" }, "value": 1 },
+                    { "write": "FC Horizon IN", "at": { "Versions": "Actual", "Years": "Y2026", "Months": "M7" }, "value": 1 }
+                ]
+            },
+            "prove": { "variable": "EBIT OUT", "by": ["Country"], "where": { "Versions": "Actual", "Years": "Y2026", "Months": "M7" } },
+            "expect": [
+                { "kind": "value" },
+                { "kind": "value", "variable": "CHECK Import Total", "where": { "Years": "Y2026", "Months": "M7" }, "equals": 0 }
+            ]
+        },
+        {
+            "id": "L3",
+            "name": "Change a weight in master data",
+            "kind": "load",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A SKU with volume in the plan months of FC 6+6", "variable": "Volume", "by": ["SKU"] },
+            "action": { "write": "IMPORT Unit Weight", "at": { "SKU": "$pick.SKU" }, "value": "$old * 1.25" },
+            "prove": { "variable": "Logistics Cost", "by": ["Country"], "where": { "Brand": "$pick.Brand", "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [
+                { "kind": "value" },
+                { "kind": "unchanged", "variable": "EBIT OUT", "by": ["Country", "Versions", "Years", "Months"] }
+            ]
+        },
+        {
+            "id": "W1",
+            "name": "Type one volume",
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": {
+                "rule": "A customer in the customer group with the most invoice sales in its country, a SKU with planned volume for that customer, a plan month where nobody has typed a volume yet",
+                "variable": "Volume",
+                "where": { "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" },
+                "hasValue": true,
+                "without": "Volume Override IN"
+            },
+            "action": { "write": "Volume Override IN", "at": "$pick", "value": "round($old * (0.5 to 1.5), 0)" },
+            "prove": { "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [
+                { "kind": "value" },
+                { "kind": "value", "variable": "Volume", "at": "$pick", "equals": "$new" },
+                { "kind": "unchanged", "variable": "EBIT OUT", "rule": "Every other country", "test": "C3" }
+            ]
+        },
+        {
+            "id": "W2",
+            "name": "Paste 1,000 volumes at once",
+            "kind": "write",
+            "runs": "bulk",
+            "status": "ready",
+            "start": "base",
+            "pick": {
+                "rule": "1,000 distinct customer and SKU cells with planned volume, in one country and one plan month",
+                "count": 1000,
+                "variable": "Volume",
+                "where": { "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" },
+                "hasValue": true
+            },
+            "action": { "write": "Volume Override IN", "at": "$pick", "value": "round($old * (0.5 to 1.5), 0)", "transaction": "one" },
+            "prove": { "variable": "Volume", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$pick.Months" } },
+            "expect": [
+                { "kind": "delta", "change": "sum($new - $old)" },
+                { "kind": "value", "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026" } }
+            ]
+        },
+        {
+            "id": "W3",
+            "name": "Change a rebate rate",
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A customer group with invoice sales in a plan month", "variable": "Invoice Sales", "by": ["Customer Group", "Months"], "where": { "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" } },
+            "action": { "write": "Rebate Rate IN", "at": "$pick", "value": "$old + (0.005 to 0.02)", "old": "Rebate Rate" },
+            "prove": { "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$pick.Months" } },
+            "expect": [{ "kind": "delta", "change": "-($new - $old) * Invoice Sales[$pick]" }]
+        },
+        {
+            "id": "W4",
+            "name": "Raise a brand's price",
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A brand with planned gross sales in FC 6+6", "variable": "Gross Sales", "by": ["Brand"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "action": { "write": "Price Increase IN", "at": { "Brand": "$pick.Brand", "Versions": "FC 6+6", "Years": "Y2026" }, "value": "$old + (0.01 to 0.05)", "old": "Price Increase IN, or 0 where it is blank" },
+            "prove": { "variable": "Gross Sales", "by": ["Country", "Months"], "where": { "Brand": "$pick.Brand", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" } },
+            "expect": [
+                { "kind": "delta", "factor": "(1 + $new) / (1 + $old)" },
+                { "kind": "unchanged", "variable": "Gross Sales", "where": { "Brand": "$pick.Brand", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$closedMonths" } }
+            ]
+        },
+        {
+            "id": "W5",
+            "name": "Change a planning exchange rate",
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A currency other than EUR and a plan month. That gives 18 cells, so the test writes each one once.", "from": { "Currency": "every member except EUR and NULL (Currency)", "Months": "$planMonths" } },
+            "runs": { "repeats": 17, "warmup": 1 },
+            "action": { "write": "FX Rate IN", "at": { "Currency": "$pick.Currency", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$pick.Months" }, "value": "$old * (0.95 to 1.05)", "old": "FX Rate" },
+            "prove": { "variable": "COGS", "where": { "Country": "the country whose currency is $pick.Currency", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$pick.Months" } },
+            "expect": [
+                { "kind": "delta", "factor": "$new / $old" },
+                { "kind": "unchanged", "variable": "COGS", "rule": "Every other country, same month" }
+            ]
+        },
+        {
+            "id": "W6a",
+            "name": "Change the cost of a warehouse",
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A cost center of the Logistics function with OPEX in a plan month, and one of its accounts", "variable": "OPEX", "by": ["Cost Center", "Account", "Months"], "where": { "Function": "Logistics", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" } },
+            "action": { "write": "OPEX IN", "at": "$pick", "value": "$old + (1000 to 100000)" },
+            "prove": { "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$pick.Months" } },
+            "expect": [{ "kind": "delta", "change": "-($new - $old)" }]
+        },
+        {
+            "id": "W6b",
+            "name": "Change the cost of an office",
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A cost center of the Administration function with OPEX in a plan month, and one of its accounts", "variable": "OPEX", "by": ["Cost Center", "Account", "Months"], "where": { "Function": "Administration", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" } },
+            "action": { "write": "OPEX IN", "at": "$pick", "value": "$old + (1000 to 100000)" },
+            "prove": { "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$pick.Months" } },
+            "expect": [{ "kind": "delta", "change": "-($new - $old)" }]
+        },
+        {
+            "id": "W7",
+            "name": "Set a yearly target",
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A customer group and category with last year's volume and no typed volume in FC 6+6", "variable": "Volume", "by": ["Customer Group", "Category"], "where": { "Versions": "Actual", "Years": "Y2025" } },
+            "action": { "write": "Volume Target IN", "at": { "Customer Group": "$pick.Customer Group", "Category": "$pick.Category", "Versions": "FC 6+6", "Years": "Y2026" }, "value": "round(last year's volume * (0.9 to 1.2), 0)" },
+            "prove": { "variable": "Volume", "where": { "Customer Group": "$pick.Customer Group", "Category": "$pick.Category", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" } },
+            "expect": [{ "kind": "value", "rule": "$new times the share of last year's volume that fell in the plan months" }]
+        },
+        {
+            "id": "W8",
+            "name": "Flip a yearly bonus",
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A customer group with a typed growth bonus rate, invoice sales last year, and planned invoice sales in the plan months. A group with no planned sales keeps its bonus unallocated, where Growth Bonus does not show it.", "variable": "Growth Bonus Rate IN", "by": ["Customer Group"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "action": {
+                "write": "Growth Bonus Threshold IN",
+                "at": { "Customer Group": "$pick.Customer Group", "Versions": "FC 6+6", "Years": "Y2026" },
+                "value": "the group's growth + 0.001 if it qualifies now, else its growth - 0.001",
+                "growth": "Invoice Sales by Group Year / Invoice Sales LY by Group - 1"
+            },
+            "prove": { "variable": "Growth Bonus", "where": { "Customer Group": "$pick.Customer Group", "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [
+                { "kind": "delta", "size": "Growth Bonus Rate IN * Invoice Sales by Group Year", "sign": "the bonus turns off if it was on, on if it was off" },
+                { "kind": "value", "variable": "CHECK Growth Bonus", "where": { "Customer Group": "$pick.Customer Group", "Versions": "FC 6+6", "Years": "Y2026" }, "equals": 0 }
+            ]
+        },
+        {
+            "id": "W9",
+            "name": "Copy a version",
+            "kind": "write",
+            "runs": "bulk",
+            "status": "waiting on the model",
+            "needs": ["A way to copy every input of one version into another"],
+            "start": "base",
+            "action": {
+                "copy": { "from": "FC 6+6", "to": "What-if", "what": "every IN variable" },
+                "then": "Write three inputs of What-if, picked as in W3, W4 and W6a"
+            },
+            "prove": { "variable": "PL EUR OUT", "by": ["PL Line"], "where": { "Versions": "What-if", "Years": "Y2026" } },
+            "expect": [
+                { "kind": "value", "before": "the three writes", "equals": "PL EUR OUT of FC 6+6" },
+                { "kind": "value", "after": "the three writes" },
+                { "kind": "unchanged", "variable": "PL EUR OUT", "where": { "Versions": "FC 6+6", "Years": "Y2026" } }
+            ]
+        },
+        {
+            "id": "R1",
+            "name": "Company P&L",
+            "kind": "read",
+            "status": "ready",
+            "read": { "variable": "PL EUR OUT", "by": ["PL Line", "Months"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "R2a",
+            "name": "P&L by brand",
+            "kind": "read",
+            "status": "ready",
+            "read": { "variable": "PL EUR OUT", "by": ["PL Line", "Brand"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "R2b",
+            "name": "P&L by channel",
+            "kind": "read",
+            "status": "ready",
+            "read": { "variable": "PL EUR OUT", "by": ["PL Line", "Channel"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "R2c",
+            "name": "P&L by country, in its own currency",
+            "kind": "read",
+            "status": "ready",
+            "read": { "variable": "PL OUT", "by": ["PL Line", "Country"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "R3",
+            "name": "Plan against last year",
+            "kind": "read",
+            "status": "ready",
+            "read": [
+                { "variable": "PL EUR OUT", "by": ["PL Line"], "where": { "Versions": "Budget", "Years": "Y2026" } },
+                { "variable": "PL EUR OUT", "by": ["PL Line"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+                { "variable": "PL EUR OUT", "by": ["PL Line"], "where": { "Versions": "Actual", "Years": "Y2025" } }
+            ],
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "R4",
+            "name": "Ratios",
+            "kind": "read",
+            "status": "ready",
+            "read": { "variable": "every KPI measure in 8-report.fml", "by": ["Country", "Versions"], "where": { "Years": "Y2026" } },
+            "allowedBy": ["Brand", "Brand Group", "Brand Type", "Channel", "Country", "Currency", "Versions", "Years", "Months"],
+            "expect": [{ "kind": "value", "tolerance": "ratioRelative" }]
+        },
+        {
+            "id": "R5",
+            "name": "Drill to the detail",
+            "kind": "read",
+            "status": "ready",
+            "pick": { "rule": "A customer group with invoice sales in FC 6+6, Y2026 M7. The seed picks it once, and every run of the read uses it.", "variable": "Invoice Sales", "by": ["Customer Group"], "where": { "Versions": "FC 6+6", "Years": "Y2026", "Months": "M7" }, "once": true },
+            "read": {
+                "variables": ["Gross Sales", "Standard Discounts", "Promo Discounts", "Logistics Discounts", "Invoice Sales", "Rebates", "Growth Bonus", "Trade Fees", "Promo Funding", "Net Sales", "COGS", "Gross Margin"],
+                "by": ["Customer", "SKU"],
+                "where": { "Customer Group": "$pick.Customer Group", "Versions": "FC 6+6", "Years": "Y2026", "Months": "M7" }
+            },
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "R6",
+            "name": "Margin by product attributes",
+            "kind": "read",
+            "status": "ready",
+            "read": { "variable": "Gross Margin", "by": ["Country", "Category", "Price Tier"], "where": { "Versions": "FC 6+6", "Years": "Y2026" }, "note": "By country, so each value is in one currency" },
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "R7",
+            "name": "Top customers",
+            "kind": "read",
+            "status": "ready",
+            "pick": { "rule": "A country with invoice sales in FC 6+6, Y2026. The seed picks it once, and every run of the read uses it.", "variable": "Invoice Sales", "by": ["Country"], "where": { "Versions": "FC 6+6", "Years": "Y2026" }, "once": true },
+            "read": { "variable": "Contribution Margin III", "by": ["Customer"], "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026" }, "order": "value descending, then Customer ascending", "limit": 100, "note": "One country, so every value is in one currency" },
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "R8",
+            "name": "Open the model",
+            "kind": "read",
+            "status": "ready",
+            "runs": "3 times, each from a stopped system and a cleared OS cache",
+            "timer": "From the start command until the read returns",
+            "read": { "variable": "EBIT EUR OUT", "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [{ "kind": "value" }]
+        },
+        {
+            "id": "M1",
+            "name": "Change a formula",
+            "kind": "model",
+            "status": "ready",
+            "start": "base",
+            "action": { "formula": { "variable": "Handling KG", "file": "6-margin.fml", "from": "\"Volume KG\" * \"IMPORT Handling Factor\"", "to": "\"Volume KG\"" } },
+            "prove": { "variable": "Logistics Cost", "by": ["Brand", "Country"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [
+                { "kind": "value" },
+                { "kind": "unchanged", "variable": "Logistics Cost", "by": ["Country", "Versions", "Years", "Months"] },
+                { "kind": "unchanged", "variable": "EBIT OUT", "by": ["Country", "Versions", "Years", "Months"] }
+            ]
+        },
+        {
+            "id": "M2",
+            "name": "Add a customer",
+            "kind": "model",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A customer group with planned volume, and a SKU one of its customers buys in M7" },
+            "action": {
+                "addMembers": { "Customer": "NEW-CUST-1", "parents": { "Customer Group": "$pick.Customer Group", "Region": "a region of the group's country" } },
+                "then": { "write": "Volume Override IN", "at": { "Customer": "NEW-CUST-1", "SKU": "$pick.SKU", "Versions": "FC 6+6", "Years": "Y2026", "Months": "M7" }, "value": "integer from 1 to 1000" }
+            },
+            "prove": { "variable": "Volume", "where": { "Customer Group": "$pick.Customer Group", "Versions": "FC 6+6", "Years": "Y2026", "Months": "M7" } },
+            "expect": [
+                { "kind": "delta", "change": "$new" },
+                { "kind": "value", "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026" } }
+            ]
+        },
+        {
+            "id": "M3",
+            "name": "Move a customer to another group",
+            "kind": "model",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A customer with invoice sales, and another customer group in the same country and channel" },
+            "action": { "relink": { "link": "Customer -> Customer Group", "member": "$pick.Customer", "to": "$pick.Target Group" } },
+            "prove": { "variable": "Gross Sales", "by": ["Customer Group"], "where": { "Customer Group": ["$pick.Customer Group", "$pick.Target Group"], "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [
+                { "kind": "value" },
+                { "kind": "unchanged", "variable": "EBIT OUT", "by": ["Country", "Years", "Months"], "where": { "Versions": "Actual" } }
+            ]
+        },
+        {
+            "id": "M4",
+            "name": "Allocate one more cost",
+            "kind": "model",
+            "status": "ready",
+            "start": "base",
+            "action": {
+                "add": "A cost pool per country from OPEX of the Marketing function. A key per customer and brand from Net Sales Positive, as a share of the country. An allocated cost, subtracted in Contribution Margin III. An unallocated rest, counted in EBIT. Overheads no longer include the Marketing function. CHECK OPEX in EBIT also subtracts the new allocated cost and its unallocated rest, so it stays zero.",
+                "files": ["6-margin.fml", "7-ebit.fml", "8-report.fml", "9-checks.fml"]
+            },
+            "prove": { "variable": "Contribution Margin III by Country", "by": ["Country"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [
+                { "kind": "delta", "rule": "Contribution Margin III by Country falls by what the new pool allocated" },
+                { "kind": "delta", "variable": "Overheads", "rule": "Falls by the whole pool" },
+                { "kind": "value", "variable": "CHECK OPEX in EBIT", "by": ["Country", "Versions", "Years", "Months"], "equals": 0 },
+                { "kind": "unchanged", "variable": "EBIT OUT", "by": ["Country", "Versions", "Years", "Months"] }
+            ]
+        },
+        {
+            "id": "C1",
+            "name": "A write that changes nothing",
+            "timed": false,
+            "kind": "write",
+            "status": "ready",
+            "start": "base",
+            "pick": { "rule": "A customer and SKU with volume in a closed month", "variable": "Volume", "where": { "Versions": "FC 6+6", "Years": "Y2026", "Months": "$closedMonths" }, "hasValue": true },
+            "action": { "write": "Volume Override IN", "at": "$pick", "value": "round($old * (0.5 to 1.5), 0)" },
+            "prove": { "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [
+                { "kind": "unchanged" },
+                { "kind": "unchanged", "variable": "Volume", "at": "$pick" }
+            ]
+        },
+        {
+            "id": "C2",
+            "name": "All checks",
+            "timed": false,
+            "kind": "read",
+            "status": "ready",
+            "read": { "variable": "every CHECK variable in 9-checks.fml", "by": ["Versions", "Years"], "note": "Versions only where the check has it" },
+            "expect": [{ "kind": "invariant", "ids": ["I1"] }]
+        },
+        {
+            "id": "C3",
+            "name": "A read the last write cannot reach",
+            "timed": false,
+            "kind": "read",
+            "status": "ready",
+            "runs": "after each W1 write",
+            "pick": { "rule": "A country other than the one W1 just wrote to" },
+            "read": { "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026" } },
+            "expect": [{ "kind": "unchanged" }]
+        }
+    ]
+}
