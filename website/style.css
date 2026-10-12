@@ -317,15 +317,24 @@ blockquote.demo {
     background: var(--chip-on);
 }
 
-.summary .date {
+.summary th.score {
+    padding: 0 8px 4px;
     color: var(--text-2);
     font-size: 0.85rem;
+    font-weight: 400;
+    text-align: right;
+    white-space: nowrap;
 }
 
-.summary .score {
+.summary td.score {
     text-align: right;
-    font-weight: 600;
     font-variant-numeric: tabular-nums;
+    color: var(--text-2);
+}
+
+.summary .score.picked {
+    color: var(--text);
+    font-weight: 600;
 }
 
 .machine {
@@ -363,7 +372,6 @@ blockquote.demo {
 
 .details th.test {
     font-weight: 400;
-    cursor: help;
 }
 
 .details td.cell {
@@ -379,6 +387,11 @@ blockquote.demo {
 
 .details td.fail {
     text-align: right;
+    color: var(--text-2);
+}
+
+.details tr.waiting th,
+.details tr.waiting td {
     color: var(--text-2);
 }
 
@@ -404,7 +417,7 @@ main.wide {
         font-size: 1.5rem;
     }
 
-    .summary .date {
+    .summary .score.other {
         display: none;
     }
 
