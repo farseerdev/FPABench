@@ -24,7 +24,9 @@ const OUT = path.join(ROOT, 'website', 'dist');
 const REPO_URL = 'https://github.com/farseerdev/FPABench';
 const MODEL_PAGE = 'website/model.md';
 const FML_EXAMPLE = 'Gross Margin';
-const PAGES = { 'README.md': 'about.html', [MODEL_PAGE]: 'model.html' };
+const PAGES = { 'README.md': 'about.html', [MODEL_PAGE]: 'model.html', 'tests/README.md': 'tests.html', 'tests/method.md': 'method.html' };
+const VERSIONED_DOCS = ['README.md', 'model/README.md', 'tests/README.md', 'tests/method.md'];
+const TEST_KINDS = ['load', 'write', 'read', 'model'];
 const ASSETS = ['style.css', 'site.js', 'results.js'];
 
 const errors = [];
@@ -223,6 +225,18 @@ function modelPage() {
 
 const version = (read('CHANGELOG.md').match(/^## ([^,\s]+)/m) || [])[1];
 if (!version) fail('CHANGELOG.md: no version heading such as "## 0.1-draft, 2026-10-04"');
+// A doc that names a version must name the one at the top of the changelog.
+for (const doc of VERSIONED_DOCS) {
+    for (const [, named] of read(doc).matchAll(/\b[Vv]ersion (\d+\.\d+[\w-]*)/g)) {
+        if (named !== version) fail(`${doc}: it says version ${named}, the changelog says ${version}`);
+    }
+}
+
+// The test list, as the runner reads it.
+const testList = JSON.parse(read('tests/tests.json')).tests || [];
+for (const t of testList) {
+    if (!t.id || !t.name || !TEST_KINDS.includes(t.kind) || !t.status) fail(`tests/tests.json: test ${t.id || '?'} needs an id, a name, a kind (${TEST_KINDS.join(', ')}) and a status`);
+}
 
 // The first heading and the tagline of README.md become the title line.
 const readme = read('README.md');
@@ -235,24 +249,27 @@ const modelHtml = modelPage();
 const subtitle = tagline.replace(/\.$/, '').replace(/^./, (c) => c.toLowerCase());
 const NAV = [
     ['index.html', 'Results'],
-    ['about.html', 'About'],
+    ['tests.html', 'Tests'],
+    ['method.html', 'Method'],
     ['model.html', 'The model'],
+    ['about.html', 'About'],
     [`${REPO_URL}/blob/main/CHANGELOG.md`, 'Changelog'],
     [REPO_URL, 'Source on GitHub'],
 ];
 
 // The results page. Its script draws everything from the data embedded here.
-const results = demoResults();
+// The checks without a timer pass or fail. They are not timed or scored, so the results page leaves them out.
+const results = demoResults(testList.filter((t) => t.timed !== false));
 const resultsHtml = [
     results.demo
-        ? '<blockquote class="demo"><p><strong>Demo data.</strong> Every test, result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>'
+        ? '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>'
         : '',
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
-    '<p class="method">Lower is better. Each time is divided by the fastest selected entry on that test, with 10 ms added to both. A failed test counts as twice the slowest time on that test. The score is the geometric mean of the ratios.</p>',
+    `<p class="method">Lower is better. Every result comes from one ${escapeHtml(results.machine)} machine. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
     '<div id="summary"></div>',
     '<h2 id="details-heading">Detailed comparison</h2>',
-    '<p class="method">Untick a test to leave it out of the score. Hover a test to see what it does.</p>',
+    '<p class="method">Untick a test to leave it out of the score. <a href="tests.html">The tests</a> page says what each one does.</p>',
     '<div id="details"></div>',
     `<script id="results-data" type="application/json">${JSON.stringify(results).replace(/</g, '\\u003c')}</script>`,
 ].join('\n');
@@ -293,6 +310,8 @@ ${body}
 const pages = {
     'index.html': page({ title: subtitle, body: resultsHtml, current: 'index.html', scripts: ['results.js'], wide: true }),
     'about.html': page({ title: 'about', body: about.html, current: 'about.html' }),
+    'tests.html': page({ title: 'the tests', body: renderDoc('tests/README.md', read('tests/README.md').replace(/^# .+\n+/, '')).html, current: 'tests.html' }),
+    'method.html': page({ title: 'the method', body: renderDoc('tests/method.md', read('tests/method.md').replace(/^# .+\n+/, '')).html, current: 'method.html' }),
     'model.html': page({ title: 'the model', body: modelHtml, current: 'model.html' }),
 };
 
