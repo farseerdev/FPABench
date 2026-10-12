@@ -17,7 +17,7 @@ const KINDS = [
     { id: 'model', label: 'Model changes' },
 ];
 
-const APPROACHES = [
+export const APPROACHES = [
     { id: 'cells', label: 'Stored cells' },
     { id: 'ivm', label: 'Incremental views' },
     { id: 'views', label: 'Plain views' },
