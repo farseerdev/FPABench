@@ -1,6 +1,6 @@
 # The FPABench model
 
-Version 0.6-draft. The model will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
+Version 0.7-draft. The model will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
 
 ## The business
 

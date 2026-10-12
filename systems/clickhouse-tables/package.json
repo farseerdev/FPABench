@@ -1,0 +1,9 @@
+{
+    "name": "fpabench-clickhouse-tables",
+    "private": true,
+    "description": "FPABench entry: ClickHouse, with every calculated variable as a table rebuilt after each write.",
+    "type": "module",
+    "dependencies": {
+        "@clickhouse/client": "1.23.1"
+    }
+}

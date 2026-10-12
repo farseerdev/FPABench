@@ -76,7 +76,7 @@ function scoredRows() {
         .filter((r) => state.scale.has(r.scale))
         .map((r) => {
             // The entry's own slowest time uses warm times only, so the read selector never moves it.
-            const own = Object.values(r.tests).filter((x) => x.check === 'ok').map((x) => x.time);
+            const own = Object.values(r.tests).filter((x) => x.check === 'ok' && typeof x.time === 'number').map((x) => x.time);
             return { ...r, entryInfo: entryById.get(r.entry), ratios: {}, scores: {}, slowest: Math.max(0, ...own) };
         });
     for (const kind of data.kinds) {

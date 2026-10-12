@@ -17,7 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFml, formulaNames } from '../scripts/fml.mjs';
 import { renderMarkdown, escapeHtml } from './markdown.mjs';
-import { demoResults } from './demo.mjs';
+import { demoResults, APPROACHES } from './demo.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'website', 'dist');
@@ -257,13 +257,65 @@ const NAV = [
     [REPO_URL, 'Source on GitHub'],
 ];
 
+// Real results, from results/<size>/<entry>.json. Each entry describes itself in systems/<entry>/entry.json.
+// The demo data is only used while there are no results at all.
+function realResults(tests) {
+    const dir = path.join(ROOT, 'results');
+    if (!fs.existsSync(dir)) return null;
+    const ids = new Set(tests.map((t) => t.id));
+    const rows = [];
+    const entries = new Map();
+    const machines = new Set();
+    for (const size of fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()).sort()) {
+        for (const file of fs.readdirSync(path.join(dir, size)).filter((f) => f.endsWith('.json')).sort()) {
+            const rel = `results/${size}/${file}`;
+            const r = JSON.parse(read(rel));
+            const metaFile = `systems/${r.entry}/entry.json`;
+            if (!fs.existsSync(path.join(ROOT, metaFile))) {
+                fail(`${rel}: there is no ${metaFile}`);
+                continue;
+            }
+            const meta = JSON.parse(read(metaFile));
+            entries.set(r.entry, { id: r.entry, name: meta.name, approach: meta.approach, open: meta.open });
+            machines.add(r.machine);
+            const kept = {};
+            for (const [id, t] of Object.entries(r.tests)) {
+                if (!ids.has(id)) continue;
+                kept[id] = { check: t.check, time: t.time, cold: t.cold, p95: t.p95 };
+            }
+            rows.push({ entry: r.entry, scale: r.scale, tests: kept });
+        }
+    }
+    if (rows.length === 0) return null;
+    if (machines.size !== 1) fail(`results/: one machine expected, found ${[...machines].join(', ')}`);
+    const order = ['10m', '100m', '1b', '10b'];
+    const scales = order.filter((s) => rows.some((r) => r.scale === s));
+    const approaches = APPROACHES;
+    return {
+        demo: false,
+        machine: [...machines][0],
+        kinds: [
+            { id: 'load', label: 'Loads' },
+            { id: 'write', label: 'Writes' },
+            { id: 'read', label: 'Reads' },
+            { id: 'model', label: 'Model changes' },
+        ],
+        tests: tests.map(({ id, name, kind, status }) => ({ id, name, kind, status })),
+        scales,
+        approaches: approaches.filter((a) => [...entries.values()].some((e) => e.approach === a.id)),
+        entries: [...entries.values()],
+        results: rows,
+    };
+}
+
 // The results page. Its script draws everything from the data embedded here.
 // The checks without a timer pass or fail. They are not timed or scored, so the results page leaves them out.
-const results = demoResults(testList.filter((t) => t.timed !== false));
+const timedTests = testList.filter((t) => t.timed !== false);
+const results = realResults(timedTests) || demoResults(timedTests);
 const resultsHtml = [
     results.demo
         ? '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>'
-        : '',
+        : `<blockquote class="demo"><p><strong>First draft results.</strong> ${results.entries.length} entries, one run each on one machine. <a href="${REPO_URL}/blob/main/results/README.md">The results notes</a> list what is still missing.</p></blockquote>`,
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
     `<p class="method">Lower is better. Every result comes from one ${escapeHtml(results.machine)} machine. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
