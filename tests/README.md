@@ -1,6 +1,6 @@
 # The FPABench tests
 
-Version 0.5-draft. The tests will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
+Version 0.6-draft. The tests will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
 
 FPABench times what a planning team does every day. It loads actuals, types numbers into the plan, reads reports and changes the model. Each test does one of these to [the model](../model/README.md).
 
@@ -36,21 +36,21 @@ Each test expects one of three kinds of result.
 | L2 | **Monthly close.** Load the actuals of Y2026 M7, then close M7 in the Actual version. | `EBIT OUT` of Actual, Y2026 M7 | Value. `CHECK Import Total` is 0. |
 | L3 | **Change a weight in master data.** One SKU's unit weight. | `Logistics Cost` of the SKU's brand | Value. `EBIT OUT` is unchanged. |
 
-L2 waits on the data generator for next month's actuals.
+L2 loads the `increments/close-2026-07` folder of the dataset.
 
 ## Writes
 
 | Id | Test | Proving read | Expected result |
 | --- | --- | --- | --- |
 | W1 | **Type one volume.** One customer, SKU and plan month. | `EBIT OUT` of the country | Value |
-| W2 | **Paste 1,000 volumes** in one country and month, in one transaction. | `Volume` of the country and month | Delta. The sum of the changes. |
+| W2 | **Paste 1,000 volumes** in one country, across the six plan months, in one transaction. | `Volume` of the country over the plan months | Delta. The sum of the changes. |
 | W3 | **Change a rebate rate** of one customer group and month. | `EBIT OUT` of the country | Delta. Rate change × the group's invoice sales. |
 | W4 | **Raise a brand's price** for the year. | `Gross Sales` of the brand | Delta. × (1 + new) / (1 + old) in plan months. |
 | W5 | **Change a planning exchange rate** of one currency and month. | `COGS` of that country and month | Delta. × new rate / old rate. |
 | W6a | **Change a warehouse's cost.** It is allocated to customers. | `EBIT OUT` of the country | Delta. EBIT falls by the change. |
 | W6b | **Change an office's cost.** It is not allocated. | `EBIT OUT` of the country | Delta. EBIT falls by the change. |
 | W7 | **Set a yearly target** for one customer group and category. The model spreads it down. | `Volume` of the group and category | Value |
-| W8 | **Flip a yearly bonus.** Move a group's growth threshold across its growth. | `Growth Bonus` of the group for the year | Delta. Bonus rate × the year's invoice sales. |
+| W8 | **Flip a yearly bonus.** Move a group's growth threshold across its growth. The group's bonus rate is above 0. | `Growth Bonus` of the group for the year | Delta. Bonus rate × the year's invoice sales. |
 | W9 | **Copy a version.** FC 6+6 into What-if, then change three inputs. | The What-if P&L | Value |
 
 W6a and W6b write the same kind of cell. W6a moves thousands of allocated cells, and W6b moves one total. An engine that recalculates only what a change reaches does far less work for W6b.
