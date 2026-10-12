@@ -2,6 +2,20 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
+## 0.7-draft, 2026-10-12
+
+- First draft of the runner, in `runner/`. One runner for every system, with an adapter per system. It picks cells from the seed, times each test on the client, restores a snapshot before each test, and checks every expectation it can state. `runner/compare.mjs` compares the answers of all systems, until there is a reference program.
+- Ratios are compared within 1e-6 relative or 1e-12 absolute, whichever is larger. Before, a ratio of 0 against 5e-19 counted as a difference.
+- Test M4 is written out as model edits, in `runner/lib/changes.mjs`. It allocates the marketing staff by positive net sales per country into contribution margin III, and adds two P&L lines so the P&L still sums to EBIT.
+- The first two entries, in `systems/`: RAMA 1.9.0-ffad51e.0, and DuckDB 1.5.6 with every calculated variable as a table rebuilt after each write.
+- A third entry, ClickHouse 26.9.16.11 with every calculated variable as a table. The SQL translator is shared, in `systems/sql/`, and writes each table's operands as an explicit chain of joins.
+- The first results, in `results/10m/`, from one `n2d-standard-4`. They are provisional until a rerun with the fixes below.
+- Both SQL entries keep their calculated tables in memory (DuckDB `TEMP`, ClickHouse `Memory`) and only the inputs on disk. After a restart they build them again, and a cold read pays for it. The translator reads a table straight from its operand when one operand gives every cell, and builds each dimension lookup once per rebuild. On a laptop a rebuild went from 5.2 to 2.1 s in DuckDB and from 6.9 to 3.8 s in ClickHouse, with the same answers.
+- RAMA's reads list the combinations that have a value with `generateCombinations`, as a Farseer sheet does, instead of asking for every combination the filters allow. R5 went from 173 ms to 5 ms on a laptop, with the same answers.
+- Both SQL entries rebuild only the calculated tables a change reaches, found from the formulas, instead of all of them. A member change still rebuilds everything. On a laptop a rebate rate write went from 2.2 to 0.4 s in DuckDB and from 3.9 to 0.9 s in ClickHouse, with the same answers.
+- Both SQL entries store integer member ids in every key column instead of names, with one dictionary per dimension in the dimension tables. Sums whose terms all have the target's dimensions are `UNION ALL` plus `GROUP BY` instead of joins. On a laptop a rebate rate write went from 0.43 to 0.11 s in DuckDB and from 0.92 to 0.35 s in ClickHouse, with the same answers.
+- Runner fixes after review: every write takes a fresh cell, and a test with too few cells writes fewer times. L2 and L3 wait for `sync` like L1. I1 and C2 check every stored cell. A W1 write that moves another country fails W1. R8 reports its time as cold too. Caches and picks are kept per dataset. Large sizes run loads and reads only. A difference in any answer of a test fails it. The website shows them in place of the demo data.
+
 ## 0.6-draft, 2026-10-12
 
 - First draft of the data generator, in `data/`. It writes one company at four sizes, named by their model cells: 10m, 100m, 1b and 10b. The same size always gives the same bytes, and `manifest.json` lists the SHA-256 of every file.

@@ -1,0 +1,9 @@
+{
+    "name": "fpabench-risingwave",
+    "private": true,
+    "description": "FPABench entry: RisingWave, every calculated variable as a materialized view maintained incrementally.",
+    "type": "module",
+    "dependencies": {
+        "pg": "8.23.0"
+    }
+}
