@@ -2,6 +2,16 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
+## 0.6-draft, 2026-10-12
+
+- First draft of the data generator, in `data/`. It writes one company at four sizes, named by their model cells: 10m, 100m, 1b and 10b. The same size always gives the same bytes, and `manifest.json` lists the SHA-256 of every file.
+- The data is clean UTF-8 CSV with a schema. Codes are text. Actuals come as monthly totals per customer and material, the way planning tools load them. Returns net into the month they come back in, so a month can be negative.
+- Each size also writes four later loads: the actuals of July 2026, a correction of March 2026, master data changes and a new price list. Test L2 uses the first one and is ready now.
+- Test W8 picks only customer groups with a bonus rate above 0. With a rate of 0, moving the threshold changes nothing.
+- Test W2 pastes its 1,000 volumes across the six plan months of one country. Before, they had to fit in one month, and at 10m no country has more than about 420 cells in a month.
+- The model cells of 10m and 100m were counted in a full model run. Those of 1b and 10b are estimated from the 100m run.
+- Every code in the actuals is in the master data, and every check of the model is empty or zero on the data.
+
 ## 0.5-draft, 2026-10-11
 
 - First draft of the tests, in `tests/`. There are 27 timed tests: 3 loads, 10 writes, 10 reads and 4 model changes. Three more checks run without a timer. Each test has a proving read and an expected result. Two of them wait on the model or the data.

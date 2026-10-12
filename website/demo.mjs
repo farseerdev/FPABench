@@ -3,12 +3,12 @@
 // whenever it uses this data.
 //
 // It follows tests/method.md where the method shapes the page: one machine,
-// every test at SF1 and SF10 but only loads and reads above that, and the
+// every test at 10m and 100m but only loads and reads above that, and the
 // summary numbers the method reports for each kind of test.
 
 const MACHINE = 'n2d-standard-4';
-const SCALES = ['SF1', 'SF10', 'SF100', 'SF1000'];
-const EVERY_TEST = ['SF1', 'SF10'];
+const SCALES = ['10m', '100m', '1b', '10b'];
+const EVERY_TEST = ['10m', '100m'];
 
 const KINDS = [
     { id: 'load', label: 'Loads' },
@@ -34,7 +34,7 @@ const ENTRIES = [
     { id: 'risingwave', name: 'RisingWave', approach: 'ivm', open: true },
 ];
 
-// Seconds at SF1, before the random factors.
+// Seconds at 10m, before the random factors.
 const BASE = { load: 20, write: 0.2, read: 0.05, model: 2 };
 
 function random(seed) {

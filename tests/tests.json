@@ -20,8 +20,8 @@
             "model": { "repeats": 3, "from": "snapshot" }
         },
         "scales": {
-            "everyTest": ["SF1", "SF10"],
-            "loadsAndReadsOnly": ["SF100", "SF1000"]
+            "everyTest": ["10m", "100m"],
+            "loadsAndReadsOnly": ["1b", "10b"]
         }
     },
     "invariants": [
@@ -49,12 +49,11 @@
             "id": "L2",
             "name": "Monthly close",
             "kind": "load",
-            "status": "waiting on the data",
-            "needs": ["The actuals of Y2026 M7 as an increment file"],
+            "status": "ready",
             "start": "base",
             "action": {
                 "load": "increment",
-                "files": ["actuals-Y2026-M7"],
+                "files": ["increments/close-2026-07"],
                 "then": [
                     { "write": "FC Closed IN", "at": { "Versions": "Actual", "Years": "Y2026", "Months": "M7" }, "value": 1 },
                     { "write": "FC Horizon IN", "at": { "Versions": "Actual", "Years": "Y2026", "Months": "M7" }, "value": 1 }
@@ -109,14 +108,14 @@
             "status": "ready",
             "start": "base",
             "pick": {
-                "rule": "1,000 distinct customer and SKU cells with planned volume, in one country and one plan month",
+                "rule": "1,000 distinct customer, SKU and month cells with planned volume, in one country, across all six plan months. One country and month has too few cells at 10m.",
                 "count": 1000,
                 "variable": "Volume",
                 "where": { "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" },
                 "hasValue": true
             },
             "action": { "write": "Volume Override IN", "at": "$pick", "value": "round($old * (0.5 to 1.5), 0)", "transaction": "one" },
-            "prove": { "variable": "Volume", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$pick.Months" } },
+            "prove": { "variable": "Volume", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026", "Months": "$planMonths" } },
             "expect": [
                 { "kind": "delta", "change": "sum($new - $old)" },
                 { "kind": "value", "variable": "EBIT OUT", "where": { "Country": "$pick.Country", "Versions": "FC 6+6", "Years": "Y2026" } }
@@ -201,7 +200,7 @@
             "kind": "write",
             "status": "ready",
             "start": "base",
-            "pick": { "rule": "A customer group with a typed growth bonus rate, invoice sales last year, and planned invoice sales in the plan months. A group with no planned sales keeps its bonus unallocated, where Growth Bonus does not show it.", "variable": "Growth Bonus Rate IN", "by": ["Customer Group"], "where": { "Versions": "FC 6+6", "Years": "Y2026" } },
+            "pick": { "rule": "A customer group with a typed growth bonus rate above 0, invoice sales last year, and planned invoice sales in the plan months. A group with no planned sales keeps its bonus unallocated, where Growth Bonus does not show it. A rate of 0 gives no bonus on either side of the threshold, so the write would change nothing.", "variable": "Growth Bonus Rate IN", "by": ["Customer Group"], "where": { "Versions": "FC 6+6", "Years": "Y2026" }, "above": 0 },
             "action": {
                 "write": "Growth Bonus Threshold IN",
                 "at": { "Customer Group": "$pick.Customer Group", "Versions": "FC 6+6", "Years": "Y2026" },

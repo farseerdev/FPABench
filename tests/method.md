@@ -1,6 +1,6 @@
 # How FPABench measures
 
-Version 0.5-draft. The method will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
+Version 0.6-draft. The method will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
 
 ## The runner
 
@@ -43,7 +43,7 @@ Every result comes from one Google Cloud `n2d-standard-4`: 4 vCPUs, 16 GB of mem
 - The runner and the system share the machine, and there are no other limits.
 - A system that runs out of memory at a size has no result at that size.
 - Each result records peak memory, CPU time and thread count.
-- SF1 and SF10 run every test. Larger sizes run loads and reads only, for now.
+- The 10m and 100m sizes run every test. Larger sizes run loads and reads only, for now.
 
 ## Repeats
 
@@ -90,7 +90,7 @@ A cache of answers keyed on a read's text or parameters is not allowed. Neither 
 
 ## Correctness
 
-- **Reference answers.** A plain JavaScript program computes exact answers. It shares no code with any system and covers SF1 and below.
+- **Reference answers.** A plain JavaScript program computes exact answers. It shares no code with any system and covers the 10m size.
 - **Rules at every size.** Every check equals its published value. The P&L lines add up to EBIT. EBIT equals the source amounts. Each cost pool equals what it allocated plus what it could not place. Closed months equal the actuals.
 - **Stated deltas.** A write or model change must move a result by exactly what its test states.
 - **Unchanged values.** Each write and model change checks a value it cannot reach.
