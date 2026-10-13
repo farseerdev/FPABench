@@ -267,6 +267,7 @@ function realResults(tests) {
     const rows = [];
     const entries = new Map();
     const machines = new Set();
+    const hosts = new Set();
     for (const size of fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()).sort()) {
         for (const file of fs.readdirSync(path.join(dir, size)).filter((f) => f.endsWith('.json')).sort()) {
             const rel = `results/${size}/${file}`;
@@ -279,6 +280,7 @@ function realResults(tests) {
             const meta = JSON.parse(read(metaFile));
             entries.set(r.entry, { id: r.entry, name: meta.name, approach: meta.approach, open: meta.open });
             machines.add(r.machine);
+            hosts.add(JSON.stringify({ cpus: r.host?.cpus, cpu: r.host?.cpu, memoryGB: r.host?.memoryGB }));
             const kept = {};
             for (const [id, t] of Object.entries(r.tests)) {
                 if (!ids.has(id)) continue;
@@ -289,6 +291,7 @@ function realResults(tests) {
     }
     if (rows.length === 0) return null;
     if (machines.size !== 1) fail(`results/: one machine expected, found ${[...machines].join(', ')}`);
+    if (hosts.size !== 1) fail(`results/: one kind of host expected, found ${[...hosts].join(', ')}`);
     const order = ['10m', '100m', '1b', '10b'];
     // Every size is listed. Sizes without results yet are shown but cannot be picked.
     const scales = order;
@@ -297,6 +300,7 @@ function realResults(tests) {
     return {
         demo: false,
         machine: [...machines][0],
+        host: JSON.parse([...hosts][0]),
         kinds: [
             { id: 'load', label: 'Loads' },
             { id: 'write', label: 'Writes' },
@@ -330,7 +334,7 @@ const resultsHtml = [
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
     '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
-    `<p class="method">Lower is better. Every result comes from one ${escapeHtml(results.machine)} machine. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
+    `<p class="method">Lower is better. Every result comes from the same Google Cloud ${escapeHtml(results.machine)} machine${results.host ? `, with ${results.host.cpus} vCPUs on an ${escapeHtml(results.host.cpu)} and ${results.host.memoryGB} GB of memory` : ''}. No system is tuned for speed or limited to fewer threads. Each one uses as many cores as it can. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
     '<div id="summary"></div>',
     '<h2 id="details-heading">Detailed comparison</h2>',
     '<p class="method">Untick a test to leave it out of the score. <a href="tests.html">The tests</a> page says what each one does.</p>',
