@@ -13,9 +13,11 @@
         "Category": 8,
         "Subcategory": 24,
         "Brand": 20,
+        "Brand Group": 6,
         "Product Line": 120,
         "SKU": 1000,
         "Material": 1869,
+        "Plant": 6,
         "Cost Center": 72
       },
       "actuals": {
@@ -44,9 +46,11 @@
         "Category": 10,
         "Subcategory": 37,
         "Brand": 39,
+        "Brand Group": 7,
         "Product Line": 289,
         "SKU": 3000,
         "Material": 5573,
+        "Plant": 9,
         "Cost Center": 72
       },
       "actuals": {
@@ -75,9 +79,11 @@
         "Category": 13,
         "Subcategory": 60,
         "Brand": 80,
+        "Brand Group": 10,
         "Product Line": 757,
         "SKU": 10000,
         "Material": 18449,
+        "Plant": 13,
         "Cost Center": 72
       },
       "actuals": {
@@ -106,9 +112,11 @@
         "Category": 16,
         "Subcategory": 94,
         "Brand": 154,
+        "Brand Group": 12,
         "Product Line": 1823,
         "SKU": 30000,
         "Material": 55271,
+        "Plant": 18,
         "Cost Center": 72
       },
       "actuals": {

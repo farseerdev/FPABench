@@ -23,9 +23,11 @@ const MASTER = [
     ['Category', 'categories.csv'],
     ['Subcategory', 'subcategories.csv'],
     ['Brand', 'brands.csv'],
+    ['Brand Group', 'brand_groups.csv'],
     ['Product Line', 'product_lines.csv'],
     ['SKU', 'skus.csv'],
     ['Material', 'materials.csv'],
+    ['Plant', 'plants.csv'],
     ['Cost Center', 'cost_centers.csv'],
 ];
 
