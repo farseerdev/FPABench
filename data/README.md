@@ -17,8 +17,6 @@ A size is named by its model cells: every value the model stores under its own r
 | 1b | 26,000 | 10,000 | 14 M | about 54 M | about 990 M |
 | 10b | 186,000 | 30,000 | about 140 M | about 540 M | about 10 B |
 
-10m and 100m were counted in a full model run. 1b and 10b are estimated from the 100m run. The counts will be frozen at version 1.0.
-
 ## Files
 
 UTF-8 CSV with a header row, commas and a decimal point. Months are `2024-03`. Codes are text and keep their leading zeros. `schema.json` gives every column's type, and `manifest.json` every file's SHA-256. An empty field means no value. Amounts are in the country's currency, except in columns that end in `_eur`.
