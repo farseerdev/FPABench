@@ -24,7 +24,12 @@ const GROUPS = [
     { key: 'run', label: 'Read runs', single: true, options: [['warm', 'Median warm'], ['cold', 'Cold']], only: { kind: 'read' } },
 ];
 
+// Sizes without results yet are shown, but cannot be picked.
+const ready = new Set(data.ready ?? data.scales);
+const blocked = (group, value) => group === 'scale' && !ready.has(value);
+
 const state = Object.fromEntries(GROUPS.map((g) => [g.key, new Set(g.single ? [g.options[0][0]] : g.options.map(([v]) => v))]));
+state.scale = new Set([data.scales.find((s) => ready.has(s))]);
 state.kind = new Set(['write']);
 const excluded = new Set();
 const one = (key) => [...state[key]][0];
@@ -33,7 +38,9 @@ const one = (key) => [...state[key]][0];
 
 function renderSelectors() {
     const chip = (group, value, label, on) =>
-        `<button type="button" class="chip" data-key="${group}" data-value="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
+        blocked(group, value)
+            ? `<button type="button" class="chip" data-key="${group}" data-value="${esc(value)}" aria-disabled="true" data-tip="Coming soon" title="Coming soon">${esc(label)}</button>`
+            : `<button type="button" class="chip" data-key="${group}" data-value="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
     document.getElementById('selectors').innerHTML = GROUPS.filter((g) => !g.only || Object.entries(g.only).every(([k, v]) => state[k].has(v)))
         .map((g) => {
             const set = state[g.key];
@@ -45,7 +52,7 @@ function renderSelectors() {
 
 document.getElementById('selectors').addEventListener('click', (event) => {
     const chip = event.target.closest('.chip');
-    if (!chip) return;
+    if (!chip || chip.getAttribute('aria-disabled') === 'true') return;
     const group = GROUPS.find((g) => g.key === chip.dataset.key);
     const set = state[group.key];
     const value = chip.dataset.value;

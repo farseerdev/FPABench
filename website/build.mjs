@@ -24,7 +24,7 @@ const OUT = path.join(ROOT, 'website', 'dist');
 const REPO_URL = 'https://github.com/farseerdev/FPABench';
 const MODEL_PAGE = 'website/model.md';
 const FML_EXAMPLE = 'Gross Margin';
-const PAGES = { 'README.md': 'about.html', [MODEL_PAGE]: 'model.html', 'tests/README.md': 'tests.html', 'tests/method.md': 'method.html' };
+const PAGES = { 'README.md': 'about.html', [MODEL_PAGE]: 'model.html', 'tests/README.md': 'tests.html', 'tests/method.md': 'method.html', 'data/README.md': 'data.html' };
 const VERSIONED_DOCS = ['README.md', 'model/README.md', 'tests/README.md', 'tests/method.md'];
 const TEST_KINDS = ['load', 'write', 'read', 'model'];
 const ASSETS = ['style.css', 'site.js', 'results.js'];
@@ -251,6 +251,7 @@ const NAV = [
     ['index.html', 'Results'],
     ['tests.html', 'Tests'],
     ['method.html', 'Method'],
+    ['data.html', 'Data'],
     ['model.html', 'The model'],
     ['about.html', 'About'],
     [`${REPO_URL}/blob/main/CHANGELOG.md`, 'Changelog'],
@@ -289,7 +290,9 @@ function realResults(tests) {
     if (rows.length === 0) return null;
     if (machines.size !== 1) fail(`results/: one machine expected, found ${[...machines].join(', ')}`);
     const order = ['10m', '100m', '1b', '10b'];
-    const scales = order.filter((s) => rows.some((r) => r.scale === s));
+    // Every size is listed. Sizes without results yet are shown but cannot be picked.
+    const scales = order;
+    const ready = order.filter((s) => rows.some((r) => r.scale === s));
     const approaches = APPROACHES;
     return {
         demo: false,
@@ -302,6 +305,7 @@ function realResults(tests) {
         ],
         tests: tests.map(({ id, name, kind, status }) => ({ id, name, kind, status })),
         scales,
+        ready,
         approaches: approaches.filter((a) => [...entries.values()].some((e) => e.approach === a.id)),
         entries: [...entries.values()],
         results: rows,
@@ -318,6 +322,7 @@ const resultsHtml = [
         : `<blockquote class="demo"><p><strong>First draft results.</strong> ${results.entries.length} entries, one run each on one machine. <a href="${REPO_URL}/blob/main/results/README.md">The results notes</a> list what is still missing.</p></blockquote>`,
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
+    '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
     `<p class="method">Lower is better. Every result comes from one ${escapeHtml(results.machine)} machine. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
     '<div id="summary"></div>',
     '<h2 id="details-heading">Detailed comparison</h2>',
@@ -365,6 +370,7 @@ const pages = {
     'index.html': page({ title: subtitle, body: resultsHtml, current: 'index.html', scripts: ['results.js'], wide: true }),
     'about.html': page({ title: 'about', body: about.html, current: 'about.html' }),
     'tests.html': page({ title: 'the tests', body: renderDoc('tests/README.md', read('tests/README.md').replace(/^# .+\n+/, '')).html, current: 'tests.html' }),
+    'data.html': page({ title: 'the data', body: renderDoc('data/README.md', read('data/README.md').replace(/^# .+\n+/, '')).html, current: 'data.html' }),
     'method.html': page({ title: 'the method', body: renderDoc('tests/method.md', read('tests/method.md').replace(/^# .+\n+/, '')).html, current: 'method.html' }),
     'model.html': page({ title: 'the model', body: modelHtml, current: 'model.html' }),
 };
