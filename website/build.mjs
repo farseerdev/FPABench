@@ -338,6 +338,8 @@ function page({ title, body, current, scripts = [], wide = false }) {
 <link rel="stylesheet" href="style.css">
 <script>try { const t = localStorage.getItem('fpabench-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 <script src="site.js" defer></script>
+<!-- Cloudflare Web Analytics: no cookies and no personal data. -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "e5f613c4d0ca46aa95283ab1fbc50682"}'></script>
 ${scripts.map((s) => `<script src="${s}" defer></script>`).join('\n')}
 </head>
 <body>
