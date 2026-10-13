@@ -329,7 +329,7 @@ const resultsHtml = [
         : `<blockquote class="demo"><p><strong>First draft results.</strong> ${results.entries.length} entries, one run each on one machine. <a href="${REPO_URL}/blob/main/results/README.md">The results notes</a> list what is still missing.</p></blockquote>`,
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
-    '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#what-each-size-holds">The data page</a> lists what each size holds.</p>',
+    '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
     `<p class="method">Lower is better. Every result comes from one ${escapeHtml(results.machine)} machine. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
     '<div id="summary"></div>',
     '<h2 id="details-heading">Detailed comparison</h2>',
@@ -338,24 +338,39 @@ const resultsHtml = [
     `<script id="results-data" type="application/json">${JSON.stringify(results).replace(/</g, '\\u003c')}</script>`,
 ].join('\n');
 
-// Every size side by side, from data/sizes.json.
-function sizeTable() {
-    if (sizeFacts.length === 0) return '';
-    const n = (x) => x.toLocaleString('en-US');
+// The data page. On the website the size table of data/README.md becomes one table with every
+// count from data/sizes.json, and the commands to run the generator stay on GitHub.
+function dataPage() {
+    const rel = 'data/README.md';
+    let src = read(rel).replace(/^# .+\n+/, '');
+    const use = src.match(/\n## Use\n[\s\S]*?(?=\n## )/);
+    if (use) src = src.replace(use[0], '');
+    else fail(`${rel}: no "## Use" section to leave out of the website.`);
+    const table = src.match(/(?<=\n## Sizes\n[\s\S]*?)(\|.*\|\n)+/);
+    if (!table || sizeFacts.length === 0) {
+        if (!table) fail(`${rel}: no table in the "## Sizes" section.`);
+        return renderDoc(rel, src).html;
+    }
+    // Model and input cells come from a model run, so they stay in the README table.
+    const [header, , ...lines] = table[0].trim().split('\n').map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
+    const cells = Object.fromEntries(lines.map((l) => [l[0], l]));
+    const column = (name) => header.indexOf(name);
+    for (const name of ['Model cells', 'Input cells']) if (column(name) < 0) fail(`${rel}: the size table has no "${name}" column.`);
+    const n = (x) => (typeof x === 'number' ? x.toLocaleString('en-US') : escapeHtml(x ?? '–'));
     const head = `<tr><th></th>${sizeFacts.map((f) => `<th class="num">${escapeHtml(f.size)}</th>`).join('')}</tr>`;
     const row = (label, get) => `<tr><td>${escapeHtml(label)}</td>${sizeFacts.map((f) => `<td class="num">${n(get(f))}</td>`).join('')}</tr>`;
-    const dims = Object.keys(sizeFacts[0].dimensions).map((d) => row(d, (f) => f.dimensions[d]));
-    const versions = Object.keys(sizeFacts[0].plan).map((v) => row(`Plan rows typed, ${v}`, (f) => f.plan[v]));
-    return [
-        '<h2 id="what-each-size-holds">What each size holds</h2>',
-        '<p>Counted from the generated files by <code>data/sizes.mjs</code>. Actuals are monthly totals, one row per customer, material and month, from January 2023 to June 2026. Plan rows are the cells a planner typed. Formulas fill in every other plan cell.</p>',
+    const html = [
         `<div class="table-wrap"><table><thead>${head}</thead><tbody>`,
-        ...dims,
+        row('Model cells', (f) => cells[f.size]?.[column('Model cells')]),
+        row('Input cells', (f) => cells[f.size]?.[column('Input cells')]),
+        ...Object.keys(sizeFacts[0].dimensions).map((d) => row(d, (f) => f.dimensions[d])),
         row('Sales rows, actuals', (f) => f.actuals.salesRows),
         row('Other actual rows', (f) => f.actuals.otherRows),
-        ...versions,
+        ...Object.keys(sizeFacts[0].plan).map((v) => row(`Plan rows typed, ${v}`, (f) => f.plan[v])),
         '</tbody></table></div>',
+        '<p>The dimension members and rows are counted from the generated files by <code>data/sizes.mjs</code>. Actuals are monthly totals, one row per customer, material and month. Plan rows are the cells a planner typed. Formulas fill in every other plan cell.</p>',
     ].join('\n');
+    return renderDoc(rel, src.replace(table[0], 'SIZE-TABLE\n')).html.replace('<p>SIZE-TABLE</p>', html);
 }
 
 function page({ title, body, current, scripts = [], wide = false }) {
@@ -397,7 +412,7 @@ const pages = {
     'index.html': page({ title: subtitle, body: resultsHtml, current: 'index.html', scripts: ['results.js'], wide: true }),
     'about.html': page({ title: 'about', body: about.html, current: 'about.html' }),
     'tests.html': page({ title: 'the tests', body: renderDoc('tests/README.md', read('tests/README.md').replace(/^# .+\n+/, '')).html, current: 'tests.html' }),
-    'data.html': page({ title: 'the data', body: `${renderDoc('data/README.md', read('data/README.md').replace(/^# .+\n+/, '')).html}\n${sizeTable()}`, current: 'data.html' }),
+    'data.html': page({ title: 'the data', body: dataPage(), current: 'data.html' }),
     'method.html': page({ title: 'the method', body: renderDoc('tests/method.md', read('tests/method.md').replace(/^# .+\n+/, '')).html, current: 'method.html' }),
     'model.html': page({ title: 'the model', body: modelHtml, current: 'model.html' }),
 };
