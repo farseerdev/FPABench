@@ -18,8 +18,6 @@ const entryById = new Map(data.entries.map((e) => [e.id, e]));
 const GROUPS = [
     { key: 'scale', label: 'Scale', single: true, options: data.scales.map((s) => [s, s]) },
     { key: 'system', label: 'System', options: data.entries.map((e) => [e.id, e.name]) },
-    { key: 'approach', label: 'Approach', options: data.approaches.map((a) => [a.id, a.label]) },
-    { key: 'open', label: 'Open source', options: [['yes', 'Yes'], ['no', 'No']] },
     { key: 'kind', label: 'Tests', single: true, options: data.kinds.map((k) => [k.id, k.label]) },
     { key: 'run', label: 'Read runs', single: true, options: [['warm', 'Median warm'], ['cold', 'Cold']], only: { kind: 'read' } },
 ];
@@ -106,10 +104,7 @@ function scoredRows() {
             r.scores[kind.id] = ratios.length > 0 ? Math.exp(ratios.reduce((sum, x) => sum + Math.log(x), 0) / ratios.length) : null;
         }
     }
-    const shown = rows.filter((r) => {
-        const e = r.entryInfo;
-        return state.system.has(e.id) && state.approach.has(e.approach) && state.open.has(e.open ? 'yes' : 'no');
-    });
+    const shown = rows.filter((r) => state.system.has(r.entry));
     // Rows without a score stay, so the table and its tick boxes never vanish.
     const order = (r) => r.scores[one('kind')] ?? Infinity;
     return shown.sort((a, b) => (order(a) === order(b) ? 0 : order(a) - order(b)));

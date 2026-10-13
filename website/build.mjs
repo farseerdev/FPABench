@@ -329,9 +329,7 @@ for (const f of sizeFacts) {
 }
 const resultsHtml = [
     '<p class="intro">FPABench measures how fast planning software loads data, recalculates a plan and answers reports. Every system runs the same P&amp;L model on the same data. FPABench is made by <a href="https://www.farseer.com">Farseer</a>, which builds a planning platform for finance teams. RAMA is the calculation engine inside Farseer and one of the entries. It follows the same rules as the others. <a href="about.html">About</a> says more.</p>',
-    results.demo
-        ? '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>'
-        : `<blockquote class="demo"><p><strong>First draft results.</strong> ${results.entries.length} entries, one run each on one machine. <a href="${REPO_URL}/blob/main/results/README.md">The results notes</a> list what is still missing.</p></blockquote>`,
+    results.demo && '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>',
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
     '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
@@ -341,7 +339,9 @@ const resultsHtml = [
     '<p class="method">Untick a test to leave it out of the score. <a href="tests.html">The tests</a> page says what each one does.</p>',
     '<div id="details"></div>',
     `<script id="results-data" type="application/json">${JSON.stringify(results).replace(/</g, '\\u003c')}</script>`,
-].join('\n');
+]
+    .filter(Boolean)
+    .join('\n');
 
 // The data page. On the website the size table of data/README.md becomes one table with every
 // count from data/sizes.json, and the commands to run the generator stay on GitHub.
