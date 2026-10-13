@@ -316,11 +316,20 @@ function realResults(tests) {
 // The checks without a timer pass or fail. They are not timed or scored, so the results page leaves them out.
 const timedTests = testList.filter((t) => t.timed !== false);
 const results = realResults(timedTests) || demoResults(timedTests);
+
+// What each size holds, counted from the generated data by data/sizes.mjs.
+const generatorVersion = (read('data/generate.mjs').match(/GENERATOR_VERSION = '([^']+)'/) || [])[1];
+const sizeFacts = fs.existsSync(path.join(ROOT, 'data', 'sizes.json')) ? JSON.parse(read('data/sizes.json')).sizes : [];
+for (const f of sizeFacts) {
+    if (f.generator !== generatorVersion) fail(`data/sizes.json: ${f.size} was counted with generator ${f.generator}, the generator is ${generatorVersion}. Run data/sizes.mjs again.`);
+}
+results.sizes = sizeFacts;
 const resultsHtml = [
     results.demo
         ? '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>'
         : `<blockquote class="demo"><p><strong>First draft results.</strong> ${results.entries.length} entries, one run each on one machine. <a href="${REPO_URL}/blob/main/results/README.md">The results notes</a> list what is still missing.</p></blockquote>`,
     '<table class="selectors" id="selectors"></table>',
+    '<div id="size-info"></div>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
     '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
     `<p class="method">Lower is better. Every result comes from one ${escapeHtml(results.machine)} machine. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
@@ -330,6 +339,26 @@ const resultsHtml = [
     '<div id="details"></div>',
     `<script id="results-data" type="application/json">${JSON.stringify(results).replace(/</g, '\\u003c')}</script>`,
 ].join('\n');
+
+// Every size side by side, from data/sizes.json.
+function sizeTable() {
+    if (sizeFacts.length === 0) return '';
+    const n = (x) => x.toLocaleString('en-US');
+    const head = `<tr><th></th>${sizeFacts.map((f) => `<th class="num">${escapeHtml(f.size)}</th>`).join('')}</tr>`;
+    const row = (label, get) => `<tr><td>${escapeHtml(label)}</td>${sizeFacts.map((f) => `<td class="num">${n(get(f))}</td>`).join('')}</tr>`;
+    const dims = Object.keys(sizeFacts[0].dimensions).map((d) => row(d, (f) => f.dimensions[d]));
+    const versions = Object.keys(sizeFacts[0].plan).map((v) => row(`Plan rows typed, ${v}`, (f) => f.plan[v]));
+    return [
+        '<h2 id="what-each-size-holds">What each size holds</h2>',
+        '<p>Counted from the generated files by <code>data/sizes.mjs</code>. Actuals are monthly totals, one row per customer, material and month, from January 2023 to June 2026. Plan rows are the cells a planner typed. Formulas fill in every other plan cell.</p>',
+        `<div class="table-wrap"><table><thead>${head}</thead><tbody>`,
+        ...dims,
+        row('Sales rows, actuals', (f) => f.actuals.salesRows),
+        row('Other actual rows', (f) => f.actuals.otherRows),
+        ...versions,
+        '</tbody></table></div>',
+    ].join('\n');
+}
 
 function page({ title, body, current, scripts = [], wide = false }) {
     const nav = NAV.map(([href, label]) => `<a href="${href}"${href === current ? ' aria-current="page"' : ''}>${label}</a>`).join(' | ');
@@ -370,7 +399,7 @@ const pages = {
     'index.html': page({ title: subtitle, body: resultsHtml, current: 'index.html', scripts: ['results.js'], wide: true }),
     'about.html': page({ title: 'about', body: about.html, current: 'about.html' }),
     'tests.html': page({ title: 'the tests', body: renderDoc('tests/README.md', read('tests/README.md').replace(/^# .+\n+/, '')).html, current: 'tests.html' }),
-    'data.html': page({ title: 'the data', body: renderDoc('data/README.md', read('data/README.md').replace(/^# .+\n+/, '')).html, current: 'data.html' }),
+    'data.html': page({ title: 'the data', body: `${renderDoc('data/README.md', read('data/README.md').replace(/^# .+\n+/, '')).html}\n${sizeTable()}`, current: 'data.html' }),
     'method.html': page({ title: 'the method', body: renderDoc('tests/method.md', read('tests/method.md').replace(/^# .+\n+/, '')).html, current: 'method.html' }),
     'model.html': page({ title: 'the model', body: modelHtml, current: 'model.html' }),
 };

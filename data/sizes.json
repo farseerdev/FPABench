@@ -1,0 +1,129 @@
+{
+  "about": "Counted from generated datasets by data/sizes.mjs.",
+  "sizes": [
+    {
+      "size": "10m",
+      "generator": "0.6-draft",
+      "seed": 20261012,
+      "dimensions": {
+        "Country": 6,
+        "Region": 12,
+        "Customer Group": 48,
+        "Customer": 115,
+        "Category": 8,
+        "Subcategory": 24,
+        "Brand": 20,
+        "Product Line": 120,
+        "SKU": 1000,
+        "Material": 1869,
+        "Cost Center": 72
+      },
+      "actuals": {
+        "salesRows": 88730,
+        "salesGrain": "one row per customer, material and month",
+        "from": "2023-01",
+        "to": "2026-06",
+        "otherRows": 191729
+      },
+      "plan": {
+        "Budget": 19344,
+        "FC 3+9": 10179,
+        "FC 6+6": 6949,
+        "What-if": 6924
+      }
+    },
+    {
+      "size": "100m",
+      "generator": "0.6-draft",
+      "seed": 20261012,
+      "dimensions": {
+        "Country": 6,
+        "Region": 30,
+        "Customer Group": 102,
+        "Customer": 3350,
+        "Category": 10,
+        "Subcategory": 37,
+        "Brand": 39,
+        "Product Line": 289,
+        "SKU": 3000,
+        "Material": 5573,
+        "Cost Center": 72
+      },
+      "actuals": {
+        "salesRows": 1316496,
+        "salesGrain": "one row per customer, material and month",
+        "from": "2023-01",
+        "to": "2026-06",
+        "otherRows": 507979
+      },
+      "plan": {
+        "Budget": 44753,
+        "FC 3+9": 18393,
+        "FC 6+6": 12710,
+        "What-if": 12675
+      }
+    },
+    {
+      "size": "1b",
+      "generator": "0.6-draft",
+      "seed": 20261012,
+      "dimensions": {
+        "Country": 6,
+        "Region": 54,
+        "Customer Group": 204,
+        "Customer": 26000,
+        "Category": 13,
+        "Subcategory": 60,
+        "Brand": 80,
+        "Product Line": 757,
+        "SKU": 10000,
+        "Material": 18449,
+        "Cost Center": 72
+      },
+      "actuals": {
+        "salesRows": 13965293,
+        "salesGrain": "one row per customer, material and month",
+        "from": "2023-01",
+        "to": "2026-06",
+        "otherRows": 1580087
+      },
+      "plan": {
+        "Budget": 120562,
+        "FC 3+9": 41437,
+        "FC 6+6": 28675,
+        "What-if": 28759
+      }
+    },
+    {
+      "size": "10b",
+      "generator": "0.6-draft",
+      "seed": 20261012,
+      "dimensions": {
+        "Country": 6,
+        "Region": 102,
+        "Customer Group": 408,
+        "Customer": 186000,
+        "Category": 16,
+        "Subcategory": 94,
+        "Brand": 154,
+        "Product Line": 1823,
+        "SKU": 30000,
+        "Material": 55271,
+        "Cost Center": 72
+      },
+      "actuals": {
+        "salesRows": 139290264,
+        "salesGrain": "one row per customer, material and month",
+        "from": "2023-01",
+        "to": "2026-06",
+        "otherRows": 4652065
+      },
+      "plan": {
+        "Budget": 346938,
+        "FC 3+9": 111022,
+        "FC 6+6": 76830,
+        "What-if": 76968
+      }
+    }
+  ]
+}

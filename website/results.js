@@ -189,8 +189,36 @@ document.getElementById('details').addEventListener('change', (event) => {
     render();
 });
 
+// What the picked size holds, so a reader knows the scope before reading the scores.
+const num = (n) => n.toLocaleString('en-US');
+const monthName = (m) => {
+    const [y, mo] = m.split('-');
+    return `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(mo) - 1]} ${y}`;
+};
+function renderSizeInfo() {
+    const el = document.getElementById('size-info');
+    const f = (data.sizes || []).find((x) => x.size === one('scale'));
+    if (!f) {
+        el.innerHTML = '';
+        return;
+    }
+    const dims = Object.entries(f.dimensions).map(([d, n]) => `<tr><th>${esc(d)}</th><td>${num(n)}</td></tr>`).join('');
+    const plan = Object.entries(f.plan).map(([v, n]) => `<tr><th>${esc(v)}</th><td>${num(n)}</td></tr>`).join('');
+    const planned = Object.values(f.plan);
+    const average = Math.round(planned.reduce((a, b) => a + b, 0) / planned.length);
+    el.innerHTML = `<div class="size-info">
+<div><h3>Members per dimension</h3><table>${dims}</table>
+<p>Plus ${Object.keys(f.plan).length + 1} versions, Actual and the ${Object.keys(f.plan).length} plans, and the months of 2023 to 2026.</p></div>
+<div><h3>Actuals</h3><p><strong>${num(f.actuals.salesRows)}</strong> sales rows, ${esc(f.actuals.salesGrain)}, from ${monthName(f.actuals.from)} to ${monthName(f.actuals.to)}. Monthly totals, not invoice lines.</p>
+<p>Plus ${num(f.actuals.otherRows)} rows of rebates, fees, operating expenses, list prices, standard costs and exchange rates.</p></div>
+<div><h3>Plan rows typed per version</h3><table>${plan}</table>
+<p>About ${num(average)} on average. Formulas fill in every other plan cell.</p></div>
+</div>`;
+}
+
 function render() {
     renderSelectors();
+    renderSizeInfo();
     const rows = scoredRows();
     renderSummary(rows);
     renderDetails(rows);

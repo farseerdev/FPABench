@@ -435,6 +435,46 @@ main.wide {
     max-width: none;
 }
 
+.size-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 40px;
+    max-width: 1080px;
+    margin: 4px 0 8px;
+    font-size: 0.9rem;
+}
+
+.size-info > div {
+    flex: 1 1 240px;
+}
+
+.size-info h3 {
+    font-size: 0.95rem;
+    margin: 8px 0 4px;
+}
+
+.size-info th {
+    font-weight: 400;
+    color: var(--text-2);
+    padding: 1px 16px 1px 0;
+}
+
+td.num,
+th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.size-info td {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    padding: 1px 0;
+}
+
+.size-info p {
+    margin: 6px 0;
+}
+
 @media (max-width: 600px) {
     .site-title {
         font-size: 1.5rem;
