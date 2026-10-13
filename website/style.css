@@ -435,6 +435,12 @@ main.wide {
     max-width: none;
 }
 
+td.num,
+th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 600px) {
     .site-title {
         font-size: 1.5rem;

@@ -8,16 +8,12 @@ The company is invented. It makes food, drinks, home care and personal care prod
 
 ## Sizes
 
-A size is named by its model cells: every value the model stores under its own rules, inputs and formula results together. Measures do not count.
-
 | Size | Customers | SKUs | Sales rows | Input cells | Model cells |
 |---|---:|---:|---:|---:|---:|
 | 10m | 115 | 1,000 | 89 thousand | 0.6 M | 10.0 M |
 | 100m | 3,350 | 3,000 | 1.3 M | 5.1 M | 99.7 M |
 | 1b | 26,000 | 10,000 | 14 M | about 54 M | about 990 M |
 | 10b | 186,000 | 30,000 | about 140 M | about 540 M | about 10 B |
-
-10m and 100m were counted in a full model run. 1b and 10b are estimated from the 100m run. The counts will be frozen at version 1.0.
 
 ## Files
 

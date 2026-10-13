@@ -267,6 +267,7 @@ function realResults(tests) {
     const rows = [];
     const entries = new Map();
     const machines = new Set();
+    const hosts = new Set();
     for (const size of fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()).sort()) {
         for (const file of fs.readdirSync(path.join(dir, size)).filter((f) => f.endsWith('.json')).sort()) {
             const rel = `results/${size}/${file}`;
@@ -279,6 +280,7 @@ function realResults(tests) {
             const meta = JSON.parse(read(metaFile));
             entries.set(r.entry, { id: r.entry, name: meta.name, approach: meta.approach, open: meta.open });
             machines.add(r.machine);
+            hosts.add(JSON.stringify({ cpus: r.host?.cpus, cpu: r.host?.cpu, memoryGB: r.host?.memoryGB }));
             const kept = {};
             for (const [id, t] of Object.entries(r.tests)) {
                 if (!ids.has(id)) continue;
@@ -289,6 +291,7 @@ function realResults(tests) {
     }
     if (rows.length === 0) return null;
     if (machines.size !== 1) fail(`results/: one machine expected, found ${[...machines].join(', ')}`);
+    if (hosts.size !== 1) fail(`results/: one kind of host expected, found ${[...hosts].join(', ')}`);
     const order = ['10m', '100m', '1b', '10b'];
     // Every size is listed. Sizes without results yet are shown but cannot be picked.
     const scales = order;
@@ -297,6 +300,7 @@ function realResults(tests) {
     return {
         demo: false,
         machine: [...machines][0],
+        host: JSON.parse([...hosts][0]),
         kinds: [
             { id: 'load', label: 'Loads' },
             { id: 'write', label: 'Writes' },
@@ -316,6 +320,13 @@ function realResults(tests) {
 // The checks without a timer pass or fail. They are not timed or scored, so the results page leaves them out.
 const timedTests = testList.filter((t) => t.timed !== false);
 const results = realResults(timedTests) || demoResults(timedTests);
+
+// What each size holds, counted from the generated data by data/sizes.mjs.
+const generatorVersion = (read('data/generate.mjs').match(/GENERATOR_VERSION = '([^']+)'/) || [])[1];
+const sizeFacts = fs.existsSync(path.join(ROOT, 'data', 'sizes.json')) ? JSON.parse(read('data/sizes.json')).sizes : [];
+for (const f of sizeFacts) {
+    if (f.generator !== generatorVersion) fail(`data/sizes.json: ${f.size} was counted with generator ${f.generator}, the generator is ${generatorVersion}. Run data/sizes.mjs again.`);
+}
 const resultsHtml = [
     results.demo
         ? '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>'
@@ -323,13 +334,47 @@ const resultsHtml = [
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
     '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
-    `<p class="method">Lower is better. Every result comes from one ${escapeHtml(results.machine)} machine. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
+    `<p class="method">Lower is better. Every result comes from the same Google Cloud ${escapeHtml(results.machine)} machine${results.host ? `, with ${results.host.cpus} vCPUs on an ${escapeHtml(results.host.cpu)} and ${results.host.memoryGB} GB of memory` : ''}. No system is tuned for speed or limited to fewer threads. Each one uses as many cores as it can. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
     '<div id="summary"></div>',
     '<h2 id="details-heading">Detailed comparison</h2>',
     '<p class="method">Untick a test to leave it out of the score. <a href="tests.html">The tests</a> page says what each one does.</p>',
     '<div id="details"></div>',
     `<script id="results-data" type="application/json">${JSON.stringify(results).replace(/</g, '\\u003c')}</script>`,
 ].join('\n');
+
+// The data page. On the website the size table of data/README.md becomes one table with every
+// count from data/sizes.json, and the commands to run the generator stay on GitHub.
+function dataPage() {
+    const rel = 'data/README.md';
+    let src = read(rel).replace(/^# .+\n+/, '');
+    const use = src.match(/\n## Use\n[\s\S]*?(?=\n## )/);
+    if (use) src = src.replace(use[0], '');
+    else fail(`${rel}: no "## Use" section to leave out of the website.`);
+    const table = src.match(/(?<=\n## Sizes\n[\s\S]*?)(\|.*\|\n)+/);
+    if (!table || sizeFacts.length === 0) {
+        if (!table) fail(`${rel}: no table in the "## Sizes" section.`);
+        return renderDoc(rel, src).html;
+    }
+    // Model and input cells come from a model run, so they stay in the README table.
+    const [header, , ...lines] = table[0].trim().split('\n').map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
+    const cells = Object.fromEntries(lines.map((l) => [l[0], l]));
+    const column = (name) => header.indexOf(name);
+    for (const name of ['Model cells', 'Input cells']) if (column(name) < 0) fail(`${rel}: the size table has no "${name}" column.`);
+    const n = (x) => (typeof x === 'number' ? x.toLocaleString('en-US') : escapeHtml(x ?? '–'));
+    const head = `<tr><th></th>${sizeFacts.map((f) => `<th class="num">${escapeHtml(f.size)}</th>`).join('')}</tr>`;
+    const row = (label, get) => `<tr><td>${escapeHtml(label)}</td>${sizeFacts.map((f) => `<td class="num">${n(get(f))}</td>`).join('')}</tr>`;
+    const html = [
+        `<div class="table-wrap"><table><thead>${head}</thead><tbody>`,
+        row('Model cells', (f) => cells[f.size]?.[column('Model cells')]),
+        row('Input cells', (f) => cells[f.size]?.[column('Input cells')]),
+        ...Object.keys(sizeFacts[0].dimensions).map((d) => row(d, (f) => f.dimensions[d])),
+        row('Sales rows, actuals', (f) => f.actuals.salesRows),
+        row('Other actual rows', (f) => f.actuals.otherRows),
+        ...Object.keys(sizeFacts[0].plan).map((v) => row(`Plan rows typed, ${v}`, (f) => f.plan[v])),
+        '</tbody></table></div>',
+    ].join('\n');
+    return renderDoc(rel, src.replace(table[0], 'SIZE-TABLE\n')).html.replace('<p>SIZE-TABLE</p>', html);
+}
 
 function page({ title, body, current, scripts = [], wide = false }) {
     const nav = NAV.map(([href, label]) => `<a href="${href}"${href === current ? ' aria-current="page"' : ''}>${label}</a>`).join(' | ');
@@ -370,7 +415,7 @@ const pages = {
     'index.html': page({ title: subtitle, body: resultsHtml, current: 'index.html', scripts: ['results.js'], wide: true }),
     'about.html': page({ title: 'about', body: about.html, current: 'about.html' }),
     'tests.html': page({ title: 'the tests', body: renderDoc('tests/README.md', read('tests/README.md').replace(/^# .+\n+/, '')).html, current: 'tests.html' }),
-    'data.html': page({ title: 'the data', body: renderDoc('data/README.md', read('data/README.md').replace(/^# .+\n+/, '')).html, current: 'data.html' }),
+    'data.html': page({ title: 'the data', body: dataPage(), current: 'data.html' }),
     'method.html': page({ title: 'the method', body: renderDoc('tests/method.md', read('tests/method.md').replace(/^# .+\n+/, '')).html, current: 'method.html' }),
     'model.html': page({ title: 'the model', body: modelHtml, current: 'model.html' }),
 };

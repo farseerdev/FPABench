@@ -41,6 +41,7 @@ Embedded systems run inside the runner's process. Servers pay for a network roun
 Every result comes from one Google Cloud `n2d-standard-4`: 4 vCPUs, 16 GB of memory and an SSD persistent disk. It is small on purpose, because memory often decides whether a model fits. This choice is not final until every system has had a trial run.
 
 - The runner and the system share the machine, and there are no other limits.
+- No system gets a thread or core limit. Each keeps its default thread setting, so it can use all 4 vCPUs. Each result file records this as `"threads": "default"`.
 - A system that runs out of memory at a size has no result at that size.
 - Each result records peak memory, CPU time and thread count.
 - The 10m and 100m sizes run every test. Larger sizes run loads and reads only, for now.
