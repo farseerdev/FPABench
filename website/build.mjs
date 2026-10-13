@@ -368,7 +368,6 @@ function dataPage() {
         row('Other actual rows', (f) => f.actuals.otherRows),
         ...Object.keys(sizeFacts[0].plan).map((v) => row(`Plan rows typed, ${v}`, (f) => f.plan[v])),
         '</tbody></table></div>',
-        '<p>The dimension members and rows are counted from the generated files by <code>data/sizes.mjs</code>. Actuals are monthly totals, one row per customer, material and month. Plan rows are the cells a planner typed. Formulas fill in every other plan cell.</p>',
     ].join('\n');
     return renderDoc(rel, src.replace(table[0], 'SIZE-TABLE\n')).html.replace('<p>SIZE-TABLE</p>', html);
 }
