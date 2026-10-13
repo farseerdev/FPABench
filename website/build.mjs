@@ -323,15 +323,13 @@ const sizeFacts = fs.existsSync(path.join(ROOT, 'data', 'sizes.json')) ? JSON.pa
 for (const f of sizeFacts) {
     if (f.generator !== generatorVersion) fail(`data/sizes.json: ${f.size} was counted with generator ${f.generator}, the generator is ${generatorVersion}. Run data/sizes.mjs again.`);
 }
-results.sizes = sizeFacts;
 const resultsHtml = [
     results.demo
         ? '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>'
         : `<blockquote class="demo"><p><strong>First draft results.</strong> ${results.entries.length} entries, one run each on one machine. <a href="${REPO_URL}/blob/main/results/README.md">The results notes</a> list what is still missing.</p></blockquote>`,
     '<table class="selectors" id="selectors"></table>',
-    '<div id="size-info"></div>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
-    '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
+    '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#what-each-size-holds">The data page</a> lists what each size holds.</p>',
     `<p class="method">Lower is better. Every result comes from one ${escapeHtml(results.machine)} machine. Each time is divided by the fastest entry's time on that test, with 10 ms added to both. Hiding an entry does not change the others' scores. A failed test counts as twice the largest of 300 s, the entry's slowest time and the slowest success on that test. Loads, writes, reads and model changes each get their own score, with no combined score. <a href="method.html">The method</a> has the details.</p>`,
     '<div id="summary"></div>',
     '<h2 id="details-heading">Detailed comparison</h2>',
