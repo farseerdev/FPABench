@@ -328,6 +328,7 @@ for (const f of sizeFacts) {
     if (f.generator !== generatorVersion) fail(`data/sizes.json: ${f.size} was counted with generator ${f.generator}, the generator is ${generatorVersion}. Run data/sizes.mjs again.`);
 }
 const resultsHtml = [
+    '<p class="intro">FPABench measures how fast planning software loads data, recalculates a plan and answers reports. Every system runs the same P&amp;L model on the same data. FPABench is made by <a href="https://www.farseer.com">Farseer</a>, which builds a planning platform for finance teams. RAMA is the calculation engine inside Farseer and one of the entries. It follows the same rules as the others. <a href="about.html">About</a> says more.</p>',
     results.demo
         ? '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>'
         : `<blockquote class="demo"><p><strong>First draft results.</strong> ${results.entries.length} entries, one run each on one machine. <a href="${REPO_URL}/blob/main/results/README.md">The results notes</a> list what is still missing.</p></blockquote>`,
@@ -408,7 +409,7 @@ ${scripts.map((s) => `<script src="${s}" defer></script>`).join('\n')}
 ${body}
 </main>
 <footer class="site-footer">
-<p>${escapeHtml(siteName)} ${escapeHtml(version || '')}. Made by Farseer. Code is licensed under Apache-2.0. The model, the data and the documentation are licensed under CC BY 4.0.</p>
+<p>${escapeHtml(siteName)} ${escapeHtml(version || '')}. Made by <a href="https://www.farseer.com">Farseer</a>. Code is licensed under Apache-2.0. The model, the data and the documentation are licensed under CC BY 4.0.</p>
 </footer>
 </body>
 </html>

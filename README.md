@@ -44,7 +44,9 @@ The model is written in FML, the Financial Modeling Language. FML is a small lan
 
 ## Who made this
 
-FPABench is made by Farseer. Farseer's own engine, RAMA, will be one of the entries. That is a good reason to check our work. Everything needed to do so will be in this repo.
+FPABench is made by [Farseer](https://www.farseer.com). Farseer builds a planning platform for finance teams.
+
+RAMA is the calculation engine inside Farseer. It stores every cell of a model and recalculates only the cells a change reaches. RAMA is one of the entries, and it follows the same rules as every other entry. That is a good reason to check our work. Everything needed to do so is in this repo.
 
 ## Licence
 

@@ -25,7 +25,7 @@ export const APPROACHES = [
 ];
 
 const ENTRIES = [
-    { id: 'rama', name: 'RAMA', approach: 'cells', open: false },
+    { id: 'rama', name: 'RAMA (Farseer)', approach: 'cells', open: false },
     { id: 'duckdb', name: 'DuckDB', approach: 'views', open: true },
     { id: 'duckdb-tables', name: 'DuckDB (tables)', approach: 'tables', open: true },
     { id: 'clickhouse', name: 'ClickHouse', approach: 'views', open: true },
