@@ -27,7 +27,7 @@ const FML_EXAMPLE = 'Gross Margin';
 const PAGES = { 'README.md': 'about.html', [MODEL_PAGE]: 'model.html', 'tests/README.md': 'tests.html', 'tests/method.md': 'method.html', 'data/README.md': 'data.html' };
 const VERSIONED_DOCS = ['README.md', 'model/README.md', 'tests/README.md', 'tests/method.md'];
 const TEST_KINDS = ['load', 'write', 'read', 'model'];
-const ASSETS = ['style.css', 'site.js', 'results.js'];
+const ASSETS = ['style.css', 'site.js', 'results.js', 'favicon.svg', 'favicon-96x96.png', 'favicon.ico', 'apple-touch-icon.png'];
 
 const errors = [];
 const fail = (msg) => errors.push(msg);
@@ -341,6 +341,10 @@ function page({ title, body, current, scripts = [], wide = false }) {
 <title>${escapeHtml(siteName)}: ${escapeHtml(title)}</title>
 <meta name="description" content="${escapeHtml(tagline)}">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
+<link rel="shortcut icon" href="favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 <script>try { const t = localStorage.getItem('fpabench-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 <script src="site.js" defer></script>
 <!-- Cloudflare Web Analytics: no cookies and no personal data. -->
