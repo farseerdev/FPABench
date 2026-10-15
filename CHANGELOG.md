@@ -2,6 +2,10 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
+## 0.8-draft, 2026-10-15
+
+- When one chain of joins lists a calculated table's cells, the SQL translator carries the value of each operand in that chain. So each operand is joined once, and the chain needs no `DISTINCT`. Before, the chain gave the distinct cells, and every operand was joined to them again. On the model, 45 of the 167 calculated tables get new SQL. A full rebuild has 49 `SELECT DISTINCT` instead of 94. Only tables are built this way, so it applies to DuckDB and ClickHouse. Views of every kind, such as RisingWave's materialized views, keep the SQL of 0.7-draft, because the new shape was measured on DuckDB and ClickHouse only.
+
 ## 0.7-draft, 2026-10-12
 
 - First draft of the runner, in `runner/`. One runner for every system, with an adapter per system. It picks cells from the seed, times each test on the client, restores a snapshot before each test, and checks every expectation it can state. `runner/compare.mjs` compares the answers of all systems, until there is a reference program.

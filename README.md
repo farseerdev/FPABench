@@ -4,7 +4,7 @@ An open performance benchmark for planning engines.
 
 FP&A stands for financial planning and analysis. It is the budgets, forecasts and reports a company is run on. FPABench measures how fast FP&A, EPM and planning software loads, recalculates and queries a realistic P&L model.
 
-> **Status: early draft, version 0.7-draft.** The model is here, and so is a first draft of the data, the tests, the method, the runner and the first results. Everything can still change.
+> **Status: early draft, version 0.8-draft.** The model is here, and so is a first draft of the data, the tests, the method, the runner and the first results. Everything can still change.
 
 ## Why
 
