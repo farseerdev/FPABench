@@ -1,6 +1,6 @@
 # How FPABench measures
 
-Version 0.7-draft. The method will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
+Version 0.8-draft. The method will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
 
 ## The runner
 
@@ -23,6 +23,7 @@ The runner times everything itself, with a monotonic clock. It never uses times 
 - The proving read reads a total that depends on the change. It never just reads back the cell that was written.
 - The runner also records when the write was acknowledged.
 - A model change includes any compile or reload the system needs.
+- Some systems start background work after a statement, such as compiling its plan. The runner waits until that work is done after each restore and after the cold run of R1 to R7. It also waits just before L2, L3, a bulk write, a model change or the first timed write of a write test. The adapter's `settle()` says when. It only waits, and must not start work of its own. The wait is not timed. So the warm reads and these timed runs start with the system at rest. The cold read, the warm-up write, loads, bulk writes, model changes and R8 still pay for the first run of their statements.
 
 ## Durability and tags
 

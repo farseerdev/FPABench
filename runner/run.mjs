@@ -122,6 +122,7 @@ async function restore() {
         model = base;
         sys.setModel(base);
         await sys.open();
+        await settle();
         return;
     }
     await sys.close();
@@ -133,6 +134,14 @@ async function restore() {
     model = base;
     sys.setModel(base);
     await sys.open();
+    await settle();
+}
+// Waits, untimed, until the system has finished the background work it started, such as compiling the
+// plans of new statements. Called after a restore and after the cold run of R1 to R7, and just before a
+// later load, a bulk write, a model change or the first timed write of a write test. An adapter whose
+// system has no background work has no settle().
+async function settle() {
+    if (sys.settle) await sys.settle();
 }
 function dropCaches() {
     try {
@@ -388,6 +397,7 @@ async function testL3() {
     for (let i = 0; i < D.runs.load.repeats; i++) {
         await restore();
         const before = await read('EBIT OUT', {}, by);
+        await settle();
         const t0 = now();
         await sys.write([{ variable: 'IMPORT Unit Weight', at: { SKU: p.sku }, value: p.value }]);
         const rows = await read('Logistics Cost', { Brand: p.brand, ...FC }, ['Country']);
@@ -414,6 +424,7 @@ async function writeGroup(id, prepare, { repeats = D.runs.write.repeats, warmup 
     if (total <= warmup) throw new Error(`${id}: only ${available} cells to write`);
     for (let i = 0; i < total; i++) {
         const step = await prepare(i);
+        if (i === warmup) await settle();
         const t0 = now();
         await sys.write(step.cells);
         const t1 = now();
@@ -499,6 +510,7 @@ async function testW2() {
     for (let i = 0; i < D.runs.bulk.repeats; i++) {
         await restore();
         const before = await one('Volume', { Country: p.country, ...FC, Months: PLAN });
+        await settle();
         const t0 = now();
         await sys.write(p.cells.map((c) => ({ variable: 'Volume Override IN', at: c.at, value: c.value })));
         const after = await one('Volume', { Country: p.country, ...FC, Months: PLAN });
@@ -690,6 +702,7 @@ async function readTest(id, fn) {
     const cold = await fn();
     const coldMs = ms(t0);
     answer(id, 'cold', cold);
+    await settle();
     const warm = [];
     for (let i = 0; i < D.runs.read.warm; i++) {
         const t = now();
@@ -772,6 +785,7 @@ async function modelGroup(id, apply, prove, checks) {
     for (let i = 0; i < D.runs.model.repeats; i++) {
         await restore();
         const before = await checks.before();
+        await settle();
         const t0 = now();
         await apply();
         const rows = await prove();
