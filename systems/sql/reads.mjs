@@ -46,6 +46,10 @@ export function readSql(model, { variable, by = [], where = {} }, dialect = 'duc
     // A measure: its formula over sums at the read's slice, with RAMA's rules for missing values.
     function measureSql(v, by, where) {
         const parts = [];
+        // DuckDB and ClickHouse with `by`: sum i is column v<i> of the row k. Else it is column v of t<i>.
+        // RisingWave keeps the LEFT JOINs below. The one-pass shape was measured on DuckDB and ClickHouse only.
+        const onePass = (CH || dialect === 'duckdb') && by.length > 0;
+        const ref = (i) => (onePass ? `k.v${i}` : `t${i}.v`);
         const walk = (n) => {
             switch (n.type) {
                 case 'paren':
@@ -56,11 +60,11 @@ export function readSql(model, { variable, by = [], where = {} }, dialect = 'duc
                     return `(-${walk(n.expr)})`;
                 case 'name':
                     parts.push(aggregateSql(model.variable(n.name), by, where));
-                    return `t${parts.length - 1}.v`;
+                    return ref(parts.length - 1);
                 case 'call':
                     if (n.name !== 'sum') throw new Error(`${v.name}: ${n.fn} in a measure`);
                     parts.push(aggregateSql(model.variable(n.args[0].name), by, where, n.args.slice(1)));
-                    return `t${parts.length - 1}.v`;
+                    return ref(parts.length - 1);
                 case 'bin': {
                     const a = walk(n.left);
                     const b = walk(n.right);
@@ -75,10 +79,20 @@ export function readSql(model, { variable, by = [], where = {} }, dialect = 'duc
         };
         const expr = walk(parseFormula(v.formula));
         const keyCols = by.map(id);
+        const outer = by.map((d) => `k.${id(d)} AS ${id(d)}`);
+        // The sums are tagged with their index and united, and one GROUP BY puts the sums of each key side by
+        // side, so each sum runs once and no list of keys is joined back to them. Each sum has one row per
+        // key. A key is there when any sum has a row for it, and a sum without a row for it is NULL, as with
+        // the LEFT JOINs below.
+        if (onePass) {
+            const tagged = parts.map((p, i) => `SELECT ${i} AS part, ${keyCols.join(', ')}, v FROM (${p}) t${i}`).join(' UNION ALL ');
+            const sums = parts.map((_, i) => `max(CASE WHEN part = ${i} THEN v END) AS v${i}`);
+            return `SELECT * FROM (SELECT ${[...outer, `${expr} AS v`].join(', ')} FROM (SELECT ${[...keyCols, ...sums].join(', ')} FROM (${tagged}) u GROUP BY ${keyCols.join(', ')}) k) WHERE v IS NOT NULL`;
+        }
         const ctes = parts.map((p, i) => `t${i} AS (${p})`);
         const keys = by.length ? `(${parts.map((_, i) => `SELECT ${keyCols.join(', ')} FROM t${i}`).join(CH ? ' UNION DISTINCT ' : ' UNION ')})` : '(SELECT 1 AS one)';
         const joins = parts.map((_, i) => (by.length ? `LEFT JOIN t${i} ON ${by.map((d) => `t${i}.${id(d)} = k.${id(d)}`).join(' AND ')}` : `CROSS JOIN t${i}`));
-        return `WITH ${ctes.join(', ')} SELECT * FROM (SELECT ${[...by.map((d) => `k.${id(d)} AS ${id(d)}`), `${expr} AS v`].join(', ')} FROM ${keys} k ${joins.join(' ')}) WHERE v IS NOT NULL`;
+        return `WITH ${ctes.join(', ')} SELECT * FROM (SELECT ${[...outer, `${expr} AS v`].join(', ')} FROM ${keys} k ${joins.join(' ')}) WHERE v IS NOT NULL`;
     }
 
 
