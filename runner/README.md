@@ -62,6 +62,5 @@ A system plugs in through `systems/<entry>/adapter.mjs`. It exports `create({ wo
 ## Not covered yet
 
 - W8 is skipped when no customer group fits its pick rule. The rule needs a growth bonus rate above 0 in FC 6+6.
-- W9 waits on the model.
 - Invariant I3 needs a reference for the source amounts before allocation.
 - `tests.json` describes M4 in words. `lib/changes.mjs` writes it as model edits, and that is the reference for every system.
