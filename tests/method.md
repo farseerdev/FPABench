@@ -27,7 +27,7 @@ The runner times everything itself, with a monotonic clock. It never uses times 
 
 ## Durability and tags
 
-A durable write survives a crash. Where a system has a setting for this, its entry turns it on. Every result is tagged `durable` or `non-durable`.
+A durable write survives a crash. Here that means the system forces the write to disk before it says the write is done, so the write survives a crash of the system or of the operating system. The run machine keeps every system's files on a local SSD, which Google does not keep through a host failure or a stop of the VM. So `durable` does not cover those. Where a system has a setting for this, its entry turns it on. Every result is tagged `durable` or `non-durable`.
 
 Embedded systems run inside the runner's process. Servers pay for a network round trip. Both share one table, tagged `embedded` or `server`.
 
