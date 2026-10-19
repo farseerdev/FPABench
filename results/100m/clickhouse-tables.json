@@ -1,0 +1,1244 @@
+{
+ "entry": "clickhouse-tables",
+ "scale": "100m",
+ "machine": "n2d-standard-4, local NVMe SSD",
+ "date": "2026-10-19",
+ "system": {
+  "name": "ClickHouse",
+  "version": "26.9.16.11",
+  "settings": {
+   "approach": "one table per calculated variable, the tables a change reaches rebuilt after it",
+   "server": "single node on the same machine, HTTP",
+   "nonDefault": {
+    "join_use_nulls": 1,
+    "aggregate_functions_null_for_empty": 1,
+    "mutations_sync": 2,
+    "query_plan_optimize_join_order_limit": 0
+   },
+   "tables": "inputs ReplacingMergeTree read with FINAL, fsync_after_insert = 1, fsync_part_directory = 1. Calculated tables Memory, rebuilt on start.",
+   "durable": true,
+   "keys": "integer member ids",
+   "threads": "default"
+  }
+ },
+ "host": {
+  "platform": "Linux 7.0.0-1014-gcp",
+  "arch": "x64",
+  "cpus": 4,
+  "cpu": "AMD EPYC 7B13",
+  "memoryGB": 16,
+  "node": "v22.22.3"
+ },
+ "model": {
+  "sha256": "cee0497a6600c68d8d15a4e05851f9eb3e429f7595fb067a02fc8e8875312aba"
+ },
+ "testsVersion": "0.5-draft",
+ "dataset": {
+  "sha256": "3ede1d21dcf21422"
+ },
+ "data": {
+  "generator": "0.6-draft",
+  "size": "100m",
+  "seed": 20261012
+ },
+ "seed": 1,
+ "tests": {
+  "L1": {
+   "check": "ok",
+   "time": 37.93,
+   "runs": [
+    38.26,
+    37.45,
+    37.93
+   ],
+   "notChecked": [
+    "I3: no reference for the source amounts before allocation"
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "L2": {
+   "check": "ok",
+   "time": 18.85,
+   "runs": [
+    18.85,
+    18.91,
+    18.8
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "L3": {
+   "check": "ok",
+   "time": 1.908,
+   "runs": [
+    1.934,
+    1.908,
+    1.893
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W1": {
+   "check": "ok",
+   "time": 13.85,
+   "p95": 14.08,
+   "warmup": [
+    13.84
+   ],
+   "runs": [
+    {
+     "s": 13.68,
+     "write": 13.68,
+     "read": 0.003859
+    },
+    {
+     "s": 14.02,
+     "write": 14.02,
+     "read": 0.003673
+    },
+    {
+     "s": 13.76,
+     "write": 13.74,
+     "read": 0.02007
+    },
+    {
+     "s": 13.77,
+     "write": 13.76,
+     "read": 0.00352
+    },
+    {
+     "s": 13.7,
+     "write": 13.7,
+     "read": 0.004474
+    },
+    {
+     "s": 13.82,
+     "write": 13.82,
+     "read": 0.003723
+    },
+    {
+     "s": 15.55,
+     "write": 15.54,
+     "read": 0.003415
+    },
+    {
+     "s": 13.84,
+     "write": 13.84,
+     "read": 0.003607
+    },
+    {
+     "s": 13.77,
+     "write": 13.76,
+     "read": 0.00375
+    },
+    {
+     "s": 13.99,
+     "write": 13.99,
+     "read": 0.003774
+    },
+    {
+     "s": 13.83,
+     "write": 13.83,
+     "read": 0.00387
+    },
+    {
+     "s": 13.79,
+     "write": 13.79,
+     "read": 0.003657
+    },
+    {
+     "s": 13.91,
+     "write": 13.91,
+     "read": 0.003525
+    },
+    {
+     "s": 13.81,
+     "write": 13.8,
+     "read": 0.0037
+    },
+    {
+     "s": 13.96,
+     "write": 13.96,
+     "read": 0.003787
+    },
+    {
+     "s": 13.88,
+     "write": 13.87,
+     "read": 0.003775
+    },
+    {
+     "s": 13.93,
+     "write": 13.92,
+     "read": 0.003617
+    },
+    {
+     "s": 13.96,
+     "write": 13.96,
+     "read": 0.00334
+    },
+    {
+     "s": 13.87,
+     "write": 13.86,
+     "read": 0.003532
+    },
+    {
+     "s": 14.08,
+     "write": 14.07,
+     "read": 0.003924
+    }
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "C3": {
+   "check": "ok",
+   "timed": false
+  },
+  "W2": {
+   "check": "ok",
+   "time": 13.84,
+   "runs": [
+    13.92,
+    13.84,
+    13.8
+   ],
+   "cells": 1000,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W3": {
+   "check": "ok",
+   "time": 3.665,
+   "p95": 3.714,
+   "warmup": [
+    3.85
+   ],
+   "runs": [
+    {
+     "s": 3.714,
+     "write": 3.711,
+     "read": 0.003675
+    },
+    {
+     "s": 3.68,
+     "write": 3.676,
+     "read": 0.003747
+    },
+    {
+     "s": 3.614,
+     "write": 3.61,
+     "read": 0.003501
+    },
+    {
+     "s": 3.604,
+     "write": 3.6,
+     "read": 0.003884
+    },
+    {
+     "s": 3.631,
+     "write": 3.627,
+     "read": 0.003855
+    },
+    {
+     "s": 3.669,
+     "write": 3.666,
+     "read": 0.003874
+    },
+    {
+     "s": 3.579,
+     "write": 3.575,
+     "read": 0.00366
+    },
+    {
+     "s": 3.637,
+     "write": 3.634,
+     "read": 0.003845
+    },
+    {
+     "s": 3.693,
+     "write": 3.69,
+     "read": 0.003753
+    },
+    {
+     "s": 3.613,
+     "write": 3.609,
+     "read": 0.004044
+    },
+    {
+     "s": 3.609,
+     "write": 3.605,
+     "read": 0.003959
+    },
+    {
+     "s": 3.63,
+     "write": 3.626,
+     "read": 0.003797
+    },
+    {
+     "s": 3.678,
+     "write": 3.673,
+     "read": 0.004297
+    },
+    {
+     "s": 3.605,
+     "write": 3.601,
+     "read": 0.003931
+    },
+    {
+     "s": 3.81,
+     "write": 3.806,
+     "read": 0.003745
+    },
+    {
+     "s": 3.661,
+     "write": 3.658,
+     "read": 0.00369
+    },
+    {
+     "s": 3.679,
+     "write": 3.675,
+     "read": 0.003851
+    },
+    {
+     "s": 3.69,
+     "write": 3.686,
+     "read": 0.003789
+    },
+    {
+     "s": 3.675,
+     "write": 3.671,
+     "read": 0.004101
+    },
+    {
+     "s": 3.704,
+     "write": 3.698,
+     "read": 0.005273
+    }
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W4": {
+   "check": "ok",
+   "time": 9.964,
+   "p95": 10.03,
+   "warmup": [
+    10.01
+   ],
+   "runs": [
+    {
+     "s": 9.933,
+     "write": 9.918,
+     "read": 0.01483
+    },
+    {
+     "s": 10,
+     "write": 9.989,
+     "read": 0.01483
+    },
+    {
+     "s": 10,
+     "write": 9.974,
+     "read": 0.02851
+    },
+    {
+     "s": 9.899,
+     "write": 9.883,
+     "read": 0.01562
+    },
+    {
+     "s": 9.901,
+     "write": 9.886,
+     "read": 0.01488
+    },
+    {
+     "s": 9.964,
+     "write": 9.951,
+     "read": 0.01378
+    },
+    {
+     "s": 9.944,
+     "write": 9.93,
+     "read": 0.01407
+    },
+    {
+     "s": 9.89,
+     "write": 9.875,
+     "read": 0.01585
+    },
+    {
+     "s": 9.964,
+     "write": 9.949,
+     "read": 0.01469
+    },
+    {
+     "s": 10.02,
+     "write": 10.01,
+     "read": 0.01464
+    },
+    {
+     "s": 9.996,
+     "write": 9.978,
+     "read": 0.01794
+    },
+    {
+     "s": 9.882,
+     "write": 9.867,
+     "read": 0.0142
+    },
+    {
+     "s": 10.83,
+     "write": 10.81,
+     "read": 0.01431
+    },
+    {
+     "s": 10.03,
+     "write": 10.01,
+     "read": 0.01475
+    },
+    {
+     "s": 9.975,
+     "write": 9.961,
+     "read": 0.01326
+    },
+    {
+     "s": 10.01,
+     "write": 9.995,
+     "read": 0.01346
+    },
+    {
+     "s": 9.907,
+     "write": 9.892,
+     "read": 0.01437
+    },
+    {
+     "s": 9.932,
+     "write": 9.916,
+     "read": 0.01557
+    },
+    {
+     "s": 9.929,
+     "write": 9.914,
+     "read": 0.01466
+    },
+    {
+     "s": 9.981,
+     "write": 9.963,
+     "read": 0.01747
+    }
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W5": {
+   "check": "ok",
+   "time": 3.632,
+   "p95": 3.698,
+   "warmup": [
+    3.695
+   ],
+   "runs": [
+    {
+     "s": 3.698,
+     "write": 3.672,
+     "read": 0.02561
+    },
+    {
+     "s": 3.632,
+     "write": 3.624,
+     "read": 0.008512
+    },
+    {
+     "s": 3.598,
+     "write": 3.589,
+     "read": 0.008493
+    },
+    {
+     "s": 3.627,
+     "write": 3.604,
+     "read": 0.02317
+    },
+    {
+     "s": 3.606,
+     "write": 3.596,
+     "read": 0.009318
+    },
+    {
+     "s": 3.694,
+     "write": 3.686,
+     "read": 0.008415
+    },
+    {
+     "s": 3.617,
+     "write": 3.608,
+     "read": 0.009238
+    },
+    {
+     "s": 3.63,
+     "write": 3.607,
+     "read": 0.02299
+    },
+    {
+     "s": 3.596,
+     "write": 3.587,
+     "read": 0.008818
+    },
+    {
+     "s": 3.598,
+     "write": 3.589,
+     "read": 0.009492
+    },
+    {
+     "s": 3.688,
+     "write": 3.679,
+     "read": 0.008375
+    },
+    {
+     "s": 3.635,
+     "write": 3.626,
+     "read": 0.009303
+    },
+    {
+     "s": 3.665,
+     "write": 3.657,
+     "read": 0.00867
+    },
+    {
+     "s": 3.677,
+     "write": 3.667,
+     "read": 0.009445
+    },
+    {
+     "s": 3.656,
+     "write": 3.647,
+     "read": 0.00915
+    },
+    {
+     "s": 3.681,
+     "write": 3.672,
+     "read": 0.00962
+    },
+    {
+     "s": 3.619,
+     "write": 3.61,
+     "read": 0.009228
+    }
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W6a": {
+   "check": "ok",
+   "time": 1.561,
+   "p95": 1.616,
+   "warmup": [
+    1.649
+   ],
+   "runs": [
+    {
+     "s": 1.607,
+     "write": 1.604,
+     "read": 0.003448
+    },
+    {
+     "s": 1.616,
+     "write": 1.612,
+     "read": 0.003681
+    },
+    {
+     "s": 1.541,
+     "write": 1.537,
+     "read": 0.003688
+    },
+    {
+     "s": 1.561,
+     "write": 1.542,
+     "read": 0.01833
+    },
+    {
+     "s": 1.55,
+     "write": 1.546,
+     "read": 0.003789
+    },
+    {
+     "s": 1.54,
+     "write": 1.536,
+     "read": 0.003718
+    },
+    {
+     "s": 1.578,
+     "write": 1.558,
+     "read": 0.01979
+    },
+    {
+     "s": 1.526,
+     "write": 1.522,
+     "read": 0.003748
+    },
+    {
+     "s": 1.627,
+     "write": 1.623,
+     "read": 0.003489
+    },
+    {
+     "s": 1.554,
+     "write": 1.55,
+     "read": 0.003801
+    },
+    {
+     "s": 1.573,
+     "write": 1.554,
+     "read": 0.01945
+    },
+    {
+     "s": 1.547,
+     "write": 1.543,
+     "read": 0.003699
+    },
+    {
+     "s": 1.542,
+     "write": 1.539,
+     "read": 0.003764
+    },
+    {
+     "s": 1.567,
+     "write": 1.563,
+     "read": 0.003866
+    },
+    {
+     "s": 1.562,
+     "write": 1.542,
+     "read": 0.01981
+    },
+    {
+     "s": 1.576,
+     "write": 1.572,
+     "read": 0.003774
+    },
+    {
+     "s": 1.55,
+     "write": 1.546,
+     "read": 0.003556
+    },
+    {
+     "s": 1.59,
+     "write": 1.57,
+     "read": 0.02029
+    },
+    {
+     "s": 1.551,
+     "write": 1.547,
+     "read": 0.003873
+    },
+    {
+     "s": 1.565,
+     "write": 1.562,
+     "read": 0.003517
+    }
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W6b": {
+   "check": "ok",
+   "time": 1.569,
+   "p95": 1.606,
+   "warmup": [
+    1.656
+   ],
+   "runs": [
+    {
+     "s": 1.606,
+     "write": 1.603,
+     "read": 0.003675
+    },
+    {
+     "s": 1.609,
+     "write": 1.605,
+     "read": 0.003653
+    },
+    {
+     "s": 1.559,
+     "write": 1.539,
+     "read": 0.01964
+    },
+    {
+     "s": 1.586,
+     "write": 1.567,
+     "read": 0.01951
+    },
+    {
+     "s": 1.549,
+     "write": 1.545,
+     "read": 0.003654
+    },
+    {
+     "s": 1.568,
+     "write": 1.564,
+     "read": 0.004008
+    },
+    {
+     "s": 1.549,
+     "write": 1.545,
+     "read": 0.00375
+    },
+    {
+     "s": 1.559,
+     "write": 1.556,
+     "read": 0.003421
+    },
+    {
+     "s": 1.588,
+     "write": 1.584,
+     "read": 0.003765
+    },
+    {
+     "s": 1.577,
+     "write": 1.557,
+     "read": 0.01998
+    },
+    {
+     "s": 1.578,
+     "write": 1.574,
+     "read": 0.003754
+    },
+    {
+     "s": 1.562,
+     "write": 1.543,
+     "read": 0.01979
+    },
+    {
+     "s": 1.579,
+     "write": 1.576,
+     "read": 0.003675
+    },
+    {
+     "s": 1.57,
+     "write": 1.566,
+     "read": 0.003588
+    },
+    {
+     "s": 1.561,
+     "write": 1.557,
+     "read": 0.003772
+    },
+    {
+     "s": 1.564,
+     "write": 1.56,
+     "read": 0.003616
+    },
+    {
+     "s": 1.584,
+     "write": 1.563,
+     "read": 0.0205
+    },
+    {
+     "s": 1.602,
+     "write": 1.582,
+     "read": 0.01962
+    },
+    {
+     "s": 1.563,
+     "write": 1.56,
+     "read": 0.002901
+    },
+    {
+     "s": 1.554,
+     "write": 1.551,
+     "read": 0.003465
+    }
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W7": {
+   "check": "ok",
+   "time": 14.32,
+   "p95": 14.49,
+   "warmup": [
+    14.33
+   ],
+   "runs": [
+    {
+     "s": 14.2,
+     "write": 14.17,
+     "read": 0.0264
+    },
+    {
+     "s": 14.37,
+     "write": 14.36,
+     "read": 0.01267
+    },
+    {
+     "s": 14.31,
+     "write": 14.3,
+     "read": 0.01235
+    },
+    {
+     "s": 14.26,
+     "write": 14.25,
+     "read": 0.01346
+    },
+    {
+     "s": 14.38,
+     "write": 14.37,
+     "read": 0.01251
+    },
+    {
+     "s": 14.35,
+     "write": 14.32,
+     "read": 0.0266
+    },
+    {
+     "s": 13.99,
+     "write": 13.95,
+     "read": 0.04054
+    },
+    {
+     "s": 14.49,
+     "write": 14.47,
+     "read": 0.02687
+    },
+    {
+     "s": 14.42,
+     "write": 14.4,
+     "read": 0.02568
+    },
+    {
+     "s": 14.15,
+     "write": 14.13,
+     "read": 0.01336
+    },
+    {
+     "s": 14.48,
+     "write": 14.47,
+     "read": 0.01132
+    },
+    {
+     "s": 14.23,
+     "write": 14.22,
+     "read": 0.01195
+    },
+    {
+     "s": 14.3,
+     "write": 14.28,
+     "read": 0.01226
+    },
+    {
+     "s": 14.32,
+     "write": 14.31,
+     "read": 0.01377
+    },
+    {
+     "s": 14.27,
+     "write": 14.23,
+     "read": 0.03801
+    },
+    {
+     "s": 15.27,
+     "write": 15.26,
+     "read": 0.01366
+    },
+    {
+     "s": 14.17,
+     "write": 14.16,
+     "read": 0.01224
+    },
+    {
+     "s": 14.4,
+     "write": 14.39,
+     "read": 0.01247
+    },
+    {
+     "s": 14.46,
+     "write": 14.43,
+     "read": 0.02669
+    },
+    {
+     "s": 14.29,
+     "write": 14.28,
+     "read": 0.01211
+    }
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W8": {
+   "check": "ok",
+   "time": 3.166,
+   "p95": 3.33,
+   "warmup": [
+    3.344
+   ],
+   "runs": [
+    {
+     "s": 3.205,
+     "write": 3.183,
+     "read": 0.02138
+    },
+    {
+     "s": 3.33,
+     "write": 3.323,
+     "read": 0.006821
+    },
+    {
+     "s": 3.194,
+     "write": 3.188,
+     "read": 0.006418
+    },
+    {
+     "s": 3.168,
+     "write": 3.161,
+     "read": 0.006471
+    },
+    {
+     "s": 3.166,
+     "write": 3.158,
+     "read": 0.007616
+    },
+    {
+     "s": 3.135,
+     "write": 3.129,
+     "read": 0.006294
+    },
+    {
+     "s": 3.166,
+     "write": 3.159,
+     "read": 0.006484
+    },
+    {
+     "s": 3.156,
+     "write": 3.149,
+     "read": 0.00654
+    },
+    {
+     "s": 3.121,
+     "write": 3.115,
+     "read": 0.006032
+    },
+    {
+     "s": 3.139,
+     "write": 3.132,
+     "read": 0.006525
+    },
+    {
+     "s": 3.192,
+     "write": 3.186,
+     "read": 0.006301
+    }
+   ],
+   "repeats": 11,
+   "notes": "12 cells fit the pick rule, so 11 writes instead of 20",
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "W9": {
+   "check": "unsupported",
+   "notes": "waiting on the model"
+  },
+  "R7": {
+   "check": "ok",
+   "time": 0.009818,
+   "cold": 23.94,
+   "runs": [
+    0.009818,
+    0.009978,
+    0.03655,
+    0.009353,
+    0.009814
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R2c": {
+   "check": "ok",
+   "time": 0.006285,
+   "cold": 23.49,
+   "runs": [
+    0.006226,
+    0.006285,
+    0.02064,
+    0.00721,
+    0.006019
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R3": {
+   "check": "ok",
+   "time": 0.01037,
+   "cold": 23.4,
+   "runs": [
+    0.02323,
+    0.008726,
+    0.02286,
+    0.009847,
+    0.01037
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R1": {
+   "check": "ok",
+   "time": 0.005601,
+   "cold": 23.24,
+   "runs": [
+    0.005601,
+    0.005383,
+    0.02035,
+    0.006105,
+    0.005473
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R5": {
+   "check": "ok",
+   "time": 0.1047,
+   "cold": 23.24,
+   "runs": [
+    0.1027,
+    0.1109,
+    0.1045,
+    0.1047,
+    0.1059
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R2b": {
+   "check": "ok",
+   "time": 0.007001,
+   "cold": 23.03,
+   "runs": [
+    0.006481,
+    0.006695,
+    0.02267,
+    0.007026,
+    0.007001
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R4": {
+   "check": "ok",
+   "time": 0.2666,
+   "cold": 23.51,
+   "runs": [
+    0.2691,
+    0.2666,
+    0.4261,
+    0.2555,
+    0.2579
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R6": {
+   "check": "ok",
+   "time": 0.02183,
+   "cold": 23.02,
+   "runs": [
+    0.02149,
+    0.02073,
+    0.03659,
+    0.0219,
+    0.02183
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R2a": {
+   "check": "ok",
+   "time": 0.007651,
+   "cold": 23.07,
+   "runs": [
+    0.006868,
+    0.007348,
+    0.02219,
+    0.007651,
+    0.007823
+   ],
+   "coldIncludesOpen": true,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "R8": {
+   "check": "ok",
+   "time": 22.99,
+   "runs": [
+    23.11,
+    22.85,
+    22.99
+   ],
+   "cold": 22.99,
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "M1": {
+   "check": "ok",
+   "time": 1.864,
+   "runs": [
+    1.881,
+    1.864,
+    1.855
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "M2": {
+   "check": "ok",
+   "time": 18.29,
+   "runs": [
+    18.29,
+    18.86,
+    18.18
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "M3": {
+   "check": "ok",
+   "time": 18.18,
+   "runs": [
+    18.24,
+    18.18,
+    18.13
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "M4": {
+   "check": "ok",
+   "time": 1.242,
+   "runs": [
+    1.263,
+    1.228,
+    1.242
+   ],
+   "runnerCheck": "ok",
+   "runnerProblems": [],
+   "confirmedBy": [
+    "duckdb-tables",
+    "rama"
+   ]
+  },
+  "C1": {
+   "check": "ok",
+   "timed": false
+  },
+  "C2": {
+   "check": "ok",
+   "timed": false
+  }
+ }
+}

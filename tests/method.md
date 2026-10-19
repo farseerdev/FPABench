@@ -1,6 +1,6 @@
 # How FPABench measures
 
-Version 0.8-draft. The method will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
+Version 0.9-draft. The method will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
 
 ## The runner
 
