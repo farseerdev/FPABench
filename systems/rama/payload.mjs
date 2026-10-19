@@ -66,6 +66,18 @@ export async function forEachCell(model, file, fn) {
     }
 }
 
+/** The Versions and Years that cells.csv uses, sorted, read without keeping the cells in memory. */
+export async function readSystem(model, file) {
+    const seen = { Versions: new Set(), Years: new Set() };
+    await forEachCell(model, file, (v, value, members) => {
+        for (const d of ['Versions', 'Years']) {
+            const k = v.open.indexOf(d);
+            if (k >= 0) seen[d].add(members[k]);
+        }
+    });
+    return { Versions: [...seen.Versions].sort(), Years: [...seen.Years].sort() };
+}
+
 /** Reads cells.csv into { variable name: Map(key -> { value, members }) } and the system members it uses. */
 export async function readCells(model, file) {
     const cells = new Map();

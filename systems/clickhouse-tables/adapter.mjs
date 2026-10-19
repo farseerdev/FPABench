@@ -16,7 +16,6 @@ import { spawn, execFileSync } from 'node:child_process';
 import { createClient, ClickHouseLogLevel } from '@clickhouse/client';
 import { translate } from '../sql/translate.mjs';
 import { readSql } from '../sql/reads.mjs';
-import { readCells } from '../rama/payload.mjs';
 import { MONTHS } from '../../runner/lib/model.mjs';
 import { newDict, extendDict, dictFromRows, reverse, dimRows, SYSTEM_DIMS } from '../sql/dict.mjs';
 
@@ -75,6 +74,11 @@ export async function create({ work, model }) {
     };
     const nameOf = (d, v) => names.get(d)?.get(Number(v)) ?? (v === null ? null : `#${v}`);
 
+    // Every column of cells.csv read as text: codes such as 0000100000 keep their leading zeros.
+    const AS_TEXT = 'input_format_csv_use_best_effort_in_schema_inference = 0, schema_inference_make_columns_nullable = 0';
+    // The distinct members of one column of cells.csv, sorted.
+    const distinct = async (cellsDir, col) =>
+        (await rows(`SELECT DISTINCT ${id(col)} AS m FROM file(${lit(path.resolve(path.join(cellsDir, 'cells.csv')))}, 'CSVWithNames') WHERE ${id(col)} != '' ORDER BY m SETTINGS ${AS_TEXT}`)).map((r) => r.m);
     const run = (query) => client.command({ query, clickhouse_settings: SETTINGS });
     const rows = async (query) => (await client.query({ query, format: 'JSONEachRow', clickhouse_settings: SETTINGS })).json();
     // Builds again the calculated tables a change reaches: the ones that read a changed variable, directly
@@ -148,15 +152,15 @@ export async function create({ work, model }) {
         system: null,
 
         async load(cellsDir) {
-            const { system } = await readCells(model, path.join(cellsDir, 'cells.csv'));
-            adapter.system = { Versions: [...system.Versions].sort(), Years: [...system.Years].sort(), Months: MONTHS };
             fs.mkdirSync(work, { recursive: true });
-            fs.writeFileSync(path.join(work, 'system.json'), JSON.stringify(adapter.system));
-            dict = newDict(model, adapter.system);
-            retranslate();
             await stop();
             fs.rmSync(root, { recursive: true, force: true });
             await start();
+            // ClickHouse reads the Versions and Years the cells use straight from cells.csv.
+            adapter.system = { Versions: await distinct(cellsDir, 'Versions'), Years: await distinct(cellsDir, 'Years'), Months: MONTHS };
+            fs.writeFileSync(path.join(work, 'system.json'), JSON.stringify(adapter.system));
+            dict = newDict(model, adapter.system);
+            retranslate();
             for (const s of statements(sql.schema)) await run(s);
             for (const d of allDims()) await fillDimension(d);
             await adapter.loadCells(cellsDir, { rebuild: false });
@@ -200,7 +204,7 @@ export async function create({ work, model }) {
 
         async loadCells(cellsDir, { rebuild: again = true, cells: extra = [] } = {}) {
             const file = path.resolve(path.join(cellsDir, 'cells.csv'));
-            const header = fs.readFileSync(file, 'utf8').split('\n', 1)[0].split(',');
+            const header = (await rows(`DESCRIBE file(${lit(file)}, 'CSVWithNames') SETTINGS ${AS_TEXT}`)).map((r) => r.name);
             const structure = header.map((h) => `${id(h)} String`).join(', ');
             ver++;
             await run(`CREATE OR REPLACE TABLE cells ENGINE = Memory AS SELECT * FROM file(${lit(file)}, 'CSVWithNames', ${lit(structure)})`);
