@@ -1,5 +1,6 @@
 // RAMA, Farseer's engine, through its Node addon. These are the calls the Farseer backend makes:
-// modelImport to load a model and its cells, updateCells and commit to write, query to read.
+// modelImport to load a model, the native cell import to load its cells, updateCells and commit to write,
+// query to read.
 //
 // RAMA recalculates the cells a write reaches when the write commits, so a write is visible as soon
 // as commit returns. Commits are durable, as in the backend: commit forces the write to disk.
@@ -7,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { buildPayload, variablePayload, tablePayload, readCells } from './payload.mjs';
+import { variablePayload, tablePayload, readCells, forEachCell } from './payload.mjs';
 import { MONTHS } from '../../runner/lib/model.mjs';
 
 const NO_DELETE = { rows: false, tables: false, columns: false, variables: false };
@@ -57,14 +58,17 @@ export async function create({ work, model }) {
 
     // Gids for the native cell import: one map of member name to gid per dimension.
     let gids = new Map();
-    const memberGid = (tx, d, m) => {
+    const dimGids = (tx, d) => {
         if (!gids.has(d)) {
             const data = tx.dimensionByName(d).data(false, null);
             const names = Array.from(data[2]);
             const g = Array.from(data[1]);
             gids.set(d, new Map(names.map((n, i) => [n, g[i]])));
         }
-        const gid = gids.get(d).get(m);
+        return gids.get(d);
+    };
+    const memberGid = (tx, d, m) => {
+        const gid = dimGids(tx, d).get(m);
         if (gid === undefined) throw new Error(`no member ${m} in ${d}`);
         return gid;
     };
@@ -122,11 +126,23 @@ export async function create({ work, model }) {
         settings: { binary: 'rama.node (release)', durableCommits: true, abakus: true, threads: 'default' },
         system: null,
 
+        // The model goes in through modelImport, as when Farseer pushes a model. The input cells go in through
+        // the native cell import, streamed from cells.csv to RAMA's CSV, so they never sit in memory here.
+        // Until 2026-10-19 they went inside the modelImport JSON, which at 1b did not fit in 12 GB of heap.
         async load(cellsDir) {
             gids = new Map();
             names = new Map();
-            const payload = await buildPayload(model, path.join(cellsDir, 'cells.csv'));
-            adapter.system = { Versions: payload.versions, Years: payload.years, Months: MONTHS };
+            const cellsFile = path.join(cellsDir, 'cells.csv');
+            const seen = { Versions: new Set(), Years: new Set() };
+            await forEachCell(model, cellsFile, (v, value, members) => {
+                for (const d of ['Versions', 'Years']) {
+                    const k = v.open.indexOf(d);
+                    if (k >= 0) seen[d].add(members[k]);
+                }
+            });
+            const versions = [...seen.Versions].sort();
+            const years = [...seen.Years].sort();
+            adapter.system = { Versions: versions, Years: years, Months: MONTHS };
             fs.mkdirSync(work, { recursive: true });
             fs.writeFileSync(path.join(work, 'system.json'), JSON.stringify(adapter.system));
             rama.dropDB(dbPath);
@@ -134,7 +150,7 @@ export async function create({ work, model }) {
             db.enableAbakus(true);
             // RAMA seeds Versions Plan and Actual and Years Y2023 to Y2025. Keep exactly the data's own.
             rw((tx) => {
-                for (const [dim, want] of Object.entries({ Versions: payload.versions, Years: payload.years })) {
+                for (const [dim, want] of Object.entries({ Versions: versions, Years: years })) {
                     const t = tx.dimensionByName(dim);
                     const data = t.data(false, null);
                     const names = Array.from(data[2]);
@@ -145,8 +161,41 @@ export async function create({ work, model }) {
                     if (drop.length) tx.dimensionByName(dim).deleteDMembers(drop.map((m) => gids[names.indexOf(m)]));
                 }
             });
-            rw((tx) => tx.modelImport(JSON.stringify({ tables: payload.tables, variables: [] }), { dryRun: false, deleteEnabled: NO_DELETE }));
-            rw((tx) => tx.modelImport(JSON.stringify({ tables: [], variables: payload.variables }), { dryRun: false, deleteEnabled: NO_DELETE }));
+            rw((tx) => tx.modelImport(JSON.stringify({ tables: model.userDims.map((d) => tablePayload(model, d)), variables: [] }), { dryRun: false, deleteEnabled: NO_DELETE }));
+            rw((tx) => tx.modelImport(JSON.stringify({ tables: [], variables: model.order.map((v) => variablePayload(v)) }), { dryRun: false, deleteEnabled: NO_DELETE }));
+            // Each input variable's gid and its members' positions, in the order RAMA keeps its dimensions.
+            const layout = new Map();
+            ro((tx) => {
+                const dimName = new Map(Array.from(tx.dimensions()).map((i) => [tx.dimensionByID(i).gid(), tx.dimensionByID(i).name()]));
+                for (const v of model.variables.filter((x) => !x.formula)) {
+                    const h = tx.variableByName(v.name);
+                    const dims = Array.from(h.representation().tableGids).map((g) => dimName.get(g));
+                    layout.set(v.name, { gid: h.gid(), dims, at: dims.map((d) => v.open.indexOf(d)) });
+                    for (const d of dims) dimGids(tx, d);
+                }
+            });
+            const file = path.join(work, 'import.csv');
+            const fd = fs.openSync(file, 'w');
+            let buf = '';
+            await forEachCell(model, cellsFile, (v, value, members) => {
+                const { gid, dims, at } = layout.get(v.name);
+                const key = dims.map((d, i) => {
+                    const g = gids.get(d).get(members[at[i]]);
+                    if (g === undefined) throw new Error(`a cell of "${v.name}" names ${members[at[i]]}, which ${d} does not have`);
+                    return g;
+                });
+                buf += `${value},${gid},${key.join(':')}\n`;
+                if (buf.length > 1 << 20) {
+                    fs.writeSync(fd, buf);
+                    buf = '';
+                }
+            });
+            fs.writeSync(fd, buf);
+            fs.closeSync(fd);
+            // overwrite = false: a second row for a cell already loaded throws. Two rows for one cell should add
+            // up, and this import would keep only the last, so a repeat must fail instead of loading wrong.
+            rw((tx) => tx.importCellsFromCsvFile(file, false));
+            fs.rmSync(file, { force: true });
             rw((tx) => tx.recalc());
         },
 

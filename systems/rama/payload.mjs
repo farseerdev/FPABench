@@ -48,6 +48,24 @@ export function tablePayload(model, d, names = null) {
     return { name: d, columns: [{ type: 'PRIMARY_KEY' }, ...fks.map((p) => ({ type: 'FOREIGN_KEY', foreignKeyTableName: p }))], rows };
 }
 
+/** Calls fn(variable, value, members) for each row of cells.csv, members in the order of variable.open. */
+export async function forEachCell(model, file, fn) {
+    const rl = readline.createInterface({ input: fs.createReadStream(file), crlfDelay: Infinity });
+    let cols = null;
+    for await (const line of rl) {
+        if (!line) continue;
+        const f = line.split(',');
+        if (!cols) {
+            cols = new Map(f.map((h, i) => [h, i]));
+            continue;
+        }
+        const v = model.variable(f[0]);
+        const members = v.open.map((d) => f[cols.get(d)]);
+        if (members.some((m) => m === undefined || m === '')) throw new Error(`${file}: a cell of "${v.name}" lacks a member: ${line}`);
+        fn(v, Number(f[1]), members);
+    }
+}
+
 /** Reads cells.csv into { variable name: Map(key -> { value, members }) } and the system members it uses. */
 export async function readCells(model, file) {
     const cells = new Map();
