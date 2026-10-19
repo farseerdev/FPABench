@@ -92,7 +92,7 @@ What the numbers show, at both sizes:
 
 ## 1b, RAMA only, on a larger machine
 
-This run is outside the method, and its times do not rank against the tables above. On the method's `n2d-standard-4` the run was killed about 9 minutes into the first load, most likely for lack of memory. The kernel log was not kept, so that is not confirmed. So it ran on an `n2d-highmem-16`, with 16 vCPU and 128 GB, of which Linux sees 126 GB, four times the cores and eight times the memory, with the same local SSD. Peak resident memory was 41.4 GB, for RAMA and the runner in one process. At 1b the method runs loads and reads only. Every one of them passed its checks. Manifest SHA-256 `af44b682…`, run time 69.3 min. There is no other entry at 1b, so no answer was compared.
+This run is outside the method, and its times do not rank against the tables above. On the method's `n2d-standard-4` the run was killed about 9 minutes into the first load, most likely for lack of memory. The kernel log was not kept, so that is not confirmed. So it ran on an `n2d-highmem-16`, with 16 vCPU and 128 GB, of which Linux sees 126 GB, four times the cores and eight times the memory, with the same local SSD. Peak resident memory was 41.4 GB, for RAMA and the runner in one process. At the time of the run the method ran only loads and reads at 1b. Every one of them passed its checks. Manifest SHA-256 `af44b682…`, run time 69.3 min. There is no other entry at 1b, so no answer was compared.
 
 The file is in [`off-method/1b/rama.json`](off-method/1b/rama.json), outside the size folders, because the website shows results from one machine only.
 

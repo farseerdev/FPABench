@@ -45,7 +45,7 @@ Every result comes from one Google Cloud `n2d-standard-4`: 4 vCPUs and 16 GB of 
 - No system gets a thread or core limit. Each keeps its default thread setting, so it can use all 4 vCPUs. Each result file records this as `"threads": "default"`.
 - A system that runs out of memory at a size has no result at that size.
 - Each result records peak memory, CPU time and thread count.
-- The 10m and 100m sizes run every test. Larger sizes run loads and reads only, for now.
+- The 10m, 100m and 1b sizes run every test. 10b runs loads and reads only, for now.
 
 ## Repeats
 
