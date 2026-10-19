@@ -39,7 +39,7 @@ Embedded systems run inside the runner's process. Servers pay for a network roun
 
 ## The machine
 
-Every result comes from one Google Cloud `n2d-standard-4`: 4 vCPUs, 16 GB of memory and an SSD persistent disk. It is small on purpose, because memory often decides whether a model fits. This choice is not final until every system has had a trial run.
+Every result comes from one Google Cloud `n2d-standard-4`: 4 vCPUs and 16 GB of memory. It boots from an SSD persistent disk and has one local NVMe SSD of 375 GB. The data, every system's files, its snapshot and any Docker storage go on the local SSD, so no system runs out of disk. It is small on purpose, because memory often decides whether a model fits. This choice is not final until every system has had a trial run.
 
 - The runner and the system share the machine, and there are no other limits.
 - No system gets a thread or core limit. Each keeps its default thread setting, so it can use all 4 vCPUs. Each result file records this as `"threads": "default"`.
