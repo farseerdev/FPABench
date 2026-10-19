@@ -22,7 +22,7 @@ The script installs `@farseer/rama` 1.9.0-ffad51e.0 from Farseer's registry. On 
 | Write | `updateCells` with one `sum(...)` formula per cell, then `commit` |
 | Write to a read-only variable | `importCellsFromCsvFile`, the native path of a data import. `updateCells` refuses read-only cells. |
 | Read | `generateCombinations` lists the combinations of the `by` members that have a value, then one `query` call reads them. A Farseer sheet lists its rows with data the same way. A measure has no stored cells to list, so a measure read asks for every combination the filters allow. |
-| Model change | `modelImport` of the changed members and variables, then `recalc` |
+| Model change | `modelImport` of the changed members and variables, then `commit`. The commit updates every cell that depends on a changed formula. Until 2026-10-12 the adapter also called `recalc()`, which recalculates the whole model and took M1 from 1.9 s to 3.1 s on a laptop, with the same answers. |
 
 `payload.mjs` turns the model and the input cells into the JSON `modelImport` takes. That is the JSON the backend sends when a model is pushed.
 
