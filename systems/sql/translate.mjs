@@ -346,9 +346,16 @@ export function translate(model, { versions, years, kind = 'TABLE', dialect = 'd
         const sigOf = (r) => `${r.sql}|${JSON.stringify(r.via)}`;
         const only = cells.join && new Set(cells.join.map(sigOf)).size === 1 ? cells.join[0] : null;
         const direct = only && !only.via.length && T.every((t) => only.keys.includes(t)) && only.keys.every((k) => T.includes(k)) ? sigOf(only) : null;
-        const inDriver = new Set(direct ? refs.filter((r) => sigOf(r) === direct).map((r) => r.i) : []);
-        const driver = direct ? only.sql : cellsSql(cells.union ?? [cells]);
-        if (direct) value.sql = value.sql.replace(/\br(\d+)\.v\b/g, (m, i) => (inDriver.has(Number(i)) ? 'd.v' : m));
+        // When one chain of joins gives a table's cells, the chain also carries the value of each operand
+        // in it, so each operand is joined once and the chain needs no DISTINCT. Views of any kind, and tables
+        // whose cells are a union of chains, list the distinct coordinates and join every operand back onto them.
+        // Views keep that shape because the carried chain was measured on DuckDB and ClickHouse tables only.
+        const carried = new Map(); // operand signature -> alias of the operand in the chain
+        const chained = kind === 'TABLE' && !direct && cells.join?.length > 0;
+        const driver = direct ? only.sql : chained ? termSql(cells, carried) : cellsSql(cells.union ?? [cells]);
+        const inDriver = new Set(refs.filter((r) => (direct ? sigOf(r) === direct : carried.has(sigOf(r)))).map((r) => r.i));
+        const driverCol = (r) => (direct ? 'd.v' : `d.${carried.get(sigOf(r))}_v`);
+        value.sql = value.sql.replace(/\br(\d+)\.v\b/g, (m, i) => (inDriver.has(Number(i)) ? driverCol(refs[Number(i)]) : m));
 
         // --- the view -------------------------------------------------------------------------------
         const joins = [];
@@ -377,17 +384,20 @@ export function translate(model, { versions, years, kind = 'TABLE', dialect = 'd
 
         // The distinct target coordinates of a list of cell sets, united.
         function cellsSql(sets) {
-            return sets.map(termSql).join(UNION);
+            return sets.map((s) => termSql(s)).join(UNION);
         }
         // The distinct target coordinates of one join of operands, as an explicit chain of joins. The
         // operand with the most target dimensions goes first, and each coarser operand joins through the
         // parent columns of what is already there. An operand that appears twice joins once. A target
         // dimension no operand gives is filled with every member, as late as possible.
-        function termSql(c) {
+        // With `carried`, the chain also selects each operand's value as <alias>_v, records each operand's
+        // alias in `carried`, and needs no DISTINCT: each operand has at most one row per coordinate of its
+        // own dimensions, so the chain has one row per target cell.
+        function termSql(c, carried = null) {
             const seen = new Set();
             const pending = c.join
                 .filter((r) => {
-                    const sig = `${r.sql}|${JSON.stringify(r.via)}`;
+                    const sig = sigOf(r);
                     if (seen.has(sig)) return false;
                     seen.add(sig);
                     return true;
@@ -427,6 +437,7 @@ export function translate(model, { versions, years, kind = 'TABLE', dialect = 'd
                 }
                 const r = pending.splice(i, 1)[0];
                 const alias = `p${k++}`;
+                carried?.set(sigOf(r), alias);
                 const on = [];
                 for (const key of r.keys) if (have.has(key)) on.push(`${alias}.${id(key)} = ${have.get(key)}`);
                 for (const [x, t] of r.via) on.push(`${alias}.${id(x)} = ${flatOf(t)}.${id(x)}`);
@@ -436,6 +447,7 @@ export function translate(model, { versions, years, kind = 'TABLE', dialect = 'd
             }
             for (const t of T) if (!have.has(t)) addMembers(t);
             const sel = T.map((t) => `${have.get(t)} AS ${id(t)}`);
+            if (carried) return `SELECT ${[...sel, ...[...carried.values()].map((a) => `${a}.v AS ${a}_v`)].join(', ')} FROM ${from.join(' ')}`;
             return `SELECT DISTINCT ${sel.length ? sel.join(', ') : '1 AS one'} FROM ${from.length ? from.join(' ') : '(SELECT 1) AS z'}`;
         }
     }

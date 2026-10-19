@@ -10,7 +10,7 @@ RAMA is not open source. Its Node package is in Farseer's private npm registry, 
 ./install.sh
 ```
 
-The script installs `@farseer/rama` 1.9.0-ffad51e.0 from Farseer's registry. On Ubuntu 24.04 it also installs `libatomic1` and the `libstdc++6` of GCC 16 from the Ubuntu toolchain PPA, because the binary needs `GLIBCXX_3.4.34`. Farseer runs RAMA on the same GCC 16 runtime.
+The script installs `@farseer/rama` 1.9.0-ffad51e.0 from Farseer's registry. On Ubuntu 24.04 it also installs `libatomic1` and the `libstdc++6` of GCC 16 from the Ubuntu toolchain PPA, because the binary needs `GLIBCXX_3.4.34`. Farseer runs RAMA on the same GCC 16 runtime. On Ubuntu 26.04 the binary runs as it is, with no extra packages.
 
 ## How it runs
 
