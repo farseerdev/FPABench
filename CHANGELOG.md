@@ -4,6 +4,7 @@ Changes to the model, the data, the tests and the method, newest first. A change
 
 ## 0.8-draft, 2026-10-15
 
+- The run machine gets a local NVMe SSD of 375 GB, and every system keeps its data, its snapshot and any Docker storage on it. The boot disk stays an SSD persistent disk. Before, everything was on the persistent disk, which a system's state and snapshot could fill. This can move every result that touches the disk, so results from before and after are not comparable. The results in `results/10m/` are from before.
 - RAMA's load sends the model through `modelImport` and the input cells through its native cell import, streamed from `cells.csv`. Before, every cell went inside the `modelImport` JSON, and at 1b the adapter ran out of Node heap at 4 GB and again at 12 GB, before RAMA did any work. A cell that appears twice in `cells.csv` now stops the load, since the import would keep only one of the two. On a laptop at 10m the load took 10.0 s against 10.4 s before, with the same answers.
 - ClickHouse keeps the join order the translator writes (`query_plan_optimize_join_order_limit = 0`). At 100m its own join reordering made the `Growth Bonus Plan` statement run for more than 15 minutes, so the run did not finish its first load. With the setting the same statement takes 0.04 s. At 10m both orders were fast.
 - RAMA's model change no longer calls `recalc()` after the commit. The commit already updates every cell a changed formula reaches. On a laptop M1 went from 3.0 to 1.9 s, with the same answers.
