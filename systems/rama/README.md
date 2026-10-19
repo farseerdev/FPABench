@@ -18,7 +18,7 @@ The script installs `@farseer/rama` 1.9.0-ffad51e.0 from Farseer's registry. On 
 
 | Step | Call |
 | --- | --- |
-| Load | One `modelImport` for the dimensions, one for the variables with their cells, then `recalc` |
+| Load | One `modelImport` for the dimensions and one for the variables, without cells. Then `importCellsFromCsvFile`, the native cell import, with every input cell streamed from `cells.csv`, then `recalc`. Until 2026-10-19 the cells went inside the variables' `modelImport` JSON, and at 1b that JSON did not fit in 12 GB of Node heap. |
 | Write | `updateCells` with one `sum(...)` formula per cell, then `commit` |
 | Write to a read-only variable | `importCellsFromCsvFile`, the native path of a data import. `updateCells` refuses read-only cells. |
 | Read | `generateCombinations` lists the combinations of the `by` members that have a value, then one `query` call reads them. A Farseer sheet lists its rows with data the same way. A measure has no stored cells to list, so a measure read asks for every combination the filters allow. |
