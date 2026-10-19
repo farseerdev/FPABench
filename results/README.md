@@ -4,13 +4,13 @@ Draft. One folder per dataset size, and one file per entry in it. Each file is w
 
 ## The machine
 
-Each entry ran on its own Google Cloud `n2d-standard-4` in europe-west1-b: AMD EPYC 7B13, 4 vCPU, 16 GB, an SSD persistent disk to boot from and a 375 GB local NVMe SSD for the data, the system's files and its snapshot. Ubuntu 24.04, kernel 7.0.0-1014-gcp, Node 22.22.3. Every VM was new and was deleted after its run. Tests 0.5-draft, model files with SHA-256 `cee0497a6600c68d…`, data generator 0.6-draft, seed 1, FPABench `c85ca46`. All runs were on 2026-10-19. At each size every entry wrote the same cells, from one picks file.
+Each entry ran on its own Google Cloud `n2d-standard-4` in europe-west1-b: AMD EPYC 7B13, 4 vCPU, 16 GB, an SSD persistent disk to boot from and a 375 GB local NVMe SSD for the data, the system's files and its snapshot. Ubuntu 24.04.5, kernel 7.0.0-1014-gcp, Node 22.22.3. Every VM was new and was deleted after its run. Tests 0.5-draft, model files with SHA-256 `cee0497a6600c68d…`, data generator 0.6-draft, seed 1, FPABench `c85ca46`. All runs were on 2026-10-19. At each size every entry wrote the same cells, from one picks file.
 
 | Entry | System | Durable | Runs as |
 | --- | --- | --- | --- |
-| `rama` | RAMA 1.9.0-ffad51e.0 | yes | in process |
-| `duckdb-tables` | DuckDB 1.5.6, `@duckdb/node-api` 1.5.6-r.1 | inputs yes, calculated tables in memory | in process |
-| `clickhouse-tables` | ClickHouse 26.9.16.11, `@clickhouse/client` 1.23.1 | inputs yes, calculated tables in memory | one server on the same machine |
+| `rama` ([10m](10m/rama.json), [100m](100m/rama.json)) | RAMA 1.9.0-ffad51e.0 | yes | in process |
+| `duckdb-tables` ([10m](10m/duckdb-tables.json), [100m](100m/duckdb-tables.json)) | DuckDB 1.5.6, `@duckdb/node-api` 1.5.6-r.1 | inputs yes, calculated tables in memory | in process |
+| `clickhouse-tables` ([10m](10m/clickhouse-tables.json), [100m](100m/clickhouse-tables.json)) | ClickHouse 26.9.16.11, `@clickhouse/client` 1.23.1 | inputs yes, calculated tables in memory | one server on the same machine |
 
 The SQL entries rebuild only the calculated tables a change reaches, and use integer member ids. The method may count that dependency logic as tuning. That is not decided yet. ClickHouse runs with the two settings it needs to keep missing values missing, and keeps the translator's join order. Settings are in each system's README.
 
@@ -18,7 +18,7 @@ Seconds. A write is the median of up to 20 writes, each to a fresh cell, with th
 
 ## 10m
 
-Manifest SHA-256 `7e4a79c2…`. Run times: RAMA 1.9 min, DuckDB 5.7 min, ClickHouse 10.4 min. Every test passed its checks on every entry, and every answer matched across all three in all 27 compared tests.
+Manifest SHA-256 `7e4a79c2…`. Run times: RAMA 1.9 min, DuckDB 5.7 min, ClickHouse 10.4 min. Every ready test passed its checks on every entry, and every answer matched across all three in all 26 compared tests. W9 is not ready.
 
 | Test | RAMA | DuckDB (tables) | ClickHouse (tables) |
 | --- | ---: | ---: | ---: |
@@ -51,7 +51,7 @@ Manifest SHA-256 `7e4a79c2…`. Run times: RAMA 1.9 min, DuckDB 5.7 min, ClickHo
 
 ## 100m
 
-Manifest SHA-256 `3ede1d21…`. Run times: RAMA 14.0 min, DuckDB 31.5 min, ClickHouse 42.9 min. Every test passed its checks on every entry, and every answer matched across all three in all 27 compared tests.
+Manifest SHA-256 `3ede1d21…`. Run times: RAMA 14.0 min, DuckDB 31.5 min, ClickHouse 42.9 min. Every ready test passed its checks on every entry, and every answer matched across all three in all 26 compared tests. W9 is not ready.
 
 | Test | RAMA | DuckDB (tables) | ClickHouse (tables) |
 | --- | ---: | ---: | ---: |
@@ -92,13 +92,13 @@ What the numbers show, at both sizes:
 
 ## 1b, RAMA only, on a larger machine
 
-This run is outside the method, and its times do not rank against the tables above. On the method's `n2d-standard-4` the run was killed about 9 minutes into the first load, most likely for lack of memory. The kernel log was not kept, so that is not confirmed. So it ran on an `n2d-highmem-16`, with 16 vCPU and 128 GB, four times the cores and eight times the memory, with the same local SSD. Peak resident memory was 41.4 GB, for RAMA and the runner in one process. At 1b the method runs loads and reads only. Every one of them passed its checks. Manifest SHA-256 `af44b682…`, run time 69.3 min. There is no other entry at 1b, so no answer was compared.
+This run is outside the method, and its times do not rank against the tables above. On the method's `n2d-standard-4` the run was killed about 9 minutes into the first load, most likely for lack of memory. The kernel log was not kept, so that is not confirmed. So it ran on an `n2d-highmem-16`, with 16 vCPU and 128 GB, of which Linux sees 126 GB, four times the cores and eight times the memory, with the same local SSD. Peak resident memory was 41.4 GB, for RAMA and the runner in one process. At 1b the method runs loads and reads only. Every one of them passed its checks. Manifest SHA-256 `af44b682…`, run time 69.3 min. There is no other entry at 1b, so no answer was compared.
 
 The file is in [`off-method/1b/rama.json`](off-method/1b/rama.json), outside the size folders, because the website shows results from one machine only.
 
 | Test | RAMA, 1b, `n2d-highmem-16` |
 | --- | ---: |
-| L1 Initial load | 1.02e+03 |
+| L1 Initial load | 1,022 |
 | L2 Monthly close | 104 |
 | L3 Change a weight in master data | 38.7 |
 | R1 Company P&L | 0.0103, cold 20.7 |
@@ -115,9 +115,10 @@ The file is in [`off-method/1b/rama.json`](off-method/1b/rama.json), outside the
 ## Caveats
 
 - There is no reference program yet for the expected values. Two systems built in different ways that agree stand in for one. See the runner's README.
+- W9 waits on the model. Every file marks it `unsupported`.
 - Invariant I3 is not checked.
 - The test edits of M4 are the runner's own reading of `tests.json`.
 - RAMA cannot be installed outside Farseer yet. Its package is in Farseer's private registry.
 - One run of each entry. ClickBench-style repeats on fresh machines are still to do.
-- These results replace the run of 2026-10-15, which used a 200 GB SSD persistent disk. Since then the run machine has a local NVMe SSD, RAMA commits a model change without a full recalc and streams its input cells through the native cell import, and ClickHouse keeps the translator's join order. The changelog has the effect of each. Compare entries within one run, not across runs.
+- These results replace the run of 2026-10-15, which used a 200 GB SSD persistent disk. Since then the run machine has a local NVMe SSD, RAMA commits a model change without a full recalc and streams its input cells through the native cell import, and ClickHouse keeps the translator's join order. The changelog has the effect of each. Compare entries within one set of runs. Each entry ran on its own new machine of the same type.
 - Durable means a write survives a crash of the system or the operating system. The local SSD does not survive a host failure or a stop of the VM. See the method.

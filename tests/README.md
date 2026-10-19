@@ -1,6 +1,6 @@
 # The FPABench tests
 
-Version 0.8-draft. The tests will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
+Version 0.9-draft. The tests will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
 
 FPABench times what a planning team does every day. It loads actuals, types numbers into the plan, reads reports and changes the model. Each test does one of these to [the model](../model/README.md).
 
