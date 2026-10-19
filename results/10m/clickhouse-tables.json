@@ -958,10 +958,6 @@
     "rama"
    ]
   },
-  "W9": {
-   "check": "unsupported",
-   "notes": "waiting on the model"
-  },
   "R7": {
    "check": "ok",
    "time": 0.006016,

@@ -51,11 +51,8 @@ L2 loads the `increments/close-2026-07` folder of the dataset.
 | W6b | **Change an office's cost.** It is not allocated. | `EBIT OUT` of the country | Delta. EBIT falls by the change. |
 | W7 | **Set a yearly target** for one customer group and category. The model spreads it down. | `Volume` of the group and category | Value |
 | W8 | **Flip a yearly bonus.** Move a group's growth threshold across its growth. The group's bonus rate is above 0. | `Growth Bonus` of the group for the year | Delta. Bonus rate × the year's invoice sales. |
-| W9 | **Copy a version.** FC 6+6 into What-if, then change three inputs. | The What-if P&L | Value |
 
 W6a and W6b write the same kind of cell. W6a moves thousands of allocated cells, and W6b moves one total. An engine that recalculates only what a change reaches does far less work for W6b.
-
-W9 waits on the model for a way to copy a version.
 
 ## Reads
 

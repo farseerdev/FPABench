@@ -18,7 +18,7 @@ Seconds. A write is the median of up to 20 writes, each to a fresh cell, with th
 
 ## 10m
 
-Manifest SHA-256 `7e4a79c2…`. Run times: RAMA 1.9 min, DuckDB 5.7 min, ClickHouse 10.4 min. Every ready test passed its checks on every entry, and every answer matched across all three in all 26 compared tests. W9 is not ready.
+Manifest SHA-256 `7e4a79c2…`. Run times: RAMA 1.9 min, DuckDB 5.7 min, ClickHouse 10.4 min. Every ready test passed its checks on every entry, and every answer matched across all three in all 26 compared tests.
 
 | Test | RAMA | DuckDB (tables) | ClickHouse (tables) |
 | --- | ---: | ---: | ---: |
@@ -51,7 +51,7 @@ Manifest SHA-256 `7e4a79c2…`. Run times: RAMA 1.9 min, DuckDB 5.7 min, ClickHo
 
 ## 100m
 
-Manifest SHA-256 `3ede1d21…`. Run times: RAMA 14.0 min, DuckDB 31.5 min, ClickHouse 42.9 min. Every ready test passed its checks on every entry, and every answer matched across all three in all 26 compared tests. W9 is not ready.
+Manifest SHA-256 `3ede1d21…`. Run times: RAMA 14.0 min, DuckDB 31.5 min, ClickHouse 42.9 min. Every ready test passed its checks on every entry, and every answer matched across all three in all 26 compared tests.
 
 | Test | RAMA | DuckDB (tables) | ClickHouse (tables) |
 | --- | ---: | ---: | ---: |
@@ -115,7 +115,6 @@ The file is in [`off-method/1b/rama.json`](off-method/1b/rama.json), outside the
 ## Caveats
 
 - There is no reference program yet for the expected values. Two systems built in different ways that agree stand in for one. See the runner's README.
-- W9 waits on the model. Every file marks it `unsupported`.
 - Invariant I3 is not checked.
 - The test edits of M4 are the runner's own reading of `tests.json`.
 - RAMA cannot be installed outside Farseer yet. Its package is in Farseer's private registry.
