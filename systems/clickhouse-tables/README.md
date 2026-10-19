@@ -31,6 +31,7 @@ ClickHouse has no row update that suits typed values. So each input table is a `
 | --- | --- | --- |
 | `join_use_nulls` | 1 | Required. With the default 0, the missing side of an outer join is 0 or `''`, and "missing" turns into 0. |
 | `aggregate_functions_null_for_empty` | 1 | Required. With the default 0, a sum over no rows is 0 instead of missing. |
+| `query_plan_optimize_join_order_limit` | 0 | Keeps the join order the translator writes, widest operand first. At 100m, ClickHouse's own join reordering made one statement (`Growth Bonus Plan`, 1 million rows joined to three lookups of up to 3,351 rows) run for more than 15 minutes. With this setting it takes 0.04 s. |
 | `mutations_sync` | 2 | No mutations run in the tests. Set so one would finish before the next statement. |
 | `fsync_after_insert`, `fsync_part_directory` | 1, on every table on disk | The method turns durability on where a system has a setting for it |
 | Threads, memory | ClickHouse's defaults | |

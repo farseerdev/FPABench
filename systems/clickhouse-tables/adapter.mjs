@@ -23,7 +23,10 @@ import { newDict, extendDict, dictFromRows, reverse, dimRows, SYSTEM_DIMS } from
 const id = (s) => `"${String(s).replace(/"/g, '""')}"`;
 const lit = (s) => `'${String(s).replace(/'/g, "''").replace(/\\/g, '\\\\')}'`;
 const num = (x) => (Number.isFinite(x) ? String(x) : 'NULL');
-const SETTINGS = { join_use_nulls: 1, aggregate_functions_null_for_empty: 1, mutations_sync: 2 };
+// query_plan_optimize_join_order_limit = 0 keeps the join order the translator writes, widest operand
+// first. At 100m ClickHouse 26.9 reordered one table's joins (Growth Bonus Plan: 1 million rows joined to
+// lookups of 120 to 3,351 rows) and the statement ran for more than 15 minutes instead of 0.04 s.
+const SETTINGS = { join_use_nulls: 1, aggregate_functions_null_for_empty: 1, mutations_sync: 2, query_plan_optimize_join_order_limit: 0 };
 const PORT = Number(process.env.FPABENCH_CLICKHOUSE_PORT ?? 18123);
 
 const statements = (sql) =>
