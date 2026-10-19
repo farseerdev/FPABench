@@ -4,6 +4,7 @@ Changes to the model, the data, the tests and the method, newest first. A change
 
 ## 0.8-draft, 2026-10-15
 
+- R8 counts in the cold read score only. R8 opens a stopped system, so every run of it is cold. Before, it also counted in the warm read score. On the website, R8 cannot be ticked in the warm read view. `tests/tests.json` does not change. On the results in `results/10m/`, the warm read score of RAMA goes from 1.06 to 1.07, DuckDB from 1.28 to 1.20 and ClickHouse from 2.05 to 1.80. The order of the entries does not change. No cold read score changes.
 - RAMA's load sends the model through `modelImport` and the input cells through its native cell import, streamed from `cells.csv`. Before, every cell went inside the `modelImport` JSON, and at 1b the adapter ran out of Node heap at 4 GB and again at 12 GB, before RAMA did any work. A cell that appears twice in `cells.csv` now stops the load, since the import would keep only one of the two. On a laptop at 10m the load took 10.0 s against 10.4 s before, with the same answers.
 - ClickHouse keeps the join order the translator writes (`query_plan_optimize_join_order_limit = 0`). At 100m its own join reordering made the `Growth Bonus Plan` statement run for more than 15 minutes, so the run did not finish its first load. With the setting the same statement takes 0.04 s. At 10m both orders were fast.
 - RAMA's model change no longer calls `recalc()` after the commit. The commit already updates every cell a changed formula reaches. On a laptop M1 went from 3.0 to 1.9 s, with the same answers.

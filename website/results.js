@@ -5,7 +5,8 @@
 // times out or gives a wrong answer counts as twice the largest of 300 s, the
 // entry's own slowest time and the slowest success on that test. Each kind of
 // test gets its own score, the geometric mean of its tests' ratios. There is no
-// combined score. Lower is better.
+// combined score. Lower is better. R8 opens a stopped system, so every run of it
+// is cold, and it counts in the cold read score only.
 
 const data = JSON.parse(document.getElementById('results-data').textContent);
 const SHIFT = 0.01;
@@ -68,6 +69,9 @@ document.getElementById('selectors').addEventListener('click', (event) => {
 // --- scores ---------------------------------------------------------------------------------
 
 const testById = new Map(data.tests.map((t) => [t.id, t]));
+const COLD_ONLY = new Set(['R8']);
+// Whether a test counts in the score of the selected read runs.
+const counts = (test) => !(COLD_ONLY.has(test.id) && one('run') !== 'cold');
 const timeOf = (row, testId) => {
     const result = row.tests[testId];
     if (!result || result.check !== 'ok') return null;
@@ -85,7 +89,7 @@ function scoredRows() {
             return { ...r, entryInfo: entryById.get(r.entry), ratios: {}, scores: {}, slowest: Math.max(0, ...own) };
         });
     for (const kind of data.kinds) {
-        const counted = data.tests.filter((t) => t.kind === kind.id && t.status === 'ready' && !excluded.has(t.id));
+        const counted = data.tests.filter((t) => t.kind === kind.id && t.status === 'ready' && !excluded.has(t.id) && counts(t));
         for (const test of counted) {
             const times = rows.map((r) => timeOf(r, test.id)).filter((t) => t !== null);
             if (times.length === 0) continue;
@@ -125,7 +129,7 @@ function renderSummary(rows) {
     const kind = one('kind');
     const scored = rows.filter((r) => r.scores[kind] !== null);
     if (scored.length === 0) {
-        const kindTests = data.tests.filter((t) => t.kind === kind && t.status === 'ready');
+        const kindTests = data.tests.filter((t) => t.kind === kind && t.status === 'ready' && counts(t));
         let why = 'No entry passed any of the counted tests.';
         if (rows.length === 0) why = 'No results for this selection.';
         else if (kindTests.length > 0 && kindTests.every((t) => excluded.has(t.id))) why = 'No test counts toward the score. Tick at least one test below.';
@@ -171,7 +175,10 @@ function renderDetails(rows) {
             return `<td class="cell"${style}${title}>${seconds(time)}${ratio ? `<span class="x">${ratioText(ratio)}</span>` : ''}</td>`;
         });
         const checked = excluded.has(test.id) ? '' : ' checked';
-        return `<tr><td><input type="checkbox" data-test="${esc(test.id)}"${checked} aria-label="Count ${esc(test.id)} in the score"></td>${name}${cells.join('')}</tr>`;
+        const box = counts(test)
+            ? `<input type="checkbox" data-test="${esc(test.id)}"${checked} aria-label="Count ${esc(test.id)} in the score">`
+            : `<input type="checkbox" disabled title="Counts in the cold read score only" aria-label="${esc(test.id)} counts in the cold read score only">`;
+        return `<tr><td>${box}</td>${name}${cells.join('')}</tr>`;
     });
     el.innerHTML = `<div class="table-wrap wide"><table class="details"><thead>${head}</thead><tbody>${body.join('')}</tbody></table></div>`;
 }
