@@ -73,7 +73,8 @@ score = (c + t) / (c + best)
 
 `t` is the system's time and `best` is the fastest system's time. `c` is 10 ms, so differences no user could feel don't count as big ratios. Lower is better, and 1 is the best.
 
-- Each system gets four scores, one each for loads, writes, reads and model changes. Each is the geometric mean of its test scores. There is no combined score.
+- Loads, writes and model changes get one score each. Reads get two scores, one from the median warm times and one from the cold times. Each score is the geometric mean of its test scores. There is no combined score.
+- R8 opens a stopped system, so every run of it is cold. It counts in the cold read score only.
 - Absolute times are always shown next to the scores.
 - A failed, timed-out or wrong test counts as twice the largest of three times. These are 300 s, the system's slowest warm time on any test, and the slowest success of any system on that test.
 
