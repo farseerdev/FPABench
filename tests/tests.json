@@ -20,8 +20,7 @@
             "model": { "repeats": 3, "from": "snapshot" }
         },
         "scales": {
-            "everyTest": ["10m", "100m"],
-            "loadsAndReadsOnly": ["1b", "10b"]
+            "everyTest": ["10m", "100m", "1b", "10b"]
         }
     },
     "invariants": [

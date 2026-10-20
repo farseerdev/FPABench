@@ -33,7 +33,7 @@ On Linux the runner drops the OS cache before a cold read with `sudo -n`. Withou
 2. L1 loads three times from empty. After the last load the runner stops the system and copies its files. That copy is the snapshot.
 3. Every other test starts from the snapshot. A write test writes once to warm up, then 20 times. The cells come from the seed in one shuffled order, so every write takes a fresh cell. When fewer cells fit the pick rule, the test writes fewer times and its result says so. A bulk write, a later load and a model change run three times, each from the snapshot. A read runs once cold, after a restart and an OS cache drop, then five times warm. The runner waits, untimed, for the system to finish the background work it started, such as compiling the plans of new statements. It waits after each restore and after the cold run of R1 to R7. It also waits just before a later load, a bulk write, a model change or the first timed write of a write test. An adapter whose system has no background work has no `settle()`.
 4. The timer runs here, from just before the action to the end of the proving read. A load's timer also waits for `sync`. A write result also has the two parts: the write until the system says it is done, and the proving read.
-5. At sizes where the method runs loads and reads only, the runner leaves out every other test. `tests.json` still names sizes SF1 to SF1000, so the runner reads SF1, SF10, SF100 and SF1000 as 10m, 100m, 1b and 10b.
+5. Every size runs every test. `tests.json` may name sizes SF1 to SF1000, and the runner reads SF1, SF10, SF100 and SF1000 as 10m, 100m, 1b and 10b.
 
 ## Checks
 
