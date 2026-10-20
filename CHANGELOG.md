@@ -4,6 +4,7 @@ Changes to the model, the data, the tests and the method, newest first. A change
 
 ## 0.9-draft, 2026-10-19
 
+- In the SQL entries, the members the model itself brings get fixed ids: those in its dimension files, the members its formulas and pins name, and the NULL members. They come first in each dimension, and the data's own members, such as customers, follow them. Before, every dimension was numbered in alphabetical order with the data's members mixed in, so the SQL for 10m and 100m differed in 11 lines. Now the generated SQL is the same for both, which allows SQL files made once ahead of a run. On a laptop at 10m every answer stayed the same.
 - Every size runs every test. Before, 1b and 10b ran loads and reads only, because nobody knew how long their writes would take. At 100m the slowest write took 14 s. The 1b results in `results/off-method/` are from before, with loads and reads only.
 - Each size has its own machine, always with 4 vCPUs of the N2D series. 10m and 100m stay on an `n2d-standard-4` with 16 GB. 1b gets an `n2d-custom-4-65536-ext`, a custom N2D with 64 GB, because RAMA and DuckDB each needed about 42 to 44 GB at 1b. 10b has no machine yet.
 - Test W9, copy a version, is removed for now. It waited on a way to copy a version, and no runner code or adapter call for it existed. It never ran, so no result moves. The result files no longer list it.
