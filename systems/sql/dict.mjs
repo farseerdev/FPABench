@@ -1,5 +1,6 @@
 // Integer ids for members, for the SQL entries. Every key column holds ids instead of member names.
 //
+// Members the model names get fixed ids, ahead of the data's own, so the SQL means the same with any dataset.
 // Ids are given once and never change: a new member, such as a customer added by test M2, gets the next
 // free id of its dimension, so the rows already stored keep theirs. The ids live in the dimension tables
 // ("dim <Dim>": id, name, parent ids), so a restarted system reads them back from there.
@@ -11,10 +12,20 @@ function membersOf(model, system, d) {
     return SYSTEM_DIMS.includes(d) ? system[d] : [...model.members.get(d).keys()].sort();
 }
 
-/** A new dictionary: dimension -> Map(name -> id), ids from 1 in member order. */
+/**
+ * A new dictionary: dimension -> Map(name -> id), ids from 1. In a user dimension the members the model
+ * itself brings come first, sorted, so a member a formula names has the same id with any dataset. The
+ * members only the data brings, such as customers, follow them. Versions and Years come from the data, and
+ * every dataset has the same ones.
+ */
 export function newDict(model, system) {
     const dict = new Map();
-    for (const d of [...model.userDims, ...SYSTEM_DIMS]) dict.set(d, new Map(membersOf(model, system, d).map((m, i) => [m, i + 1])));
+    for (const d of [...model.userDims, ...SYSTEM_DIMS]) {
+        const all = membersOf(model, system, d);
+        const fixed = SYSTEM_DIMS.includes(d) ? [] : [...(model.modelMembers?.get(d) ?? [])].sort();
+        const isFixed = new Set(fixed);
+        dict.set(d, new Map([...fixed, ...all.filter((m) => !isFixed.has(m))].map((m, i) => [m, i + 1])));
+    }
     return dict;
 }
 
