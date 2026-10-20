@@ -124,19 +124,26 @@ export function loadModel(modelDir, cellsDir = null) {
 
     // Members.
     const members = new Map(userDims.map((d) => [d, new Map()]));
-    const add = (d, name, parentRow = {}) => {
+    // The members the model itself brings: its dimension files, its pins, the members its formulas name and the
+    // NULL members. They do not depend on the data, so the SQL entries give them fixed ids.
+    const modelMembers = new Map(userDims.map((d) => [d, new Set()]));
+    const add = (d, name, parentRow = {}, fromModel = true) => {
         const m = members.get(d);
         if (!m || !name) return;
+        if (fromModel) modelMembers.get(d).add(name);
         const prev = m.get(name);
         const ps = prev?.parents ?? {};
         for (const p of parentsOf(d)) if (parentRow[p]) ps[p] = parentRow[p];
         m.set(name, { name, parents: ps });
     };
-    const dirs = [path.join(modelDir, 'dimensions'), cellsDir && path.join(cellsDir, 'dimensions')].filter(Boolean);
+    const dirs = [
+        [path.join(modelDir, 'dimensions'), true],
+        [cellsDir && path.join(cellsDir, 'dimensions'), false],
+    ].filter(([dir]) => dir);
     for (const d of userDims) {
-        for (const dir of dirs) {
+        for (const [dir, fromModel] of dirs) {
             const file = path.join(dir, `${d}.csv`);
-            if (fs.existsSync(file)) for (const r of readCsv(file)) add(d, r[d], r);
+            if (fs.existsSync(file)) for (const r of readCsv(file)) add(d, r[d], r, fromModel);
         }
     }
     for (const v of variables) for (const [d, m] of Object.entries(v.pins)) add(d, m);
@@ -170,7 +177,7 @@ export function loadModel(modelDir, cellsDir = null) {
         return cur;
     };
 
-    return { dir: modelDir, files, variables, variable, byName, links, userDims, parentsOf, ancestorsOf, isAncestor, order, members, above, addMember: add };
+    return { dir: modelDir, files, variables, variable, byName, links, userDims, parentsOf, ancestorsOf, isAncestor, order, members, modelMembers, above, addMember: add };
 }
 
 /** Members of every user dimension in the order a cell file would list them, plus the system ones. */

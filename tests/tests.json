@@ -20,8 +20,7 @@
             "model": { "repeats": 3, "from": "snapshot" }
         },
         "scales": {
-            "everyTest": ["10m", "100m"],
-            "loadsAndReadsOnly": ["1b", "10b"]
+            "everyTest": ["10m", "100m", "1b", "10b"]
         }
     },
     "invariants": [
@@ -211,25 +210,6 @@
             "expect": [
                 { "kind": "delta", "size": "Growth Bonus Rate IN * Invoice Sales by Group Year", "sign": "the bonus turns off if it was on, on if it was off" },
                 { "kind": "value", "variable": "CHECK Growth Bonus", "where": { "Customer Group": "$pick.Customer Group", "Versions": "FC 6+6", "Years": "Y2026" }, "equals": 0 }
-            ]
-        },
-        {
-            "id": "W9",
-            "name": "Copy a version",
-            "kind": "write",
-            "runs": "bulk",
-            "status": "waiting on the model",
-            "needs": ["A way to copy every input of one version into another"],
-            "start": "base",
-            "action": {
-                "copy": { "from": "FC 6+6", "to": "What-if", "what": "every IN variable" },
-                "then": "Write three inputs of What-if, picked as in W3, W4 and W6a"
-            },
-            "prove": { "variable": "PL EUR OUT", "by": ["PL Line"], "where": { "Versions": "What-if", "Years": "Y2026" } },
-            "expect": [
-                { "kind": "value", "before": "the three writes", "equals": "PL EUR OUT of FC 6+6" },
-                { "kind": "value", "after": "the three writes" },
-                { "kind": "unchanged", "variable": "PL EUR OUT", "where": { "Versions": "FC 6+6", "Years": "Y2026" } }
             ]
         },
         {

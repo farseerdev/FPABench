@@ -1,6 +1,6 @@
 # How FPABench measures
 
-Version 0.8-draft. The method will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
+Version 0.9-draft. The method will change before version 1. Every change is listed in [CHANGELOG.md](../CHANGELOG.md).
 
 ## The runner
 
@@ -27,7 +27,7 @@ The runner times everything itself, with a monotonic clock. It never uses times 
 
 ## Durability and tags
 
-A durable write survives a crash. Where a system has a setting for this, its entry turns it on. Every result is tagged `durable` or `non-durable`.
+A durable write survives a crash. Here that means the system forces the write to disk before it says the write is done, so the write survives a crash of the system or of the operating system. The run machine keeps every system's files on a local SSD, which Google does not keep through a host failure or a stop of the VM. So `durable` does not cover those. Where a system has a setting for this, its entry turns it on. Every result is tagged `durable` or `non-durable`.
 
 Embedded systems run inside the runner's process. Servers pay for a network round trip. Both share one table, tagged `embedded` or `server`.
 
@@ -39,13 +39,21 @@ Embedded systems run inside the runner's process. Servers pay for a network roun
 
 ## The machine
 
-Every result comes from one Google Cloud `n2d-standard-4`: 4 vCPUs, 16 GB of memory and an SSD persistent disk. It is small on purpose, because memory often decides whether a model fits. This choice is not final until every system has had a trial run.
+Every result at a size comes from one kind of Google Cloud machine. Every size gets 4 vCPUs of the same CPU series, so times can be compared across sizes. Only the memory grows with the data.
+
+| Size | Machine | vCPUs | Memory |
+| --- | --- | ---: | ---: |
+| 10m, 100m | `n2d-standard-4` | 4 | 16 GB |
+| 1b | `n2d-custom-4-65536-ext`, a custom N2D with extended memory | 4 | 64 GB |
+| 10b | Not chosen yet | 4 | |
+
+At 1b RAMA and DuckDB each needed about 42 to 44 GB, so 16 GB is too small there, and 64 GB leaves room. The machine boots from an SSD persistent disk and has one local NVMe SSD of 375 GB. The data, every system's files, its snapshot and any Docker storage go on the local SSD, so no system runs out of disk. Each machine is small on purpose, because memory often decides whether a model fits. This choice is not final until every system has had a trial run.
 
 - The runner and the system share the machine, and there are no other limits.
 - No system gets a thread or core limit. Each keeps its default thread setting, so it can use all 4 vCPUs. Each result file records this as `"threads": "default"`.
 - A system that runs out of memory at a size has no result at that size.
 - Each result records peak memory, CPU time and thread count.
-- The 10m and 100m sizes run every test. Larger sizes run loads and reads only, for now.
+- Every size runs every test.
 
 ## Repeats
 
