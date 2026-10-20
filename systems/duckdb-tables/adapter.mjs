@@ -14,7 +14,6 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { DuckDBInstance } from '@duckdb/node-api';
 import { translate } from '../sql/translate.mjs';
-import { readCells } from '../rama/payload.mjs';
 import { readSql } from '../sql/reads.mjs';
 import { MONTHS } from '../../runner/lib/model.mjs';
 import { newDict, extendDict, dictFromRows, reverse, dimRow, dimRows, SYSTEM_DIMS } from '../sql/dict.mjs';
@@ -58,6 +57,10 @@ export async function create({ work, model }) {
         for (const chunk of sql.rebuildSql(changed)) for (const s of statements(chunk)) await run(s);
     };
 
+    // The distinct members of one column of cells.csv, sorted.
+    const distinct = async (cellsDir, col) =>
+        (await rows(`SELECT DISTINCT ${id(col)} AS m FROM read_csv(${lit(path.resolve(path.join(cellsDir, 'cells.csv')))}, header = true, all_varchar = true) WHERE ${id(col)} <> '' ORDER BY m`)).map((r) => r.m);
+
     async function upsert(cells, { transaction = true } = {}) {
         const byVar = new Map();
         for (const c of cells) {
@@ -97,15 +100,15 @@ export async function create({ work, model }) {
         system: null,
 
         async load(cellsDir) {
-            const { system } = await readCells(model, path.join(cellsDir, 'cells.csv'));
-            adapter.system = { Versions: [...system.Versions].sort(), Years: [...system.Years].sort(), Months: MONTHS };
             fs.mkdirSync(work, { recursive: true });
-            fs.writeFileSync(path.join(work, 'system.json'), JSON.stringify(adapter.system));
-            dict = newDict(model, adapter.system);
-            retranslate();
             fs.rmSync(file, { force: true });
             fs.rmSync(`${file}.wal`, { force: true });
             await adapter.open({ build: false });
+            // DuckDB reads the Versions and Years the cells use straight from cells.csv.
+            adapter.system = { Versions: await distinct(cellsDir, 'Versions'), Years: await distinct(cellsDir, 'Years'), Months: MONTHS };
+            fs.writeFileSync(path.join(work, 'system.json'), JSON.stringify(adapter.system));
+            dict = newDict(model, adapter.system);
+            retranslate();
             for (const s of statements(sql.schema)) await run(s);
             for (const d of allDims()) {
                 const vals = dimRows(model, dict, d).map((r) => `(${r.map((x, i) => (i === 1 ? lit(x) : x)).join(', ')})`);
@@ -119,7 +122,7 @@ export async function create({ work, model }) {
         /** Opens the file. The calculated tables live in memory, so a start builds them again from the inputs. */
         async open({ build = true } = {}) {
             if (conn) return;
-            if (!adapter.system) adapter.system = JSON.parse(fs.readFileSync(path.join(work, 'system.json'), 'utf8'));
+            if (build && !adapter.system) adapter.system = JSON.parse(fs.readFileSync(path.join(work, 'system.json'), 'utf8'));
             instance = await DuckDBInstance.create(file);
             conn = await instance.connect();
             if (!build) return;

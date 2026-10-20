@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { variablePayload, tablePayload, readCells, forEachCell } from './payload.mjs';
+import { variablePayload, tablePayload, readCells, readSystem, forEachCell } from './payload.mjs';
 import { MONTHS } from '../../runner/lib/model.mjs';
 
 const NO_DELETE = { rows: false, tables: false, columns: false, variables: false };
@@ -133,15 +133,9 @@ export async function create({ work, model }) {
             gids = new Map();
             names = new Map();
             const cellsFile = path.join(cellsDir, 'cells.csv');
-            const seen = { Versions: new Set(), Years: new Set() };
-            await forEachCell(model, cellsFile, (v, value, members) => {
-                for (const d of ['Versions', 'Years']) {
-                    const k = v.open.indexOf(d);
-                    if (k >= 0) seen[d].add(members[k]);
-                }
-            });
-            const versions = [...seen.Versions].sort();
-            const years = [...seen.Years].sort();
+            // RAMA's dimensions must hold every version and year before its cell import can run, and RAMA cannot
+            // read a CSV by itself before that. So the adapter reads these two columns, one line at a time.
+            const { Versions: versions, Years: years } = await readSystem(model, cellsFile);
             adapter.system = { Versions: versions, Years: years, Months: MONTHS };
             fs.mkdirSync(work, { recursive: true });
             fs.writeFileSync(path.join(work, 'system.json'), JSON.stringify(adapter.system));
