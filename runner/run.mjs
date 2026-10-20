@@ -64,17 +64,14 @@ const log = (...a) => {
 
 // --- dataset --------------------------------------------------------------------------------------
 
-// Which kinds of test run at which size. tests.json names the sizes, and until it uses the data's names
+// The sizes tests.json allows. Every one runs every test. tests.json names the sizes, and until it uses the data's names
 // (10m to 10b) the runner reads SF1 and SF10 as 10m and 100m, and SF100 and SF1000 as 1b and 10b.
 const SIZE_OF = { SF1: '10m', SF10: '100m', SF100: '1b', SF1000: '10b' };
 const sizesOf = (list) => list.map((x) => SIZE_OF[x] ?? x);
 const manifestText = fs.readFileSync(path.join(dataset, 'manifest.json'), 'utf8');
 const manifest = JSON.parse(manifestText);
 const scale = manifest.size;
-if (sizesOf(D.scales.loadsAndReadsOnly).includes(scale)) {
-    const allowed = tests.tests.filter((t) => t.kind === 'load' || t.kind === 'read').map((t) => t.id);
-    only = new Set((only ? [...only] : allowed).filter((id) => allowed.includes(id)));
-} else if (!sizesOf(D.scales.everyTest).includes(scale)) throw new Error(`tests.json says nothing about size ${scale}`);
+if (!sizesOf(D.scales.everyTest).includes(scale)) throw new Error(`tests.json says nothing about size ${scale}`);
 // Everything cached in --work (input cells, the system's files, the snapshot) and the picks belong to one
 // dataset. They are keyed by the SHA-256 of its manifest, so another dataset never reuses them.
 const datasetId = createHash('sha256').update(manifestText).digest('hex').slice(0, 16);
