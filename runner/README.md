@@ -30,7 +30,7 @@ The dataset brings `picks.json`: for each test, the cells it writes and the valu
 | `--out` | Where `<entry>.json`, `<entry>.answers.json` and `<entry>.log` go |
 | `--record` | Runs on the dataset's picks and writes the expected results to this file. For RAMA. |
 | `--expected` | The expected results to check against. A downloaded size brings its own. A file recorded for another dataset is refused. |
-| `--tests` | Only these tests, such as `L1,W1,R1`. They are added to the results already in `--out`. With `--record`, they replace only their own entries in an expected file that is already there. Every test but L1 starts from the snapshot L1 leaves. |
+| `--tests` | Only these tests, such as `L1,W1,R1`. They are added to the results already in `--out`. With `--record`, they replace only their own entries in an expected file that is already there. Every test but L1 starts from the snapshot L1 leaves. On a work folder where L1 has not run yet, the runner loads once first, untimed and not recorded, to make one. |
 | `--machine` | The machine, as it goes in the results, such as `n2d-standard-4, local NVMe SSD`. A published result goes in `results/<machine>/<size>/`, with the machine in lower case and hyphens: `results/n2d-standard-4-local-nvme-ssd/10m/rama.json`. |
 | `--quick` | One run of each load, bulk write, model change and read, and three writes per write test, to try the runner. Not for results. A quick record goes with quick runs only. |
 

@@ -318,6 +318,25 @@ async function runTest(test, p) {
 log(`entry ${entry}, ${system.name} ${system.version}, scale ${manifest.size}${record ? ', recording the expected results' : ''}`);
 const started = performance.now();
 
+// Every test but L1 starts from the snapshot L1 leaves. A run without L1, on a work folder where L1 has not
+// passed yet, loads once first, untimed and not recorded, to make one. snapshot.ok marks a finished L1.
+const snapshotMark = path.join(testWork, 'snapshot.ok');
+if (!tests.some((t) => t.id === 'L1') && !fs.existsSync(snapshotMark)) {
+    log('no snapshot in this work folder yet: loading once to make one, untimed');
+    const l1 = (await import(path.join(root, 'systems', entry, 'tests', 'l1.mjs'))).default;
+    const context = { ...base };
+    try {
+        await l1.setup(context);
+        await l1.run(context);
+    } catch (e) {
+        context.failed = true;
+        throw e;
+    } finally {
+        await l1.teardown(context);
+    }
+    fs.writeFileSync(snapshotMark, new Date().toISOString() + '\n');
+}
+
 // Whether the expected file has the answers of a test: every run has its expected answer, or must be 0.
 const isRecorded = (p) => p !== undefined && (Array.isArray(p) ? p : [p]).every((w) => w.expect !== undefined || mustBeZero(w, 'answer'));
 
@@ -332,7 +351,10 @@ for (const test of tests) {
     log(`${test.id} start`);
     try {
         const p = picks[test.id];
+        // L1 makes the snapshot again, so the mark goes until it has finished.
+        if (test.id === 'L1') fs.rmSync(snapshotMark, { force: true });
         const result = await runTest(test, p);
+        if (test.id === 'L1') fs.writeFileSync(snapshotMark, new Date().toISOString() + '\n');
 
         // Each answer and each check against the expected results. When recording, the first answer is the
         // expected one, and later runs must give it again. What the pick says must be 0 is checked against 0.

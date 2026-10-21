@@ -25,6 +25,8 @@ Changes to the model, the data, the tests and the method, newest first. A change
 - A test the expected file has no answers for is reported as "not recorded" and not run. Before, a `--record --tests` on a new file left the other tests marked wrong.
 - A downloaded dataset is checked against the published `SHA256SUMS` on every run, and downloaded again when a new version was published. The runner reads both forms of a `SHA256SUMS` line and refuses a file name with a path in it.
 - `data/picks.mjs` keeps its copy of the input cells next to the dataset instead of in `/tmp`, and deletes it also when a pick fails. L3 picks only a SKU with a unit weight. C3 picks only a country with sales, so a leaked write shows. M3 and the sorting do less work, for 10b. The picks of 10m, 100m and 1b stay the same.
+- A run with `--tests` but without L1 makes the snapshot first, untimed and not recorded, when the work folder has none yet. Before, every test then failed to restore.
+- RAMA's L2 reads, sums and writes the July cells one file at a time, straight into RAMA's import file, so it no longer holds every cell in memory twice. At 100m L2 takes 6.0 s instead of 6.6 s.
 - `systems/risingwave/` is removed, with its SQL dialect in the translator. It had no tests in the new style and no results. The generated SQL of DuckDB and ClickHouse does not change.
 
 ## 0.9-draft, 2026-10-20

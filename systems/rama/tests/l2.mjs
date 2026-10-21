@@ -7,7 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { restore, cell, importCells, eachLine } from '../db.mjs';
+import { restore, cell, eachLine } from '../db.mjs';
 
 export default {
     async setup(context) {
@@ -15,23 +15,53 @@ export default {
     },
 
     async run({ db, work, cells, pick }) {
-        // The increment's cells, one file per variable, with two rows for one cell added up.
-        const list = [];
+        // RAMA's CSV of the increment: value, variable gid and member gids, in the order RAMA keeps the
+        // variable's dimensions. One file at a time: its cells are summed by their gids, two rows for one cell
+        // adding up, and written out, so only one variable's cells are held at once.
+        const file = path.join(work, 'import.csv');
+        const fd = fs.openSync(file, 'w');
         for (const name of fs.readdirSync(path.join(cells.close, 'cells')).sort()) {
-            const byKey = new Map();
-            await eachLine(path.join(cells.close, 'cells', name), (f, header) => {
-                const key = f.slice(0, -1).join(',');
-                const prev = byKey.get(key);
-                const at = Object.fromEntries(header.slice(0, -1).map((d, i) => [d, f[i]]));
-                byKey.set(key, { variable: name.slice(0, -'.csv'.length), at, value: (prev?.value ?? 0) + Number(f[f.length - 1]) });
+            const variable = name.slice(0, -'.csv'.length);
+            const { gid, dims } = db.ro((tx) => {
+                const h = tx.variableByName(variable);
+                const dimName = new Map(Array.from(tx.dimensions()).map((i) => [tx.dimensionByID(i).gid(), tx.dimensionByID(i).name()]));
+                return { gid: h.gid(), dims: Array.from(h.representation().tableGids).map((g) => dimName.get(g)) };
             });
-            // One at a time: at 1b a file has hundreds of thousands of cells, too many to pass to push at once.
-            for (const c of byKey.values()) list.push(c);
+            const gids = dims.map((d) => db.gids(d));
+            const sums = new Map();
+            let at = null;
+            let value = 0;
+            await eachLine(path.join(cells.close, 'cells', name), (f, header) => {
+                if (!at) {
+                    at = dims.map((d) => header.indexOf(d));
+                    value = header.indexOf('value');
+                }
+                const key = dims
+                    .map((d, i) => {
+                        const g = gids[i].get(f[at[i]]);
+                        if (g === undefined) throw new Error(`a cell of "${variable}" names ${f[at[i]]}, which ${d} does not have`);
+                        return g;
+                    })
+                    .join(':');
+                sums.set(key, (sums.get(key) ?? 0) + Number(f[value]));
+            });
+            let buf = '';
+            for (const [key, v] of sums) {
+                buf += `${v},${gid},${key}\n`;
+                if (buf.length > 1 << 20) {
+                    fs.writeSync(fd, buf);
+                    buf = '';
+                }
+            }
+            fs.writeSync(fd, buf);
         }
+        fs.closeSync(fd);
+        // overwrite = true: a July cell replaces the value already there. The flags go in the same transaction.
         db.rw((tx) => {
-            importCells(db, tx, work, list);
+            tx.importCellsFromCsvFile(file, true);
             tx.updateCells([], pick.flags.map((f) => ({ type: 'VARIABLE', formula: cell(f.variable, f.at), value: f.value })), [], false);
         });
+        fs.rmSync(file, { force: true });
 
         return db.rows('EBIT OUT', ['Country'], { Versions: 'Actual', Years: 'Y2026', Months: 'M7' });
     },
