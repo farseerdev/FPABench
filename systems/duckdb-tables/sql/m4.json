@@ -1,0 +1,67 @@
+{
+ "model": "m4",
+ "dialect": "duckdb",
+ "system": {
+  "Versions": [
+   "Actual",
+   "Budget",
+   "FC 3+9",
+   "FC 6+6",
+   "What-if"
+  ],
+  "Years": [
+   "Y2023",
+   "Y2024",
+   "Y2025",
+   "Y2026"
+  ],
+  "Months": [
+   "M1",
+   "M2",
+   "M3",
+   "M4",
+   "M5",
+   "M6",
+   "M7",
+   "M8",
+   "M9",
+   "M10",
+   "M11",
+   "M12"
+  ]
+ },
+ "changed": [
+  "Marketing Staff Pool",
+  "Net Sales Positive by Country",
+  "Marketing Staff Key",
+  "Marketing Staff Cost",
+  "Contribution Margin III",
+  "Marketing Staff Unallocated",
+  "Overheads",
+  "Unallocated by Country",
+  "PL Marketing Staff",
+  "PL Marketing Staff Unallocated",
+  "PL OUT",
+  "CHECK OPEX in EBIT"
+ ],
+ "tables": [
+  "Marketing Staff Pool",
+  "Net Sales Positive by Country",
+  "Marketing Staff Key",
+  "Marketing Staff Cost",
+  "Contribution Margin III",
+  "Marketing Staff Unallocated",
+  "Overheads",
+  "Contribution Margin III by Country",
+  "Unallocated by Country",
+  "EBIT OUT",
+  "EBIT EUR OUT",
+  "PL Overheads",
+  "PL Marketing Staff",
+  "PL Marketing Staff Unallocated",
+  "PL OUT",
+  "PL EUR OUT",
+  "CHECK OPEX in EBIT",
+  "CHECK PL without FX Rate"
+ ]
+}

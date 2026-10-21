@@ -1,0 +1,504 @@
+{
+ "tables": [],
+ "variables": [
+  {
+   "name": "Marketing Staff Pool",
+   "description": null,
+   "notes": null,
+   "formula": "sum(\"OPEX\", Function>Marketing)",
+   "tables": [
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables"
+   ]
+  },
+  {
+   "name": "Net Sales Positive by Country",
+   "description": null,
+   "notes": null,
+   "formula": "\"Net Sales Positive\"",
+   "tables": [
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables"
+   ]
+  },
+  {
+   "name": "Marketing Staff Key",
+   "description": null,
+   "notes": null,
+   "formula": "if(gt(\"Net Sales Positive by Country\", 0), \"Net Sales Positive\" / \"Net Sales Positive by Country\")",
+   "tables": [
+    "Customer",
+    "Brand",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables"
+   ]
+  },
+  {
+   "name": "Marketing Staff Cost",
+   "description": null,
+   "notes": null,
+   "formula": "\"Marketing Staff Pool\" * \"Marketing Staff Key\"",
+   "tables": [
+    "Customer",
+    "Brand",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables"
+   ]
+  },
+  {
+   "name": "Contribution Margin III",
+   "description": null,
+   "notes": "Contribution margin II less the brand's marketing, in the country's currency. Costs that no customer could carry are not in it. Layer 7 takes them off the country's profit.",
+   "formula": "\"Contribution Margin II\" - \"Marketing Cost\" - \"Marketing Staff Cost\"",
+   "tables": [
+    "Customer",
+    "Brand",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables",
+    "Margin"
+   ]
+  },
+  {
+   "name": "Marketing Staff Unallocated",
+   "description": null,
+   "notes": null,
+   "formula": "\"Marketing Staff Pool\" - \"Marketing Staff Cost\"",
+   "tables": [
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables"
+   ]
+  },
+  {
+   "name": "Overheads",
+   "description": null,
+   "notes": "Every operating expense that is not allocated to customers. That includes cost centers missing from master data, which load under NULL (Function) and NULL (Country).",
+   "formula": "sum(\"OPEX\", not(or(Function>Logistics, Function>Sales, Function>Marketing)))",
+   "tables": [
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables",
+    "EBIT"
+   ]
+  },
+  {
+   "name": "Unallocated by Country",
+   "description": null,
+   "notes": "Deductions and costs that no customer could carry. Customer profitability leaves them out, but the country's profit must not.",
+   "formula": "\"Rebates Unallocated by Country\" + \"Growth Bonus Unallocated by Country\" + \"Trade Fees Unallocated by Country\" + \"Logistics Unallocated\" + \"Sales Force Unallocated\" + \"Marketing Unallocated\" + \"Marketing Staff Unallocated\"",
+   "tables": [
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables",
+    "EBIT"
+   ]
+  },
+  {
+   "name": "PL Marketing Staff",
+   "description": null,
+   "notes": null,
+   "formula": "-1 * \"Marketing Staff Cost\"",
+   "tables": [
+    "Brand",
+    "Channel",
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [
+    [
+     "PL Line",
+     "P190"
+    ]
+   ],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables"
+   ]
+  },
+  {
+   "name": "PL Marketing Staff Unallocated",
+   "description": null,
+   "notes": null,
+   "formula": "-1 * \"Marketing Staff Unallocated\"",
+   "tables": [
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [
+    [
+     "PL Line",
+     "P190"
+    ],
+    [
+     "Brand",
+     "NULL (Brand)"
+    ],
+    [
+     "Channel",
+     "NULL (Channel)"
+    ]
+   ],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables"
+   ]
+  },
+  {
+   "name": "PL OUT",
+   "description": null,
+   "notes": "Management P&L by brand, channel and country, in the country's currency. Summed over all lines it is EBIT.",
+   "formula": "\"PL Gross Sales\" + \"PL Standard Discounts\" + \"PL Promo Discounts\" + \"PL Logistics Discounts\" + \"PL Rebates\" + \"PL Growth Bonus\" + \"PL Trade Fees\" + \"PL Promo Funding\" + \"PL COGS\" + \"PL Logistics\" + \"PL Sales Force\" + \"PL Marketing\" + \"PL Overheads\" + \"PL Rebates Unallocated\" + \"PL Growth Bonus Unallocated\" + \"PL Trade Fees Unallocated\" + \"PL Logistics Unallocated\" + \"PL Sales Force Unallocated\" + \"PL Marketing Unallocated\" + \"PL Marketing Staff\" + \"PL Marketing Staff Unallocated\"",
+   "tables": [
+    "PL Line",
+    "Brand",
+    "Channel",
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables",
+    "Report"
+   ]
+  },
+  {
+   "name": "CHECK OPEX in EBIT",
+   "description": null,
+   "notes": "Operating expenses that never reach EBIT. Zero when healthy.",
+   "formula": "\"OPEX by Country\" - \"Overheads\" - \"Logistics Cost\" - \"Logistics Unallocated\" - \"Sales Force Cost\" - \"Sales Force Unallocated\" - \"Marketing Staff Cost\" - \"Marketing Staff Unallocated\"",
+   "tables": [
+    "Country",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables",
+    "Checks"
+   ]
+  }
+ ]
+}

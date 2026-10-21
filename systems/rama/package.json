@@ -4,6 +4,6 @@
     "description": "FPABench entry: RAMA, Farseer's engine, through its Node addon.",
     "type": "module",
     "dependencies": {
-        "@farseer/rama": "1.9.0-ffad51e.0"
+        "@farseer/rama": "1.9.0-c9c20e7.0"
     }
 }

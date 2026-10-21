@@ -5,33 +5,40 @@
 // times out or gives a wrong answer counts as twice the largest of 300 s, the
 // entry's own slowest time and the slowest success on that test. Each kind of
 // test gets its own score, the geometric mean of its tests' ratios. There is no
-// combined score. Lower is better. R8 opens a stopped system, so every run of it
-// is cold, and it counts in the cold read score only.
+// combined score. Lower is better.
 
 const data = JSON.parse(document.getElementById('results-data').textContent);
 const SHIFT = 0.01;
 const FLOOR = 300;
-const FAILURES = { wrong: '✗ wrong', error: '☠ error', timeout: '☠ timeout', unsupported: '– not supported' };
+const FAILURES = { wrong: '✗ wrong', error: '☠ error', timeout: '☠ timeout', unsupported: '– not supported', 'not recorded': '– not recorded' };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const entryById = new Map(data.entries.map((e) => [e.id, e]));
 
+const machineLabel = (m) => `${m.name}${m.host?.cpus ? `, ${m.host.cpus} vCPU, ${m.host.memoryGB} GB` : ''}`;
 const GROUPS = [
+    { key: 'machine', label: 'Machine', options: data.machines.map((m) => [m.id, machineLabel(m)]) },
     { key: 'scale', label: 'Scale', single: true, options: data.scales.map((s) => [s, s]) },
     { key: 'system', label: 'System', options: data.entries.map((e) => [e.id, e.name]) },
     { key: 'kind', label: 'Tests', single: true, options: data.kinds.map((k) => [k.id, k.label]) },
-    { key: 'run', label: 'Read runs', single: true, options: [['warm', 'Median warm'], ['cold', 'Cold']], only: { kind: 'read' } },
 ];
 
-// Sizes without results yet are shown, but cannot be picked.
-const ready = new Set(data.ready ?? data.scales);
-const blocked = (group, value) => group === 'scale' && !ready.has(value);
+// Sizes none of the picked machines has results for are shown, but cannot be picked.
+const readyOn = (machines) => new Set([...machines].flatMap((m) => data.ready[m] ?? []));
+const blocked = (group, value) => group === 'scale' && !readyOn(state.machine).has(value);
 
 const state = Object.fromEntries(GROUPS.map((g) => [g.key, new Set(g.single ? [g.options[0][0]] : g.options.map(([v]) => v))]));
-state.scale = new Set([data.scales.find((s) => ready.has(s))]);
+const one = (key) => [...state[key]][0];
+// The page opens on the reference machine alone, which comes first, and its first size with results. More
+// machines can be ticked, as in ClickBench. Each system then shows once per machine, and every row shown is
+// scored against the fastest of them.
+state.machine = new Set([data.machines[0].id]);
+state.scale = new Set([data.scales.find((s) => readyOn(state.machine).has(s))]);
+const machineById = new Map(data.machines.map((m) => [m.id, m]));
+// A row's name: the system, and its machine when more than one machine is ticked.
+const rowName = (r) => (state.machine.size > 1 ? `${r.entryInfo.name} · ${machineById.get(r.machine).name.split(',')[0]}` : r.entryInfo.name);
 state.kind = new Set(['write']);
 const excluded = new Set();
-const one = (key) => [...state[key]][0];
 
 // --- selectors ------------------------------------------------------------------------------
 
@@ -63,33 +70,33 @@ document.getElementById('selectors').addEventListener('click', (event) => {
         else for (const [v] of group.options) set.add(v);
     } else if (set.has(value)) set.delete(value);
     else set.add(value);
+    // At least one machine stays ticked. When none of the ticked ones has results at the picked size, the page
+    // moves to the first size one of them has.
+    if (group.key === 'machine' && state.machine.size === 0) state.machine.add(value === '*' ? data.machines[0].id : value);
+    if (group.key === 'machine' && !readyOn(state.machine).has(one('scale'))) state.scale = new Set([data.scales.find((s) => readyOn(state.machine).has(s))]);
     render();
 });
 
 // --- scores ---------------------------------------------------------------------------------
 
 const testById = new Map(data.tests.map((t) => [t.id, t]));
-const COLD_ONLY = new Set(['R8']);
-// Whether a test counts in the score of the selected read runs.
-const counts = (test) => !(COLD_ONLY.has(test.id) && one('run') !== 'cold');
 const timeOf = (row, testId) => {
     const result = row.tests[testId];
     if (!result || result.check !== 'ok') return null;
-    return testById.get(testId).kind === 'read' && one('run') === 'cold' ? result.cold : result.time;
+    return result.time;
 };
 
 // Every entry at the selected scale is scored, shown or not. The other filters
 // only decide which rows are shown, so hiding a system never moves another's score.
 function scoredRows() {
     const rows = data.results
-        .filter((r) => state.scale.has(r.scale))
+        .filter((r) => state.machine.has(r.machine) && state.scale.has(r.scale))
         .map((r) => {
-            // The entry's own slowest time uses warm times only, so the read selector never moves it.
             const own = Object.values(r.tests).filter((x) => x.check === 'ok' && typeof x.time === 'number').map((x) => x.time);
             return { ...r, entryInfo: entryById.get(r.entry), ratios: {}, scores: {}, slowest: Math.max(0, ...own) };
         });
     for (const kind of data.kinds) {
-        const counted = data.tests.filter((t) => t.kind === kind.id && t.status === 'ready' && !excluded.has(t.id) && counts(t));
+        const counted = data.tests.filter((t) => t.kind === kind.id && t.status === 'ready' && !excluded.has(t.id));
         for (const test of counted) {
             const times = rows.map((r) => timeOf(r, test.id)).filter((t) => t !== null);
             if (times.length === 0) continue;
@@ -129,7 +136,7 @@ function renderSummary(rows) {
     const kind = one('kind');
     const scored = rows.filter((r) => r.scores[kind] !== null);
     if (scored.length === 0) {
-        const kindTests = data.tests.filter((t) => t.kind === kind && t.status === 'ready' && counts(t));
+        const kindTests = data.tests.filter((t) => t.kind === kind && t.status === 'ready');
         let why = 'No entry passed any of the counted tests.';
         if (rows.length === 0) why = 'No results for this selection.';
         else if (kindTests.length > 0 && kindTests.every((t) => excluded.has(t.id))) why = 'No test counts toward the score. Tick at least one test below.';
@@ -146,7 +153,7 @@ function renderSummary(rows) {
                 const s = r.scores[k.id];
                 return `<td class="score${k.id === kind ? ' picked' : ' other'}">${s === null ? '–' : ratioText(s)}</td>`;
             });
-            return `<tr><td class="name">${esc(r.entryInfo.name)}</td><td class="bar-cell"><span class="bar" style="width:${width(r.scores[kind]).toFixed(1)}%"></span></td>${scores.join('')}</tr>`;
+            return `<tr><td class="name">${esc(rowName(r))}</td><td class="bar-cell"><span class="bar" style="width:${width(r.scores[kind]).toFixed(1)}%"></span></td>${scores.join('')}</tr>`;
         })
         .join('');
     el.innerHTML = `<table class="summary"><thead><tr><th></th><th></th>${head}</tr></thead><tbody>${body}</tbody></table>`;
@@ -160,7 +167,7 @@ function renderDetails(rows) {
     }
     const kind = one('kind');
     const tests = data.tests.filter((t) => t.kind === kind);
-    const head = `<tr><th></th><th>Test</th>${rows.map((r) => `<th class="entry">${esc(r.entryInfo.name)}</th>`).join('')}</tr>`;
+    const head = `<tr><th></th><th>Test</th>${rows.map((r) => `<th class="entry">${esc(rowName(r))}</th>`).join('')}</tr>`;
     const body = tests.map((test) => {
         const name = `<th class="test">${esc(test.id)} ${esc(test.name)}</th>`;
         if (test.status !== 'ready') return `<tr class="waiting"><td></td>${name}<td colspan="${rows.length}">${esc(test.status)}</td></tr>`;
@@ -175,9 +182,7 @@ function renderDetails(rows) {
             return `<td class="cell"${style}${title}>${seconds(time)}${ratio ? `<span class="x">${ratioText(ratio)}</span>` : ''}</td>`;
         });
         const checked = excluded.has(test.id) ? '' : ' checked';
-        const box = counts(test)
-            ? `<input type="checkbox" data-test="${esc(test.id)}"${checked} aria-label="Count ${esc(test.id)} in the score">`
-            : `<input type="checkbox" disabled title="Counts in the cold read score only" aria-label="${esc(test.id)} counts in the cold read score only">`;
+        const box = `<input type="checkbox" data-test="${esc(test.id)}"${checked} aria-label="Count ${esc(test.id)} in the score">`;
         return `<tr><td>${box}</td>${name}${cells.join('')}</tr>`;
     });
     el.innerHTML = `<div class="table-wrap wide"><table class="details"><thead>${head}</thead><tbody>${body.join('')}</tbody></table></div>`;

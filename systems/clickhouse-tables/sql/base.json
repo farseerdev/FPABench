@@ -1,0 +1,865 @@
+{
+ "model": "base",
+ "dialect": "clickhouse",
+ "system": {
+  "Versions": [
+   "Actual",
+   "Budget",
+   "FC 3+9",
+   "FC 6+6",
+   "What-if"
+  ],
+  "Years": [
+   "Y2023",
+   "Y2024",
+   "Y2025",
+   "Y2026"
+  ],
+  "Months": [
+   "M1",
+   "M2",
+   "M3",
+   "M4",
+   "M5",
+   "M6",
+   "M7",
+   "M8",
+   "M9",
+   "M10",
+   "M11",
+   "M12"
+  ]
+ },
+ "calculated": [
+  "FC Actual",
+  "FC Plan",
+  "FC Plan Months",
+  "Volume ACT",
+  "Gross Sales ACT",
+  "Standard Discounts ACT",
+  "Promo Discounts ACT",
+  "Logistics Discounts ACT",
+  "Promo Funding ACT",
+  "Invoice Sales ACT",
+  "Invoice Sales ACT by Group",
+  "Group Key ACT",
+  "Rebate Expense ACT",
+  "Rebates ACT",
+  "Growth Bonus ACT",
+  "Rebates Unallocated ACT",
+  "Growth Bonus Unallocated ACT",
+  "Gross Sales ACT by Group Brand",
+  "Standard Discounts ACT by Group Brand",
+  "Standard Discount Rate ACT",
+  "Rebate Rate ACT",
+  "Gross Sales ACT by Group",
+  "Logistics Discounts ACT by Group",
+  "Logistics Discount Rate ACT",
+  "COGS ACT",
+  "Volume LY",
+  "Invoice Sales ACT LY",
+  "Invoice Sales LY by Group",
+  "Volume LY Plan",
+  "Volume Growth Baseline",
+  "Volume LY by Group Category",
+  "Volume Target Key",
+  "Volume Target Cascade",
+  "Volume Baseline",
+  "Volume Planned",
+  "Volume Plan",
+  "List Price Reset",
+  "List Price Carry",
+  "List Price Plan",
+  "Standard Discount Rate Reset",
+  "Standard Discount Rate Carry",
+  "Standard Discount Rate",
+  "Rebate Rate Reset",
+  "Rebate Rate Carry",
+  "Rebate Rate",
+  "Logistics Discount Rate Reset",
+  "Logistics Discount Rate Carry",
+  "Logistics Discount Rate",
+  "FX Rate Reset",
+  "FX Rate Carry",
+  "FX Rate Plan",
+  "Gross Sales Plan",
+  "Standard Discounts Plan",
+  "Promo Discounts Plan",
+  "Logistics Discounts Plan",
+  "Promo Funding Plan",
+  "Standard Cost Plan",
+  "COGS Plan",
+  "Gross Sales",
+  "Standard Discounts",
+  "Promo Discounts",
+  "Logistics Discounts",
+  "Invoice Sales",
+  "Invoice Sales Plan",
+  "Rebates Plan",
+  "Invoice Sales by Group Year",
+  "Growth Bonus Rate",
+  "Growth Bonus Entitlement",
+  "Growth Bonus Booked Monthly",
+  "Growth Bonus Booked",
+  "Invoice Sales Plan by Group Year",
+  "Growth Bonus Remaining",
+  "Growth Bonus Plan",
+  "Growth Bonus Plan Unallocated",
+  "Trade Fees Plan",
+  "Marketing Spend Plan",
+  "Marketing Split Monthly",
+  "Marketing Plan EUR",
+  "Marketing Plan",
+  "OPEX Plan",
+  "Volume",
+  "Promo Funding",
+  "COGS",
+  "Rebates",
+  "Growth Bonus",
+  "Rebates Unallocated",
+  "Growth Bonus Unallocated",
+  "Trade Fees Pool",
+  "Marketing Pool",
+  "OPEX",
+  "FX Rate",
+  "Volume KG",
+  "Handling KG",
+  "Invoice Sales Positive",
+  "Invoice Sales by Group Brand",
+  "Trade Fees Key",
+  "Trade Fees",
+  "Trade Fees Unallocated",
+  "Net Sales",
+  "Gross Margin",
+  "Invoice Sales by Customer Brand",
+  "Net Sales by Customer Brand",
+  "Gross Margin by Customer Brand",
+  "Handling KG by Customer Brand",
+  "Logistics Pool",
+  "Handling KG Positive",
+  "Handling KG by Country",
+  "Logistics Key",
+  "Logistics Cost",
+  "Logistics Unallocated",
+  "Sales Force Pool",
+  "Invoice Sales Positive by Customer Brand",
+  "Invoice Sales by Channel Country",
+  "Sales Force Key",
+  "Sales Force Cost",
+  "Sales Force Unallocated",
+  "Contribution Margin II",
+  "Net Sales Positive",
+  "Net Sales by Brand Country",
+  "Marketing Key",
+  "Marketing Cost",
+  "Marketing Unallocated",
+  "Contribution Margin III",
+  "Overheads",
+  "Contribution Margin III by Country",
+  "Trade Fees Unallocated by Country",
+  "Rebates Unallocated by Country",
+  "Growth Bonus Unallocated by Country",
+  "Unallocated by Country",
+  "EBIT OUT",
+  "EBIT EUR OUT",
+  "PL Gross Sales",
+  "PL Standard Discounts",
+  "PL Promo Discounts",
+  "PL Logistics Discounts",
+  "PL Rebates",
+  "PL Growth Bonus",
+  "PL Trade Fees",
+  "PL Promo Funding",
+  "PL COGS",
+  "PL Logistics",
+  "PL Sales Force",
+  "PL Marketing",
+  "PL Overheads",
+  "PL Rebates Unallocated",
+  "PL Growth Bonus Unallocated",
+  "PL Trade Fees Unallocated",
+  "PL Logistics Unallocated",
+  "PL Sales Force Unallocated",
+  "PL Marketing Unallocated",
+  "PL OUT",
+  "PL EUR OUT",
+  "Volume by Brand Channel Country",
+  "Volume for KPIs",
+  "Gross Sales Loaded by Country",
+  "CHECK Import Total",
+  "CHECK Marketing Split",
+  "CHECK Growth Bonus",
+  "OPEX by Country",
+  "CHECK OPEX in EBIT",
+  "CHECK Uncosted Volume",
+  "CHECK Uncosted Plan Volume",
+  "CHECK Unpriced Volume",
+  "CHECK Volume without FX Rate",
+  "CHECK Marketing without FX Rate",
+  "CHECK PL without FX Rate",
+  "CHECK EUR Rate"
+ ],
+ "reads": {
+  "FC Actual": [
+   "FC Closed IN",
+   "FC Horizon IN"
+  ],
+  "FC Plan": [
+   "FC Closed IN",
+   "FC Horizon IN"
+  ],
+  "FC Plan Months": [
+   "FC Plan"
+  ],
+  "Volume ACT": [
+   "IMPORT Volume"
+  ],
+  "Gross Sales ACT": [
+   "IMPORT Gross Sales"
+  ],
+  "Standard Discounts ACT": [
+   "IMPORT Standard Discounts"
+  ],
+  "Promo Discounts ACT": [
+   "IMPORT Promo Discounts"
+  ],
+  "Logistics Discounts ACT": [
+   "IMPORT Logistics Discounts"
+  ],
+  "Promo Funding ACT": [
+   "IMPORT Promo Funding"
+  ],
+  "Invoice Sales ACT": [
+   "Gross Sales ACT",
+   "Logistics Discounts ACT",
+   "Promo Discounts ACT",
+   "Standard Discounts ACT"
+  ],
+  "Invoice Sales ACT by Group": [
+   "Invoice Sales ACT"
+  ],
+  "Group Key ACT": [
+   "Invoice Sales ACT",
+   "Invoice Sales ACT by Group"
+  ],
+  "Rebate Expense ACT": [
+   "IMPORT Rebate True-ups",
+   "IMPORT Rebates"
+  ],
+  "Rebates ACT": [
+   "Group Key ACT",
+   "Rebate Expense ACT"
+  ],
+  "Growth Bonus ACT": [
+   "Group Key ACT",
+   "IMPORT Growth Bonus"
+  ],
+  "Rebates Unallocated ACT": [
+   "Rebate Expense ACT",
+   "Rebates ACT"
+  ],
+  "Growth Bonus Unallocated ACT": [
+   "Growth Bonus ACT",
+   "IMPORT Growth Bonus"
+  ],
+  "Gross Sales ACT by Group Brand": [
+   "Gross Sales ACT"
+  ],
+  "Standard Discounts ACT by Group Brand": [
+   "Standard Discounts ACT"
+  ],
+  "Standard Discount Rate ACT": [
+   "Gross Sales ACT by Group Brand",
+   "Standard Discounts ACT by Group Brand"
+  ],
+  "Rebate Rate ACT": [
+   "IMPORT Rebates",
+   "Invoice Sales ACT by Group"
+  ],
+  "Gross Sales ACT by Group": [
+   "Gross Sales ACT"
+  ],
+  "Logistics Discounts ACT by Group": [
+   "Logistics Discounts ACT"
+  ],
+  "Logistics Discount Rate ACT": [
+   "Gross Sales ACT by Group",
+   "Logistics Discounts ACT by Group"
+  ],
+  "COGS ACT": [
+   "IMPORT FX Rate",
+   "IMPORT Standard Cost",
+   "Volume ACT"
+  ],
+  "Volume LY": [
+   "Volume ACT"
+  ],
+  "Invoice Sales ACT LY": [
+   "Invoice Sales ACT"
+  ],
+  "Invoice Sales LY by Group": [
+   "Invoice Sales ACT LY"
+  ],
+  "Volume LY Plan": [
+   "FC Plan",
+   "Volume LY"
+  ],
+  "Volume Growth Baseline": [
+   "Volume Growth IN",
+   "Volume LY Plan"
+  ],
+  "Volume LY by Group Category": [
+   "Volume LY"
+  ],
+  "Volume Target Key": [
+   "Volume LY Plan",
+   "Volume LY by Group Category"
+  ],
+  "Volume Target Cascade": [
+   "Volume Target IN",
+   "Volume Target Key"
+  ],
+  "Volume Baseline": [
+   "Volume Growth Baseline",
+   "Volume Target Cascade"
+  ],
+  "Volume Planned": [
+   "Volume Baseline",
+   "Volume Override IN"
+  ],
+  "Volume Plan": [
+   "FC Plan",
+   "Volume Planned"
+  ],
+  "List Price Reset": [
+   "FC Closed IN",
+   "IMPORT List Price"
+  ],
+  "List Price Carry": [
+   "List Price Reset"
+  ],
+  "List Price Plan": [
+   "List Price Carry",
+   "Price Increase IN"
+  ],
+  "Standard Discount Rate Reset": [
+   "FC Closed IN",
+   "Standard Discount Rate ACT"
+  ],
+  "Standard Discount Rate Carry": [
+   "Standard Discount Rate Reset"
+  ],
+  "Standard Discount Rate": [
+   "Standard Discount IN",
+   "Standard Discount Rate Carry"
+  ],
+  "Rebate Rate Reset": [
+   "FC Closed IN",
+   "Rebate Rate ACT"
+  ],
+  "Rebate Rate Carry": [
+   "Rebate Rate Reset"
+  ],
+  "Rebate Rate": [
+   "Rebate Rate Carry",
+   "Rebate Rate IN"
+  ],
+  "Logistics Discount Rate Reset": [
+   "FC Closed IN",
+   "Logistics Discount Rate ACT"
+  ],
+  "Logistics Discount Rate Carry": [
+   "Logistics Discount Rate Reset"
+  ],
+  "Logistics Discount Rate": [
+   "Logistics Discount IN",
+   "Logistics Discount Rate Carry"
+  ],
+  "FX Rate Reset": [
+   "FC Closed IN",
+   "IMPORT FX Rate"
+  ],
+  "FX Rate Carry": [
+   "FX Rate Reset"
+  ],
+  "FX Rate Plan": [
+   "FC Plan",
+   "FX Rate Carry",
+   "FX Rate IN"
+  ],
+  "Gross Sales Plan": [
+   "List Price Plan",
+   "Volume Plan"
+  ],
+  "Standard Discounts Plan": [
+   "Gross Sales Plan",
+   "Standard Discount Rate"
+  ],
+  "Promo Discounts Plan": [
+   "Gross Sales Plan",
+   "Promo Discount IN"
+  ],
+  "Logistics Discounts Plan": [
+   "Gross Sales Plan",
+   "Logistics Discount Rate"
+  ],
+  "Promo Funding Plan": [
+   "FC Plan",
+   "Promo Funding IN"
+  ],
+  "Standard Cost Plan": [
+   "IMPORT Standard Cost",
+   "Standard Cost IN"
+  ],
+  "COGS Plan": [
+   "FX Rate Plan",
+   "Standard Cost Plan",
+   "Volume Plan"
+  ],
+  "Gross Sales": [
+   "FC Actual",
+   "Gross Sales ACT",
+   "Gross Sales Plan"
+  ],
+  "Standard Discounts": [
+   "FC Actual",
+   "Standard Discounts ACT",
+   "Standard Discounts Plan"
+  ],
+  "Promo Discounts": [
+   "FC Actual",
+   "Promo Discounts ACT",
+   "Promo Discounts Plan"
+  ],
+  "Logistics Discounts": [
+   "FC Actual",
+   "Logistics Discounts ACT",
+   "Logistics Discounts Plan"
+  ],
+  "Invoice Sales": [
+   "Gross Sales",
+   "Logistics Discounts",
+   "Promo Discounts",
+   "Standard Discounts"
+  ],
+  "Invoice Sales Plan": [
+   "FC Plan",
+   "Invoice Sales"
+  ],
+  "Rebates Plan": [
+   "Invoice Sales Plan",
+   "Rebate Rate"
+  ],
+  "Invoice Sales by Group Year": [
+   "Invoice Sales"
+  ],
+  "Growth Bonus Rate": [
+   "Growth Bonus Rate IN",
+   "Growth Bonus Threshold IN",
+   "Invoice Sales LY by Group",
+   "Invoice Sales by Group Year"
+  ],
+  "Growth Bonus Entitlement": [
+   "Growth Bonus Rate",
+   "Invoice Sales by Group Year"
+  ],
+  "Growth Bonus Booked Monthly": [
+   "FC Actual",
+   "IMPORT Growth Bonus"
+  ],
+  "Growth Bonus Booked": [
+   "Growth Bonus Booked Monthly"
+  ],
+  "Invoice Sales Plan by Group Year": [
+   "Invoice Sales Plan"
+  ],
+  "Growth Bonus Remaining": [
+   "FC Plan Months",
+   "Growth Bonus Booked",
+   "Growth Bonus Entitlement"
+  ],
+  "Growth Bonus Plan": [
+   "Growth Bonus Remaining",
+   "Invoice Sales Plan",
+   "Invoice Sales Plan by Group Year"
+  ],
+  "Growth Bonus Plan Unallocated": [
+   "FC Plan",
+   "FC Plan Months",
+   "Growth Bonus Remaining",
+   "Invoice Sales Plan by Group Year"
+  ],
+  "Trade Fees Plan": [
+   "FC Plan",
+   "Trade Fees IN"
+  ],
+  "Marketing Spend Plan": [
+   "FC Plan",
+   "Marketing Spend IN"
+  ],
+  "Marketing Split Monthly": [
+   "Marketing Split IN"
+  ],
+  "Marketing Plan EUR": [
+   "Marketing Spend Plan",
+   "Marketing Split Monthly"
+  ],
+  "Marketing Plan": [
+   "FX Rate Plan",
+   "Marketing Plan EUR"
+  ],
+  "OPEX Plan": [
+   "FC Plan",
+   "OPEX IN"
+  ],
+  "Volume": [
+   "FC Actual",
+   "Volume ACT",
+   "Volume Plan"
+  ],
+  "Promo Funding": [
+   "FC Actual",
+   "Promo Funding ACT",
+   "Promo Funding Plan"
+  ],
+  "COGS": [
+   "COGS ACT",
+   "COGS Plan",
+   "FC Actual"
+  ],
+  "Rebates": [
+   "FC Actual",
+   "Rebates ACT",
+   "Rebates Plan"
+  ],
+  "Growth Bonus": [
+   "FC Actual",
+   "Growth Bonus ACT",
+   "Growth Bonus Plan"
+  ],
+  "Rebates Unallocated": [
+   "FC Actual",
+   "Rebates Unallocated ACT"
+  ],
+  "Growth Bonus Unallocated": [
+   "FC Actual",
+   "Growth Bonus Plan Unallocated",
+   "Growth Bonus Unallocated ACT"
+  ],
+  "Trade Fees Pool": [
+   "FC Actual",
+   "IMPORT Trade Fees",
+   "Trade Fees Plan"
+  ],
+  "Marketing Pool": [
+   "FC Actual",
+   "IMPORT Marketing",
+   "Marketing Plan"
+  ],
+  "OPEX": [
+   "FC Actual",
+   "IMPORT OPEX",
+   "OPEX Plan"
+  ],
+  "FX Rate": [
+   "FC Actual",
+   "FX Rate Plan",
+   "IMPORT FX Rate"
+  ],
+  "Volume KG": [
+   "IMPORT Unit Weight",
+   "Volume"
+  ],
+  "Handling KG": [
+   "IMPORT Handling Factor",
+   "Volume KG"
+  ],
+  "Invoice Sales Positive": [
+   "Invoice Sales"
+  ],
+  "Invoice Sales by Group Brand": [
+   "Invoice Sales Positive"
+  ],
+  "Trade Fees Key": [
+   "Invoice Sales Positive",
+   "Invoice Sales by Group Brand"
+  ],
+  "Trade Fees": [
+   "Trade Fees Key",
+   "Trade Fees Pool"
+  ],
+  "Trade Fees Unallocated": [
+   "Trade Fees",
+   "Trade Fees Pool"
+  ],
+  "Net Sales": [
+   "Growth Bonus",
+   "Invoice Sales",
+   "Promo Funding",
+   "Rebates",
+   "Trade Fees"
+  ],
+  "Gross Margin": [
+   "COGS",
+   "Net Sales"
+  ],
+  "Invoice Sales by Customer Brand": [
+   "Invoice Sales"
+  ],
+  "Net Sales by Customer Brand": [
+   "Net Sales"
+  ],
+  "Gross Margin by Customer Brand": [
+   "Gross Margin"
+  ],
+  "Handling KG by Customer Brand": [
+   "Handling KG"
+  ],
+  "Logistics Pool": [
+   "OPEX"
+  ],
+  "Handling KG Positive": [
+   "Handling KG by Customer Brand"
+  ],
+  "Handling KG by Country": [
+   "Handling KG Positive"
+  ],
+  "Logistics Key": [
+   "Handling KG Positive",
+   "Handling KG by Country"
+  ],
+  "Logistics Cost": [
+   "Logistics Key",
+   "Logistics Pool"
+  ],
+  "Logistics Unallocated": [
+   "Logistics Cost",
+   "Logistics Pool"
+  ],
+  "Sales Force Pool": [
+   "OPEX"
+  ],
+  "Invoice Sales Positive by Customer Brand": [
+   "Invoice Sales by Customer Brand"
+  ],
+  "Invoice Sales by Channel Country": [
+   "Invoice Sales Positive by Customer Brand"
+  ],
+  "Sales Force Key": [
+   "Invoice Sales Positive by Customer Brand",
+   "Invoice Sales by Channel Country"
+  ],
+  "Sales Force Cost": [
+   "Sales Force Key",
+   "Sales Force Pool"
+  ],
+  "Sales Force Unallocated": [
+   "Sales Force Cost",
+   "Sales Force Pool"
+  ],
+  "Contribution Margin II": [
+   "Gross Margin by Customer Brand",
+   "Logistics Cost",
+   "Sales Force Cost"
+  ],
+  "Net Sales Positive": [
+   "Net Sales by Customer Brand"
+  ],
+  "Net Sales by Brand Country": [
+   "Net Sales Positive"
+  ],
+  "Marketing Key": [
+   "Net Sales Positive",
+   "Net Sales by Brand Country"
+  ],
+  "Marketing Cost": [
+   "Marketing Key",
+   "Marketing Pool"
+  ],
+  "Marketing Unallocated": [
+   "Marketing Cost",
+   "Marketing Pool"
+  ],
+  "Contribution Margin III": [
+   "Contribution Margin II",
+   "Marketing Cost"
+  ],
+  "Overheads": [
+   "OPEX"
+  ],
+  "Contribution Margin III by Country": [
+   "Contribution Margin III"
+  ],
+  "Trade Fees Unallocated by Country": [
+   "Trade Fees Unallocated"
+  ],
+  "Rebates Unallocated by Country": [
+   "Rebates Unallocated"
+  ],
+  "Growth Bonus Unallocated by Country": [
+   "Growth Bonus Unallocated"
+  ],
+  "Unallocated by Country": [
+   "Growth Bonus Unallocated by Country",
+   "Logistics Unallocated",
+   "Marketing Unallocated",
+   "Rebates Unallocated by Country",
+   "Sales Force Unallocated",
+   "Trade Fees Unallocated by Country"
+  ],
+  "EBIT OUT": [
+   "Contribution Margin III by Country",
+   "Overheads",
+   "Unallocated by Country"
+  ],
+  "EBIT EUR OUT": [
+   "EBIT OUT",
+   "FX Rate"
+  ],
+  "PL Gross Sales": [
+   "Gross Sales"
+  ],
+  "PL Standard Discounts": [
+   "Standard Discounts"
+  ],
+  "PL Promo Discounts": [
+   "Promo Discounts"
+  ],
+  "PL Logistics Discounts": [
+   "Logistics Discounts"
+  ],
+  "PL Rebates": [
+   "Rebates"
+  ],
+  "PL Growth Bonus": [
+   "Growth Bonus"
+  ],
+  "PL Trade Fees": [
+   "Trade Fees"
+  ],
+  "PL Promo Funding": [
+   "Promo Funding"
+  ],
+  "PL COGS": [
+   "COGS"
+  ],
+  "PL Logistics": [
+   "Logistics Cost"
+  ],
+  "PL Sales Force": [
+   "Sales Force Cost"
+  ],
+  "PL Marketing": [
+   "Marketing Cost"
+  ],
+  "PL Overheads": [
+   "Overheads"
+  ],
+  "PL Rebates Unallocated": [
+   "Rebates Unallocated"
+  ],
+  "PL Growth Bonus Unallocated": [
+   "Growth Bonus Unallocated"
+  ],
+  "PL Trade Fees Unallocated": [
+   "Trade Fees Unallocated"
+  ],
+  "PL Logistics Unallocated": [
+   "Logistics Unallocated"
+  ],
+  "PL Sales Force Unallocated": [
+   "Sales Force Unallocated"
+  ],
+  "PL Marketing Unallocated": [
+   "Marketing Unallocated"
+  ],
+  "PL OUT": [
+   "PL COGS",
+   "PL Gross Sales",
+   "PL Growth Bonus",
+   "PL Growth Bonus Unallocated",
+   "PL Logistics",
+   "PL Logistics Discounts",
+   "PL Logistics Unallocated",
+   "PL Marketing",
+   "PL Marketing Unallocated",
+   "PL Overheads",
+   "PL Promo Discounts",
+   "PL Promo Funding",
+   "PL Rebates",
+   "PL Rebates Unallocated",
+   "PL Sales Force",
+   "PL Sales Force Unallocated",
+   "PL Standard Discounts",
+   "PL Trade Fees",
+   "PL Trade Fees Unallocated"
+  ],
+  "PL EUR OUT": [
+   "FX Rate",
+   "PL OUT"
+  ],
+  "Volume by Brand Channel Country": [
+   "Volume"
+  ],
+  "Volume for KPIs": [
+   "FX Rate",
+   "Volume by Brand Channel Country"
+  ],
+  "Gross Sales Loaded by Country": [
+   "IMPORT Gross Sales"
+  ],
+  "CHECK Import Total": [
+   "Gross Sales Loaded by Country",
+   "IMPORT Control Total"
+  ],
+  "CHECK Marketing Split": [
+   "Marketing Plan EUR",
+   "Marketing Spend Plan"
+  ],
+  "CHECK Growth Bonus": [
+   "FC Plan Months",
+   "Growth Bonus Booked",
+   "Growth Bonus Entitlement",
+   "Growth Bonus Plan",
+   "Growth Bonus Plan Unallocated"
+  ],
+  "OPEX by Country": [
+   "OPEX"
+  ],
+  "CHECK OPEX in EBIT": [
+   "Logistics Cost",
+   "Logistics Unallocated",
+   "OPEX by Country",
+   "Overheads",
+   "Sales Force Cost",
+   "Sales Force Unallocated"
+  ],
+  "CHECK Uncosted Volume": [
+   "IMPORT Standard Cost",
+   "Volume ACT"
+  ],
+  "CHECK Uncosted Plan Volume": [
+   "Standard Cost Plan",
+   "Volume Plan"
+  ],
+  "CHECK Unpriced Volume": [
+   "List Price Plan",
+   "Volume Plan"
+  ],
+  "CHECK Volume without FX Rate": [
+   "FX Rate",
+   "Volume"
+  ],
+  "CHECK Marketing without FX Rate": [
+   "FX Rate Plan",
+   "Marketing Plan EUR"
+  ],
+  "CHECK PL without FX Rate": [
+   "FX Rate",
+   "PL OUT"
+  ],
+  "CHECK EUR Rate": [
+   "FX Rate"
+  ]
+ }
+}

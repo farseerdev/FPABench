@@ -12,13 +12,13 @@ It installs the `clickhouse` binary (Homebrew on macOS, the official static buil
 
 ## How it runs
 
-The adapter starts and stops its own server, with a small config in the work folder. So opening the model (test R8) includes starting the server.
+The tests start and stop their own server, with a small config in the work folder. So opening the model (test R8) includes starting the server.
 
-The SQL comes from [`../sql/translate.mjs`](../sql/translate.mjs), the same translator the DuckDB entry uses, in ClickHouse's dialect. Reads come from [`../sql/reads.mjs`](../sql/reads.mjs).
+The SQL is in [`sql/`](sql/), generated from the model by [`model/lib/sql/generate.mjs`](../../model/lib/sql/generate.mjs) with the translator [`model/lib/sql/translate.mjs`](../../model/lib/sql/translate.mjs), which both SQL entries share. [`sql/schema.sql`](sql/schema.sql) creates the tables and [`sql/calculate.sql`](sql/calculate.sql) builds every calculated table. [`sql/m1.sql`](sql/m1.sql) and [`sql/m4.sql`](sql/m4.sql) are the migrations of tests M1 and M4: only the statements that take the base model to the changed one. Run `node model/lib/sql/generate.mjs` after changing the model or the translator. `--check` fails when the files are out of date. Reads come from [`model/lib/sql/reads.mjs`](../../model/lib/sql/reads.mjs).
 
 | Step | What happens |
 | --- | --- |
-| Load | Create the tables, fill the dimension tables, read `cells.csv` with `file()`, then build every calculated table |
+| Load | Create the tables, add the model's members and the data's own, read each input variable's file `cells/<Variable>.csv` with `file()`, then build every calculated table |
 | Write | `INSERT` a new row version into each input table, then build again the calculated tables the write reaches, in dependency order |
 | Read | One `GROUP BY` query. A measure is one query over the sums it needs. |
 | Model change | Translate the changed model, then build again the changed tables and every table that reads them. New or moved members change the dimension lookups, so then every table is built again. |
@@ -36,7 +36,7 @@ ClickHouse has no row update that suits typed values. So each input table is a `
 | `fsync_after_insert`, `fsync_part_directory` | 1, on every table on disk | The method turns durability on where a system has a setting for it |
 | Threads, memory | ClickHouse's defaults | |
 
-A write is visible when the last table is built. After a restart the server builds every calculated table before the first read, so a cold read includes one full rebuild.
+A write is visible when the last table is built. After a restart the server builds every calculated table before the first read, so R8, which starts the server, includes one full rebuild.
 
 ## Why tables and not views
 
@@ -44,7 +44,7 @@ ClickHouse's incremental materialized views react to inserts into one table, so 
 
 Refreshable materialized views were tried, with the translator's `REFRESHABLE` kind. Each calculated variable became a view with `REFRESH EVERY 1 YEAR DEPENDS ON ...`, created `EMPTY`. Two things came out of it:
 
-- `SYSTEM REFRESH VIEW` on one view does not refresh the views that depend on it. `DEPENDS ON` only orders scheduled refreshes. So the adapter would still refresh all 194 views itself, in order, with `SYSTEM REFRESH VIEW` and `SYSTEM WAIT VIEW`.
+- `SYSTEM REFRESH VIEW` on one view does not refresh the views that depend on it. `DEPENDS ON` only orders scheduled refreshes. So the tests would still refresh all 194 views itself, in order, with `SYSTEM REFRESH VIEW` and `SYSTEM WAIT VIEW`.
 - A refresh runs without the session's settings. Each view's query must carry `join_use_nulls = 1` and `aggregate_functions_null_for_empty = 1`, or missing values turn into 0.
 
 With both handled the answers were the same, and a full refresh took 4.2 s on a laptop against 4.25 s for rebuilding the tables. So this entry keeps the tables, which are simpler.
@@ -54,4 +54,4 @@ With both handled the answers were the same, and a full refresh took 4.2 s on a 
 - Every key column holds an integer member id instead of the member's name. The ids are in the dimension tables (`dim <Dim>`: id, name, parent ids), are given once and never change, so a new member gets the next free id. Names turn into ids when cells are loaded or written, and back into names when they are read. Loading a cell that names an unknown member fails. On a laptop, integer keys made a rebate rate write 0.92 → 0.35 s and the 10m load 7.8 → 5.6 s.
 - The first translation joined each table's operands in one comma-separated `FROM`. DuckDB reorders such joins, but ClickHouse joins in the order written, and the 10m load took 307 s. The translator now writes an explicit chain of joins, widest operand first. The load took 10 s on a laptop, and DuckDB got the same SQL.
 - Keeping the calculated tables in `Memory` instead of writing them as `MergeTree` parts, and reading each table straight from its operand when one operand gives every cell, cut a laptop rebuild from about 6.9 s to 3.8 s.
-- The adapter knows which tables read which variables, from the formulas, and rebuilds only the ones a change reaches. It still rebuilds whole tables, not cells. On a laptop this cut a rebate rate write from 3.9 s to 0.9 s. The method may count this dependency logic as tuning. If so, this entry becomes `clickhouse-tables-tuned` and a plain full-rebuild entry is added.
+- The generator knows which tables read which variables, from the formulas. `sql/rebuild/<Variable>.sql` rebuilds only the tables a write to that variable reaches. It still rebuilds whole tables, not cells. On a laptop this cut a rebate rate write from 3.9 s to 0.9 s. The method may count this dependency logic as tuning. If so, this entry becomes `clickhouse-tables-tuned` and a plain full-rebuild entry is added.

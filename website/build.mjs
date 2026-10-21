@@ -4,8 +4,7 @@
 //   node website/build.mjs           writes website/dist/
 //   node website/build.mjs --check   only checks, writes nothing
 //
-// The home page shows the results. There are no real results yet, so it shows
-// random ones from demo.mjs, under a banner that says so. The about page
+// The home page shows the results in results/. The about page
 // comes from README.md. The model page comes from website/model.md, a short
 // version of model/README.md for planners. Its version line, its hierarchies
 // and its FML example are read from the model files, and its P&L table must
@@ -17,7 +16,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseFml, formulaNames } from '../scripts/fml.mjs';
 import { renderMarkdown, escapeHtml } from './markdown.mjs';
-import { demoResults, APPROACHES } from './demo.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'website', 'dist');
@@ -258,49 +256,63 @@ const NAV = [
     [REPO_URL, 'Source on GitHub'],
 ];
 
-// Real results, from results/<size>/<entry>.json. Each entry describes itself in systems/<entry>/entry.json.
-// The demo data is only used while there are no results at all.
-function realResults(tests) {
+// How each entry keeps its results current, as systems/<entry>/entry.json names it.
+const APPROACHES = [
+    { id: 'cells', label: 'Stored cells' },
+    { id: 'tables', label: 'Refreshed tables' },
+];
+
+// The machine the method names for published rankings. The page opens on it.
+const REFERENCE_MACHINE = 'n2d-standard-4-local-nvme-ssd';
+// A machine's folder name: its name in lower case, with every run of other characters a hyphen.
+const machineId = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+// The results, from results/<machine>/<size>/<entry>.json, as ClickBench keeps one file per system and
+// machine. Each entry describes itself in systems/<entry>/entry.json. Entries are only scored against
+// others on the same machine.
+function readResults(tests) {
     const dir = path.join(ROOT, 'results');
-    if (!fs.existsSync(dir)) return null;
     const ids = new Set(tests.map((t) => t.id));
     const rows = [];
     const entries = new Map();
-    const machines = new Set();
-    const hosts = new Set();
-    for (const size of fs.readdirSync(dir).filter((d) => fs.statSync(path.join(dir, d)).isDirectory()).sort()) {
-        for (const file of fs.readdirSync(path.join(dir, size)).filter((f) => f.endsWith('.json')).sort()) {
-            const rel = `results/${size}/${file}`;
-            const r = JSON.parse(read(rel));
-            const metaFile = `systems/${r.entry}/entry.json`;
-            if (!fs.existsSync(path.join(ROOT, metaFile))) {
-                fail(`${rel}: there is no ${metaFile}`);
-                continue;
+    const machines = new Map();
+    const folders = (d) => fs.readdirSync(d).filter((f) => fs.statSync(path.join(d, f)).isDirectory()).sort();
+    for (const machine of folders(dir)) {
+        for (const size of folders(path.join(dir, machine))) {
+            for (const file of fs.readdirSync(path.join(dir, machine, size)).filter((f) => f.endsWith('.json')).sort()) {
+                const rel = `results/${machine}/${size}/${file}`;
+                const r = JSON.parse(read(rel));
+                if (machineId(r.machine) !== machine) fail(`${rel}: its machine is "${r.machine}", so it belongs in results/${machineId(r.machine)}/`);
+                if (r.scale !== size) fail(`${rel}: its scale is ${r.scale}, so it belongs in a folder ${r.scale}`);
+                const metaFile = `systems/${r.entry}/entry.json`;
+                if (!fs.existsSync(path.join(ROOT, metaFile))) {
+                    fail(`${rel}: there is no ${metaFile}`);
+                    continue;
+                }
+                const meta = JSON.parse(read(metaFile));
+                entries.set(r.entry, { id: r.entry, name: meta.name, approach: meta.approach, open: meta.open });
+                const host = { cpus: r.host?.cpus, cpu: r.host?.cpu, memoryGB: r.host?.memoryGB };
+                const known = machines.get(machine);
+                if (known && JSON.stringify(known.host) !== JSON.stringify(host)) fail(`${rel}: another kind of host than the other results of ${machine}`);
+                machines.set(machine, { id: machine, name: r.machine, host });
+                const kept = {};
+                for (const [id, t] of Object.entries(r.tests)) {
+                    if (!ids.has(id)) continue;
+                    kept[id] = { check: t.check, time: t.time, p95: t.p95 };
+                }
+                rows.push({ machine, entry: r.entry, scale: r.scale, tests: kept });
             }
-            const meta = JSON.parse(read(metaFile));
-            entries.set(r.entry, { id: r.entry, name: meta.name, approach: meta.approach, open: meta.open });
-            machines.add(r.machine);
-            hosts.add(JSON.stringify({ cpus: r.host?.cpus, cpu: r.host?.cpu, memoryGB: r.host?.memoryGB }));
-            const kept = {};
-            for (const [id, t] of Object.entries(r.tests)) {
-                if (!ids.has(id)) continue;
-                kept[id] = { check: t.check, time: t.time, cold: t.cold, p95: t.p95 };
-            }
-            rows.push({ entry: r.entry, scale: r.scale, tests: kept });
         }
     }
-    if (rows.length === 0) return null;
-    if (machines.size !== 1) fail(`results/: one machine expected, found ${[...machines].join(', ')}`);
-    if (hosts.size !== 1) fail(`results/: one kind of host expected, found ${[...hosts].join(', ')}`);
+    if (rows.length === 0) fail('results/: there are no results');
+    if (!machines.has(REFERENCE_MACHINE)) fail(`results/: there are no results on the reference machine, ${REFERENCE_MACHINE}`);
     const order = ['10m', '100m', '1b', '10b'];
-    // Every size is listed. Sizes without results yet are shown but cannot be picked.
+    // Every size is listed. Sizes a machine has no results for are shown but cannot be picked.
     const scales = order;
-    const ready = order.filter((s) => rows.some((r) => r.scale === s));
-    const approaches = APPROACHES;
+    const ready = Object.fromEntries([...machines.keys()].map((m) => [m, order.filter((sz) => rows.some((r) => r.machine === m && r.scale === sz))]));
     return {
-        demo: false,
-        machine: [...machines][0],
-        host: JSON.parse([...hosts][0]),
+        // The reference machine first, so the page opens on it.
+        machines: [machines.get(REFERENCE_MACHINE), ...[...machines.values()].filter((m) => m.id !== REFERENCE_MACHINE)],
         kinds: [
             { id: 'load', label: 'Loads' },
             { id: 'write', label: 'Writes' },
@@ -310,7 +322,7 @@ function realResults(tests) {
         tests: tests.map(({ id, name, kind, status }) => ({ id, name, kind, status })),
         scales,
         ready,
-        approaches: approaches.filter((a) => [...entries.values()].some((e) => e.approach === a.id)),
+        approaches: APPROACHES.filter((a) => [...entries.values()].some((e) => e.approach === a.id)),
         entries: [...entries.values()],
         results: rows,
     };
@@ -319,7 +331,7 @@ function realResults(tests) {
 // The results page. Its script draws everything from the data embedded here.
 // The checks without a timer pass or fail. They are not timed or scored, so the results page leaves them out.
 const timedTests = testList.filter((t) => t.timed !== false);
-const results = realResults(timedTests) || demoResults(timedTests);
+const results = readResults(timedTests);
 
 // What each size holds, counted from the generated data by data/sizes.mjs.
 const generatorVersion = (read('data/generate.mjs').match(/GENERATOR_VERSION = '([^']+)'/) || [])[1];
@@ -329,11 +341,10 @@ for (const f of sizeFacts) {
 }
 const resultsHtml = [
     '<p class="intro">FPABench measures how fast planning software loads data, recalculates a plan and answers reports. Every system runs the same P&amp;L model on the same data. FPABench is made by <a href="https://www.farseer.com">Farseer</a>, which builds a planning platform for finance teams. RAMA is the calculation engine inside Farseer and one of the entries. It follows the same rules as the others. <a href="about.html">About</a> says more.</p>',
-    results.demo && '<blockquote class="demo"><p><strong>Demo data.</strong> The tests are the real ones, but every result and time on this page is random. It only shows how the page will work. There are no real results yet.</p></blockquote>',
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
     '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
-    `<p class="method">Lower is better. ×1.00 is the fastest entry on a test. Every result comes from one Google Cloud ${escapeHtml(results.machine)} machine${results.host ? ` with ${results.host.cpus} vCPUs and ${results.host.memoryGB} GB of memory` : ''}. No system is tuned or limited to fewer threads. A failed test counts as much slower than the slowest success. <a href="method.html">The method</a> has the details.</p>`,
+    `<p class="method">Lower is better. ×1.00 is the fastest entry on a test. Tick one machine to compare the systems on it, or several to compare machines too, as in ClickBench. Every row shown is scored against the fastest row shown. The method's reference machine is a Google Cloud n2d-standard-4, and the published rankings use it alone. No system is tuned or limited to fewer threads. A failed test counts as much slower than the slowest success. <a href="method.html">The method</a> has the details.</p>`,
     '<div id="summary"></div>',
     '<h2 id="details-heading">Detailed comparison</h2>',
     '<p class="method">Untick a test to leave it out of the score. <a href="tests.html">The tests</a> page says what each one does.</p>',

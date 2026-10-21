@@ -35,7 +35,7 @@ The model is written in FML, the Financial Modeling Language. FML is a small lan
 | [`data/`](data/) | The data generator. The datasets are generated or downloaded, never stored here. |
 | [`tests/`](tests/) | The tests, their expected results, and the method that times and checks them |
 | [`runner/`](runner/) | The runner. It runs every test on every system and checks the answers. |
-| [`systems/`](systems/) | One folder per entry: how to install it, its adapter and its settings |
+| [`systems/`](systems/) | One folder per entry: how to install it, its tests in its own calls, and its settings |
 | [`results/`](results/) | The results, one folder per data size and one file per entry |
 | [`website/`](website/) | The website. `node website/build.mjs` builds it from these docs and the model into `website/dist/`. |
 | [`scripts/`](scripts/) | Tools for the model, such as the FML reader |

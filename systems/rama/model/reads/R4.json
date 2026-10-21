@@ -1,0 +1,22 @@
+{
+ "measures": [
+  "Net Price per Unit",
+  "Gross-to-Net %",
+  "Gross Margin %",
+  "Contribution Margin II %",
+  "Contribution Margin III %",
+  "EBIT %",
+  "Standard Discounts % of Gross Sales",
+  "Promo Discounts % of Gross Sales",
+  "Logistics Discounts % of Gross Sales",
+  "Rebates % of Gross Sales",
+  "Growth Bonus % of Gross Sales",
+  "Trade Fees % of Gross Sales",
+  "Promo Funding % of Gross Sales",
+  "COGS % of Gross Sales",
+  "Logistics % of Gross Sales",
+  "Sales Force % of Gross Sales",
+  "Marketing % of Gross Sales",
+  "Overheads % of Gross Sales"
+ ]
+}

@@ -4,63 +4,62 @@ Draft. It runs the tests in [`tests/tests.json`](../tests/tests.json) against on
 
 ## Run it
 
+With a published size, the runner downloads the dataset and RAMA's expected answers into `--work` once, and checks their SHA-256 first:
+
+```bash
+node runner/run.mjs --entry duckdb-tables --dataset 10m --work ~/run/work --out ~/run/out --machine n2d-standard-4
+```
+
+To make a dataset and record the answers yourself:
+
 ```bash
 node data/generate.mjs --size 10m --out ~/data/fpabench-10m
-node runner/run.mjs --entry rama --dataset ~/data/fpabench-10m --work ~/run/work --out ~/run/out --picks ~/run/picks.json --machine n2d-standard-4
-node runner/run.mjs --entry duckdb-tables --dataset ~/data/fpabench-10m --work ~/run/work --out ~/run/out --picks ~/run/picks.json --machine n2d-standard-4
-node runner/compare.mjs ~/run/out
+node runner/run.mjs --entry rama --dataset ~/data/fpabench-10m --work ~/run/work --out ~/run/out --record ~/run/expected.json --machine n2d-standard-4
+node runner/run.mjs --entry duckdb-tables --dataset ~/data/fpabench-10m --work ~/run/work --out ~/run/out --expected ~/run/expected.json --machine n2d-standard-4
 ```
 
 Each system must be installed first. See its folder in [`systems/`](../systems/).
 
+The dataset brings `picks.json`: for each test, the cells it writes and the values. `--record` runs RAMA's tests on those picks and saves every answer and check as the expected results, with the picks. Every other system runs with `--expected` and must give the same answers. When a system disagrees with RAMA, someone finds out which one is right. RAMA's answers are not checked against the effects `tests.json` states, so a RAMA error shows up as every other system being wrong on that test.
+
 | Option | What it does |
 | --- | --- |
 | `--entry` | The folder in `systems/` to run |
-| `--dataset` | A dataset written by `data/generate.mjs` |
+| `--dataset` | A dataset folder written by `data/generate.mjs`, or a published size such as `10m`, which is downloaded |
 | `--work` | Scratch space: the input cells, the system's files and the snapshot. All of them are kept per dataset, by the SHA-256 of its manifest. |
 | `--out` | Where `<entry>.json`, `<entry>.answers.json` and `<entry>.log` go |
-| `--picks` | The cells and values the tests write. The first system to run saves them. Every later system reads them, so all systems write the same cells. A picks file made for another dataset or seed is refused. |
-| `--tests` | Only these tests, such as `L1,W1,R1`. They are added to the results already in `--out`. Without L1, the runner uses the snapshot of this dataset, or loads once to make one, untimed. |
-| `--machine` | The machine type, as it goes in the results |
-| `--seed` | The seed for picks. The default is the one in `tests.json`. |
-| `--quick` | One run of everything and two writes per test, to try the runner. Not for results. |
+| `--record` | Runs on the dataset's picks and writes the expected results to this file. For RAMA. |
+| `--expected` | The expected results to check against. A downloaded size brings its own. A file recorded for another dataset is refused. |
+| `--tests` | Only these tests, such as `L1,W1,R1`. They are added to the results already in `--out`. With `--record`, they replace only their own entries in an expected file that is already there. Every test but L1 starts from the snapshot L1 leaves. |
+| `--machine` | The machine, as it goes in the results, such as `n2d-standard-4, local NVMe SSD`. A published result goes in `results/<machine>/<size>/`, with the machine in lower case and hyphens: `results/n2d-standard-4-local-nvme-ssd/10m/rama.json`. |
+| `--quick` | One run of each load, bulk write, model change and read, and three writes per write test, to try the runner. Not for results. A quick record goes with quick runs only. |
 
-On Linux the runner drops the OS cache before a cold read with `sudo -n`. Without passwordless sudo the result notes that the cache was not dropped.
+On Linux the runner drops the OS cache before each run of R8 with `sudo -n`. Without passwordless sudo the result notes that the cache was not dropped.
 
-## What it does
+## The tests
 
-1. It turns the dataset into input cells with `data/cells.mjs`, once. Every system loads the same `cells.csv`. This step is not timed.
-2. L1 loads three times from empty. After the last load the runner stops the system and copies its files. That copy is the snapshot.
-3. Every other test starts from the snapshot. A write test writes once to warm up, then 20 times. The cells come from the seed in one shuffled order, so every write takes a fresh cell. When fewer cells fit the pick rule, the test writes fewer times and its result says so. A bulk write, a later load and a model change run three times, each from the snapshot. A read runs once cold, after a restart and an OS cache drop, then five times warm. The runner waits, untimed, for the system to finish the background work it started, such as compiling the plans of new statements. It waits after each restore and after the cold run of R1 to R7. It also waits just before a later load, a bulk write, a model change or the first timed write of a write test. An adapter whose system has no background work has no `settle()`.
-4. The timer runs here, from just before the action to the end of the proving read. A load's timer also waits for `sync`. A write result also has the two parts: the write until the system says it is done, and the proving read.
-5. Every size runs every test. `tests.json` may name sizes SF1 to SF1000, and the runner reads SF1, SF10, SF100 and SF1000 as 10m, 100m, 1b and 10b.
-
-## Checks
-
-The runner checks every expectation it can state on its own: deltas, values that must not move, cells that must equal what was typed, the model's checks, and invariants I1, I2, I4 and I5. A test that fails one of them is `wrong`. I1 and C2 look at every stored cell of every check, so errors of opposite sign cannot cancel in a total. A W1 write that moves another country's EBIT fails W1 as well as C3.
-
-A `value` expectation needs a reference program, and there is none yet. So the runner saves every answer, and `compare.mjs` compares the answers of all systems, test by test and run by run, within the tolerances of `tests.json`. Ratios also get an absolute floor of 1e-12, so a 0 against 5e-19 is not a difference. A test whose answers differ is marked `wrong` in each system, with the first differences. A test with several answers, such as M2 and its EBIT, is wrong when any of them differs. Until there is a reference, two systems built in different ways that give the same answer stand in for it.
-
-## The adapter
-
-A system plugs in through `systems/<entry>/adapter.mjs`. It exports `create({ work, model })`, which returns:
+Each test is one file per system, `systems/<entry>/tests/<id>.mjs`, written in the system's own calls. A test exports:
 
 | Member | What it does |
 | --- | --- |
-| `name`, `version`, `settings` | What goes in the results |
-| `load(cellsDir)` | Builds the system from empty and loads every input cell. Done when every value is current. |
-| `open()`, `close()` | Start and stop. `close()` must leave everything on disk. |
-| `dataDirs()` | The files and folders the snapshot copies |
-| `cells(variable)` | Every stored cell of a variable, as rows `{ key, value }`. For the checks, not timed. |
-| `read({ variable, by, where })` | Rows `{ key, value }` of a variable summed over `by`, or averaged when its rollup is average. A measure is computed at that slice. `where` values may be lists. |
-| `write(cells)` | Writes `{ variable, at, value }` cells in one transaction. Done when every value is current. |
-| `loadCells(cellsDir, { cells })` | Loads more input cells on top, and `cells` with them |
-| `changeModel({ model, members, variables, cells })` | Applies a changed model: new or moved members, new or changed variables, and cells to write with them |
-| `setModel(model)` | Points the adapter at the model again after a restore. It changes nothing in the system. |
-| `settle()` | Optional. Returns when the system has finished the background work it started, such as compiling plans. It only waits, and must not start work of its own. The runner calls it, untimed, after each restore and after the cold run of R1 to R7, and just before a later load, a bulk write, a model change or the first timed write of a write test. |
+| `setup(context)` | Gets the system ready, untimed. Most tests put the system back to the snapshot. RAMA's W8 also works out the values it writes here, since they come from the model. |
+| `open(context)` | Optional, R8 only. Starts the system, inside the timer. |
+| `run(context)` | One timed run, from the first call to the end of the proving read. Returns the rows it read, `{ key, value }`. |
+| `check(context)` | Optional. Untimed checks after a run. Returns `{ name: rows }`. |
+| `teardown(context)` | Untimed. Stops the system. It runs even when setup or a run throws, with `context.failed` set. L1's teardown keeps the snapshot, unless the load failed. |
+
+`context` holds the work folder, the input cells, the test's picks, the pick of the run, and whatever `setup` puts in it. Each system's `db.mjs` also exports `system`: its name, version and settings, as they go in the results.
+
+## What it does
+
+1. It turns the dataset into input cells with `data/cells.mjs`, once. This step is not timed.
+2. It runs the tests in the order of `tests.json`. L1 loads three times from empty, and the file after the last load is the snapshot.
+3. A write test sets up once, writes once to warm up, then 20 times, each with its own pick. A read sets up once and runs 5 times. R8, a load, a bulk write, a model change and a check without a timer set up fresh for each of their runs.
+4. The timer runs here, around `run()`. A load's timer also waits for `sync`. R8's timer also covers `open()`.
+5. It compares every answer and every check with the expected results, within the tolerances of `tests.json`. Amounts match within 0.01 or a relative 1e-9. A test whose expectation says `ratioRelative`, such as R4, matches within a relative 1e-6. An answer and a recorded answer must have the same rows, since a missing row means no value, not 0. What a pick lists under `zero`, such as C2's answer and every check of L1, must be 0 everywhere, and there a missing row is fine. Those are never recorded, so RAMA is held to them too. A test with a difference is `wrong`, with the first differences.
+
 
 ## Not covered yet
 
-- W8 is skipped when no customer group fits its pick rule. The rule needs a growth bonus rate above 0 in FC 6+6.
 - Invariant I3 needs a reference for the source amounts before allocation.
-- `tests.json` describes M4 in words. `lib/changes.mjs` writes it as model edits, and that is the reference for every system.
+- `tests.json` describes M4 in words. `model/lib/changes.mjs` writes it as model edits, and that is the reference for every system.

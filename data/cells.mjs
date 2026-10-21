@@ -2,13 +2,15 @@
 //
 //   node cells.mjs <dataset dir> <out dir>
 //
-// It writes the model's input cells to one long CSV, with a variable, a value and one column per
-// dimension, and one member file per dimension in the format of model/dimensions/. Months like
+// It writes the model's input cells to one CSV per input variable, cells/<variable>.csv, with a column per
+// dimension of that variable and a value column. It also writes one member file per dimension in the format
+// of model/dimensions/, Versions and Years included. Months like
 // 2024-03 become Years Y2024 and Months M3. An empty field makes no cell. Codes stay text.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
+import { splitCsv } from './lib/csv.mjs';
 
 const [src, out] = process.argv.slice(2);
 if (!src || !out) {
@@ -17,6 +19,7 @@ if (!src || !out) {
 }
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(path.join(out, 'dimensions'), { recursive: true });
+fs.mkdirSync(path.join(out, 'cells'), { recursive: true });
 
 const DIMS = [
     'Customer',
@@ -35,8 +38,9 @@ const DIMS = [
     'Years',
     'Months',
 ];
-const cells = fs.openSync(path.join(out, 'cells.csv'), 'w');
-let buf = 'variable,value,' + DIMS.map(q).join(',') + '\n';
+// One open file per variable, with its columns fixed by its first cell.
+const files = new Map();
+const system = { Versions: new Set(), Years: new Set() };
 let count = 0;
 
 function q(s) {
@@ -44,17 +48,21 @@ function q(s) {
 }
 function emit(variable, value, coords) {
     if (value === '' || value === undefined) return;
-    buf +=
-        q(variable) +
-        ',' +
-        value +
-        ',' +
-        DIMS.map((d) => (coords[d] === undefined ? '' : q(coords[d]))).join(',') +
-        '\n';
+    let f = files.get(variable);
+    if (!f) {
+        if (variable.includes('/')) throw new Error(`a variable name cannot be a file name: ${variable}`);
+        const dims = DIMS.filter((d) => coords[d] !== undefined);
+        f = { fd: fs.openSync(path.join(out, 'cells', `${variable}.csv`), 'w'), dims, key: dims.join(), buf: [...dims, 'value'].map(q).join(',') + '\n' };
+        files.set(variable, f);
+    }
+    const dims = DIMS.filter((d) => coords[d] !== undefined);
+    if (dims.join() !== f.key) throw new Error(`${variable}: a cell with dimensions ${dims.join(', ')}, the file has ${f.dims.join(', ')}`);
+    for (const d of ['Versions', 'Years']) if (coords[d] !== undefined) system[d].add(coords[d]);
+    f.buf += dims.map((d) => q(coords[d])).join(',') + ',' + value + '\n';
     count++;
-    if (buf.length > 1 << 22) {
-        fs.writeSync(cells, buf);
-        buf = '';
+    if (f.buf.length > 1 << 20) {
+        fs.writeSync(f.fd, f.buf);
+        f.buf = '';
     }
 }
 const ym = (month) => {
@@ -73,28 +81,6 @@ async function* rows(file) {
         else yield Object.fromEntries(header.map((h, i) => [h, f[i] ?? '']));
     }
 }
-function splitCsv(line) {
-    const out = [];
-    let cur = '';
-    let inQ = false;
-    for (let i = 0; i < line.length; i++) {
-        const c = line[i];
-        if (inQ) {
-            if (c === '"' && line[i + 1] === '"') {
-                cur += '"';
-                i++;
-            } else if (c === '"') inQ = false;
-            else cur += c;
-        } else if (c === '"') inQ = true;
-        else if (c === ',') {
-            out.push(cur);
-            cur = '';
-        } else cur += c;
-    }
-    out.push(cur);
-    return out;
-}
-
 // Members as in model/dimensions: the member, @description, then one column per parent.
 async function dimension(name, file, key, parents) {
     let text = [name, '@description', ...parents.map(([dim]) => dim)].map(q).join(',') + '\n';
@@ -279,6 +265,13 @@ for (const [file, variable, col, dims] of plan) {
     }
 }
 
-fs.writeSync(cells, buf);
-fs.closeSync(cells);
-console.log(`${count} input cells written to ${path.join(out, 'cells.csv')}`);
+for (const f of files.values()) {
+    fs.writeSync(f.fd, f.buf);
+    fs.closeSync(f.fd);
+}
+// The Versions and Years the cells use. Months are always M1 to M12.
+for (const d of ['Versions', 'Years'])
+    fs.writeFileSync(path.join(out, 'dimensions', `${d}.csv`), [d, ...[...system[d]].sort()].map(q).join('\n') + '\n');
+// Written last: a folder with this file is complete.
+fs.writeFileSync(path.join(out, 'summary.json'), JSON.stringify({ cells: count, variables: [...files.keys()].sort() }, null, 1) + '\n');
+console.log(`${count} input cells of ${files.size} variables written to ${path.join(out, 'cells')}`);
