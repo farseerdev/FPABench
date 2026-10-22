@@ -33,6 +33,7 @@ Changes to the model, the data, the tests and the method, newest first. A change
 - `snapshot.ok` holds a SHA-256 of the system's generated SQL or model JSON, its `db.mjs` and its L1. A partial run makes the snapshot again when they changed.
 - The runner prints its usage when an option is missing, and `--dataset 10m` always means the published size.
 - CI runs both generators and the website build with `--check`, so out-of-date generated files fail the build.
+- 1b results for all three entries, every test, on `n2d-highmem-8`, and the 1b dataset with RAMA's 1b answers on R2. The method's 1b machine is now `n2d-highmem-8` with 8 vCPU and 64 GB instead of the custom `n2d-custom-4-65536-ext`, since no predefined N2D has 4 vCPUs and 64 GB. Every entry stayed under 43 GB.
 - `systems/risingwave/` is removed, with its SQL dialect in the translator. It had no tests in the new style and no results. The generated SQL of DuckDB and ClickHouse does not change.
 
 ## 0.9-draft, 2026-10-20

@@ -40,7 +40,7 @@ shasum -a 256 -c SHA256SUMS
 tar -xzf fpabench-10m.tar.gz
 ```
 
-`runner/run.mjs --dataset 10m` downloads and checks them itself. 10m and 100m are there so far. The same size and version always give the same bytes, so `generate.mjs` makes the same dataset too.
+`runner/run.mjs --dataset 10m` downloads and checks them itself. 10m, 100m and 1b are there so far. The same size and version always give the same bytes, so `generate.mjs` makes the same dataset too.
 
 ## Use
 

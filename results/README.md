@@ -4,7 +4,7 @@ Draft. One folder per machine, one folder per dataset size in it, and one file p
 
 ## The machine
 
-Each entry ran on its own Google Cloud `n2d-standard-4` in europe-west1-b: AMD EPYC 7B13, 4 vCPU, 16 GB, an SSD persistent disk to boot from and a 375 GB local NVMe SSD for the data, the system's files and its snapshot. Ubuntu 24.04, kernel 7.0.0-1014-gcp, Node 22.22.3. Every VM was new and was deleted after its run. Tests 0.5-draft, data generator 0.6-draft, seed 1, FPABench on `28f3481` with the changes of 2026-10-21 not yet committed. All runs were on 2026-10-21: RAMA without the second calculation in its load, and DuckDB and ClickHouse with reads by member id. At each size every entry wrote the same cells, from the dataset's `picks.json`.
+At 10m and 100m each entry ran on its own Google Cloud `n2d-standard-4` in europe-west1-b: AMD EPYC 7B13, 4 vCPU, 16 GB, an SSD persistent disk to boot from and a 375 GB local NVMe SSD for the data, the system's files and its snapshot. Ubuntu 24.04, kernel 7.0.0-1014-gcp, Node 22.22.3. Every VM was new and was deleted after its run. Tests 0.5-draft, data generator 0.6-draft, seed 1, FPABench on `28f3481` with the changes of 2026-10-21 not yet committed. All runs were on 2026-10-21: RAMA without the second calculation in its load, and DuckDB and ClickHouse with reads by member id. At each size every entry wrote the same cells, from the dataset's `picks.json`.
 
 | Entry | System | Durable | Runs as |
 | --- | --- | --- | --- |
@@ -89,6 +89,45 @@ Manifest SHA-256 `35ca0575…`. Run times: RAMA 10.7 min, DuckDB 27.9 min, Click
 - RAMA is slower on model changes that touch formulas. At 100m M1 and M4 take 8 to 10 s on RAMA and 1.0 to 1.8 s on the SQL entries, which rebuild only the tables the change reaches. Member changes (M2, M3) rebuild every SQL table, because the dimension lookups change. There RAMA is faster at both sizes.
 - Reads stay in milliseconds on all three, and RAMA and DuckDB split them. At 100m DuckDB is fastest on R1, R2a, R2c, R4, R6 and R7, and RAMA on R2b, R3 and R5. The largest gap is R6, margin by product attributes: 0.010 s on DuckDB and 0.11 s on RAMA.
 - Opening the model (R8) takes 2.6 s on RAMA at 100m, 14 s on DuckDB and 24 s on ClickHouse. DuckDB and ClickHouse build their calculated tables in memory on every start.
+
+## 1b
+
+On an `n2d-highmem-8` (AMD EPYC 7B13, 8 vCPU, 64 GB) with a 375 GB local NVMe SSD, one new VM per entry, deleted after its run. No predefined N2D has 4 vCPUs and 64 GB, so 1b has twice the cores of 10m and 100m. Manifest SHA-256 `bb28482e…`. RAMA recorded the 1b answers, and DuckDB and ClickHouse ran against them. Run times: RAMA 116.5 min, DuckDB 142.2 min, ClickHouse 271.5 min. Peak memory, for the system and the runner: RAMA 37.3 GB, DuckDB 42.9 GB, ClickHouse 39.2 GB. Every entry passed every test. The files are in [`n2d-highmem-8-local-nvme-ssd/1b/`](n2d-highmem-8-local-nvme-ssd/1b/), and the website shows them when that machine is ticked.
+
+| Test | RAMA | DuckDB (tables) | ClickHouse (tables) |
+| --- | ---: | ---: | ---: |
+| L1 Initial load | 559 | 163 | 138 |
+| L2 Monthly close | 117 | 80.9 | 125 |
+| L3 Change a weight in master data | 37.2 | 10.9 | 11.8 |
+| W1 Type one volume | 6.13 (11.1) | 51 (51.8) | 110 (112) |
+| W2 Paste 1,000 volumes at once | 53.4 | 50.3 | 107 |
+| W3 Change a rebate rate | 1.5 (3.72) | 13.4 (13.6) | 25.1 (25.6) |
+| W4 Raise a brand's price | 31.1 (35.8) | 35.7 (36.8) | 73.2 (79.2) |
+| W5 Change a planning exchange rate | 7.85 (12.7) | 11.6 (12.1) | 35.2 (35.7) |
+| W6a Change the cost of a warehouse | 2.04 (2.19) | 6.59 (6.69) | 17.3 (17.7) |
+| W6b Change the cost of an office | 0.0106 (0.015) | 6.56 (6.64) | 17.3 (17.7) |
+| W7 Set a yearly target | 11.2 (13.7) | 52.2 (53.1) | 114 (115) |
+| W8 Flip a yearly bonus | 2.27 (3.61) | 11.2 (11.6) | 19 (19.3) |
+| R1 Company P&L | 0.0117 | 0.00313 | 0.00552 |
+| R2a P&L by brand | 0.0443 | 0.00355 | 0.00756 |
+| R2b P&L by channel | 0.00524 | 0.00295 | 0.00656 |
+| R2c P&L by country, in its own currency | 0.00734 | 0.00374 | 0.00644 |
+| R3 Plan against last year | 0.00884 | 0.00743 | 0.0174 |
+| R4 Ratios | 0.137 | 0.0613 | 0.218 |
+| R5 Drill to the detail | 0.336 | 0.161 | 0.26 |
+| R6 Margin by product attributes | 1.75 | 0.0441 | 0.0831 |
+| R7 Top customers | 0.125 | 0.0257 | 0.0266 |
+| R8 Open the model | 22.1 | 61.5 | 128 |
+| M1 Change a formula | 89.8 | 8.12 | 11.1 |
+| M2 Add a customer | 45.3 | 62.2 | 127 |
+| M3 Move a customer to another group | 127 | 62.1 | 128 |
+| M4 Allocate one more cost | 65.6 | 4.99 | 6.77 |
+| C1 to C3, the checks without a timer | ok | ok | ok |
+
+- RAMA is fastest on every one-cell write. W1 takes 6.1 s on RAMA, 51 s on DuckDB and 110 s on ClickHouse. The paste of 1,000 volumes (W2) is the one write where DuckDB is as fast, at 50 s against RAMA's 53 s.
+- The SQL entries load 3.5 to 4 times faster than RAMA, and change formulas (M1, M4) 8 to 13 times faster.
+- DuckDB is fastest on every read at 1b. The reads that list detail grow fastest on RAMA: R6 takes 1.75 s on RAMA, 0.044 s on DuckDB and 0.083 s on ClickHouse.
+- RAMA opens the model fastest (R8): 22 s, against 62 s on DuckDB and 128 s on ClickHouse.
 
 ## Caveats
 

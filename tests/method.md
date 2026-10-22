@@ -39,15 +39,15 @@ Embedded systems run inside the runner's process. Servers pay for a network roun
 
 ## The machine
 
-Every result names its machine, as in ClickBench. The published rankings compare systems on the reference machines below. The website also lets the reader tick several machines and compare across them. Every size gets 4 vCPUs of the same CPU series, so times can be compared across sizes. Only the memory grows with the data. A result from any other machine can be published too, in its own machine's folder of `results/`. 
+Every result names its machine, as in ClickBench. The published rankings compare systems on the reference machines below. The website also lets the reader tick several machines and compare across them. Every size gets the same CPU series. 10m and 100m get 4 vCPUs, so their times compare. No predefined N2D has 4 vCPUs and 64 GB, so 1b gets 8 vCPUs, twice the cores of the smaller sizes. A result from any other machine can be published too, in its own machine's folder of `results/`. 
 
 | Size | Machine | vCPUs | Memory |
 | --- | --- | ---: | ---: |
 | 10m, 100m | `n2d-standard-4` | 4 | 16 GB |
-| 1b | `n2d-custom-4-65536-ext`, a custom N2D with extended memory | 4 | 64 GB |
+| 1b | `n2d-highmem-8`, the smallest predefined N2D with 64 GB | 8 | 64 GB |
 | 10b | Not chosen yet | 4 | |
 
-At 1b RAMA and DuckDB each needed about 42 to 44 GB, so 16 GB is too small there, and 64 GB leaves room. The machine boots from an SSD persistent disk and has one local NVMe SSD of 375 GB. The data, every system's files, its snapshot and any Docker storage go on the local SSD, so no system runs out of disk. Each machine is small on purpose, because memory often decides whether a model fits. This choice is not final until every system has had a trial run.
+At 1b, with every test, RAMA peaked at 37 GB, DuckDB at 43 GB and ClickHouse at 39 GB, so 16 GB is too small there, and 64 GB leaves room. The machine boots from an SSD persistent disk and has one local NVMe SSD of 375 GB. The data, every system's files, its snapshot and any Docker storage go on the local SSD, so no system runs out of disk. Each machine is small on purpose, because memory often decides whether a model fits. This choice is not final until every system has had a trial run.
 
 - The runner and the system share the machine, and there are no other limits.
 - No system gets a thread or core limit. Each keeps its default thread setting, so it can use all 4 vCPUs. Each result file records this as `"threads": "default"`.
