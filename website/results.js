@@ -29,10 +29,8 @@ const blocked = (group, value) => group === 'scale' && !readyOn(state.machine).h
 
 const state = Object.fromEntries(GROUPS.map((g) => [g.key, new Set(g.single ? [g.options[0][0]] : g.options.map(([v]) => v))]));
 const one = (key) => [...state[key]][0];
-// The page opens on the reference machine alone, which comes first, and its first size with results. More
-// machines can be ticked, as in ClickBench. Each system then shows once per machine, and every row shown is
-// scored against the fastest of them.
-state.machine = new Set([data.machines[0].id]);
+// The page opens with every machine ticked, so every size with results can be picked. Each system then shows
+// once per machine, as in ClickBench, and every row shown is scored against the fastest of them.
 state.scale = new Set([data.scales.find((s) => readyOn(state.machine).has(s))]);
 const machineById = new Map(data.machines.map((m) => [m.id, m]));
 // A row's name: the system, and its machine when more than one machine is ticked.
@@ -45,7 +43,7 @@ const excluded = new Set();
 function renderSelectors() {
     const chip = (group, value, label, on) =>
         blocked(group, value)
-            ? `<button type="button" class="chip" data-key="${group}" data-value="${esc(value)}" aria-disabled="true" data-tip="Coming soon" title="Coming soon">${esc(label)}</button>`
+            ? `<button type="button" class="chip" data-key="${group}" data-value="${esc(value)}" aria-disabled="true">${esc(label)}</button>`
             : `<button type="button" class="chip" data-key="${group}" data-value="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
     document.getElementById('selectors').innerHTML = GROUPS.filter((g) => !g.only || Object.entries(g.only).every(([k, v]) => state[k].has(v)))
         .map((g) => {

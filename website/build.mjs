@@ -264,6 +264,8 @@ const APPROACHES = [
 
 // The machine the method names for published rankings. The page opens on it.
 const REFERENCE_MACHINE = 'n2d-standard-4-local-nvme-ssd';
+// The memory of each machine type, as Google Cloud lists it.
+const MACHINE_MEMORY_GB = { 'n2d-standard-4': 16, 'n2d-highmem-8': 64 };
 // A machine's folder name: its name in lower case, with every run of other characters a hyphen.
 const machineId = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -291,7 +293,11 @@ function readResults(tests) {
                 }
                 const meta = JSON.parse(read(metaFile));
                 entries.set(r.entry, { id: r.entry, name: meta.name, approach: meta.approach, open: meta.open });
-                const host = { cpus: r.host?.cpus, cpu: r.host?.cpu, memoryGB: r.host?.memoryGB };
+                // The page shows the memory Google Cloud lists for the machine type. A result records what the OS
+                // reports, which is a little less, as the kernel keeps some for itself.
+                const type = r.machine.split(',')[0].trim();
+                if (!MACHINE_MEMORY_GB[type]) fail(`${rel}: add the memory of ${type} to MACHINE_MEMORY_GB`);
+                const host = { cpus: r.host?.cpus, cpu: r.host?.cpu, memoryGB: MACHINE_MEMORY_GB[type] ?? r.host?.memoryGB };
                 const known = machines.get(machine);
                 if (known && JSON.stringify(known.host) !== JSON.stringify(host)) fail(`${rel}: another kind of host than the other results of ${machine}`);
                 machines.set(machine, { id: machine, name: r.machine, host });
