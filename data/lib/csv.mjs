@@ -1,4 +1,5 @@
-// CSV output: buffered writes, a row count and the SHA-256 of every file, for the manifest.
+// CSV output: buffered writes, a row count and the SHA-256 of every file, for the manifest. And CSV input:
+// splitCsv for one line, readCsv for a small file.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -73,4 +74,32 @@ export function money(hundredths) {
 export function fixed(x, decimals) {
     const s = x.toFixed(decimals);
     return s === '-' + (0).toFixed(decimals) ? (0).toFixed(decimals) : s;
+}
+
+/** The fields of one CSV line. A field in double quotes may hold commas, and "" is a quote. */
+export function splitCsv(line) {
+    if (!line.includes('"')) return line.split(',');
+    const out = [];
+    let cur = '';
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (quoted) {
+            if (c === '"' && line[i + 1] === '"') cur += line[++i];
+            else if (c === '"') quoted = false;
+            else cur += c;
+        } else if (c === '"') quoted = true;
+        else if (c === ',') {
+            out.push(cur);
+            cur = '';
+        } else cur += c;
+    }
+    out.push(cur);
+    return out;
+}
+
+/** A small CSV file as rows { column: value }. A missing field is ''. */
+export function readCsv(file) {
+    const [header, ...lines] = fs.readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean).map(splitCsv);
+    return lines.map((f) => Object.fromEntries(header.map((h, i) => [h, f[i] ?? ''])));
 }

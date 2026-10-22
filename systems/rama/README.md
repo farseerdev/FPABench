@@ -14,17 +14,17 @@ The script installs `@farseer/rama` 1.9.0-ffad51e.0 from Farseer's registry. On 
 
 ## How it runs
 
-`adapter.mjs` makes the calls the Farseer backend makes, in process, through the Node addon.
+The tests in `tests/` make the calls the Farseer backend makes, in process, through the Node addon. `db.mjs` holds what they share.
 
 | Step | Call |
 | --- | --- |
-| Load | One `modelImport` for the dimensions and one for the variables, without cells. Then `importCellsFromCsvFile`, the native cell import, with every input cell streamed from `cells.csv`, then `recalc`. Until 2026-10-19 the cells went inside the variables' `modelImport` JSON, and at 1b that JSON did not fit in 12 GB of Node heap. |
+| Load | One `modelImport` for the dimensions and the variables, without cells. Then `importCellsFromCsvFile`, the native cell import, with every input cell streamed from the cell files. Its commit calculates every formula the cells reach, which is the whole model. Until 2026-10-21 the load also called `recalc()` after it, which calculated the whole model a second time: at 100m on a laptop 40 s instead of 28 s, with the same answers. Until 2026-10-19 the cells went inside the variables' `modelImport` JSON, and at 1b that JSON did not fit in 12 GB of Node heap. |
 | Write | `updateCells` with one `sum(...)` formula per cell, then `commit` |
 | Write to a read-only variable | `importCellsFromCsvFile`, the native path of a data import. `updateCells` refuses read-only cells. |
 | Read | `generateCombinations` lists the combinations of the `by` members that have a value, then one `query` call reads them. A Farseer sheet lists its rows with data the same way. A measure has no stored cells to list, so a measure read asks for every combination the filters allow. |
-| Model change | `modelImport` of the changed members and variables, then `commit`. The commit updates every cell that depends on a changed formula. Until 2026-10-12 the adapter also called `recalc()`, which recalculates the whole model and took M1 from 1.9 s to 3.1 s on a laptop, with the same answers. |
+| Model change | `modelImport` of the changed members and variables, then `commit`. The commit updates every cell that depends on a changed formula. Until 2026-10-12 the load also called `recalc()`, which recalculates the whole model and took M1 from 1.9 s to 3.1 s on a laptop, with the same answers. |
 
-`payload.mjs` turns the model and the input cells into the JSON `modelImport` takes. That is the JSON the backend sends when a model is pushed.
+The JSON `modelImport` takes is made ahead from the model by [`model/lib/rama/generate.mjs`](../../model/lib/rama/generate.mjs), into `model/` here. It is the JSON the backend sends when a model is pushed. `model.json` holds every dimension table with the members the model brings, Versions and Years included, and every variable. L1 adds the data's own members from the dataset's `dimensions/` files and sends it all in one `modelImport`. RAMA's built-in `Plan` version stays, with no cells. `m1.json` and `m4.json` hold only what tests M1 and M4 change. Run `node model/lib/rama/generate.mjs` after a model change, and `--check` to see that the files are current.
 
 ## Settings
 
@@ -34,7 +34,7 @@ The script installs `@farseer/rama` 1.9.0-ffad51e.0 from Farseer's registry. On 
 | Commits | Durable (`commit(checksum, true)`) | The backend's default. The method turns durability on where a system has it. |
 | Abakus | On | As in the backend |
 | Threads | RAMA's default | |
-| Versions | The five the data uses | RAMA seeds a `Plan` version. The adapter removes it, as the data does not use it. |
+| Versions | The five the data uses, and RAMA's built-in `Plan` | RAMA seeds a `Plan` version. It stays, with no cells, so no answer changes. |
 
 A write is visible when `commit` returns. RAMA recalculates the cells the write reaches during the commit.
 

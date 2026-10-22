@@ -24,9 +24,23 @@ UTF-8 CSV with a header row, commas and a decimal point. Months are `2024-03`. C
 | `master/` | Members and their parents: countries, regions, customer groups, customers, the product hierarchy, SKUs with their attributes and weights, materials, cost centers |
 | `actuals/` | Monthly totals from January 2023 to June 2026. `sales.csv` holds almost all rows, one per customer, material and month. The rest are rebates, growth bonus, trade fees, OPEX, marketing, list prices, standard costs, exchange rates and control totals. |
 | `plan/` | One file per planner input, one row per typed cell, for Budget, FC 3+9, FC 6+6 and What-if in 2026. Plus the two version flags. |
+| `picks.json` | The picks of the tests: for each test, the cells it writes, the values, and how often it runs. `picks.mjs` makes them from the input cells, as the last step of `generate.mjs`. |
 | `increments/` | Later loads for the tests: July 2026 actuals, a correction of March 2026 with its restated control totals, master data changes and a new price list. Corrections and new prices replace the old values. |
 
 Every code in the actuals is in the master data, and every check of the model is empty or zero on this data.
+
+## Download
+
+The datasets and RAMA's expected answers are public on Cloudflare R2, by generator version and size. Each folder holds the dataset as one archive, `expected.json` for `runner/run.mjs --expected`, and `SHA256SUMS`.
+
+```bash
+B=https://pub-508fd3a914ed495baefdd48005785ed9.r2.dev/data-0.6-draft/10m
+curl -O $B/fpabench-10m.tar.gz -O $B/expected.json -O $B/SHA256SUMS
+shasum -a 256 -c SHA256SUMS
+tar -xzf fpabench-10m.tar.gz
+```
+
+`runner/run.mjs --dataset 10m` downloads and checks them itself. 10m and 100m are there so far. The same size and version always give the same bytes, so `generate.mjs` makes the same dataset too.
 
 ## Use
 

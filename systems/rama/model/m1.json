@@ -1,0 +1,46 @@
+{
+ "tables": [],
+ "variables": [
+  {
+   "name": "Handling KG",
+   "description": null,
+   "notes": "Net kg weighted by temperature zone. A frozen kg counts as more than an ambient one.",
+   "formula": "\"Volume KG\"",
+   "tables": [
+    "Customer",
+    "SKU",
+    "Versions",
+    "Years",
+    "Months"
+   ],
+   "members": [],
+   "rollupType": "SUM",
+   "dataType": "DECIMAL",
+   "numberFormat": {
+    "type": "NUMBER",
+    "unit": "ONES",
+    "negatives": "SIGNED",
+    "polarity": "POSITIVE",
+    "currency": "EUR",
+    "decimals": 2,
+    "formatString": "#,##0.00",
+    "custom": false
+   },
+   "numberValidation": {
+    "min": null,
+    "max": null
+   },
+   "topDownMapping": null,
+   "readonly": true,
+   "calculateOnDemand": false,
+   "zConstraint": false,
+   "active": true,
+   "optimizeCalculation": true,
+   "useHierarchy": true,
+   "folderPath": [
+    "Variables",
+    "Margin"
+   ]
+  }
+ ]
+}

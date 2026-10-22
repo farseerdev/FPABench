@@ -4,7 +4,7 @@ Version 0.9-draft. The method will change before version 1. Every change is list
 
 ## The runner
 
-One runner runs every [test](README.md) on every system. Each system plugs in through a small adapter. The adapter starts and stops the system, loads files, writes cells, reads results and changes the model.
+One runner runs every [test](README.md) on every system. Each system has one file per test, written in its own calls: SQL for the SQL systems, the addon's calls for RAMA. The runner times each test the same way and checks its answers.
 
 An entry is a system plus one way of running it. For example, a database can have one entry that computes on read and another that stores results.
 
@@ -19,11 +19,11 @@ The runner times everything itself, with a monotonic clock. It never uses times 
 | Load | When the system starts reading the files | When the proving read returns and `sync` has finished |
 | Model change | Before the change | When the proving read returns the new value |
 
-- Before the proving read, the runner waits for the system's own signal that a write is visible. One example is `FLUSH` in RisingWave. A system with no signal is polled every 1 ms at most.
+- Before the proving read, the runner waits for the system's own signal that a write is visible. A system with no signal is polled every 1 ms at most.
 - The proving read reads a total that depends on the change. It never just reads back the cell that was written.
 - The runner also records when the write was acknowledged.
 - A model change includes any compile or reload the system needs.
-- Some systems start background work after a statement, such as compiling its plan. The runner waits until that work is done after each restore and after the cold run of R1 to R7. It also waits just before L2, L3, a bulk write, a model change or the first timed write of a write test. The adapter's `settle()` says when. It only waits, and must not start work of its own. The wait is not timed. So the warm reads and these timed runs start with the system at rest. The cold read, the warm-up write, loads, bulk writes, model changes and R8 still pay for the first run of their statements.
+- Some systems start background work after a statement, such as compiling its plan. A system's test waits for that work in its untimed setup, if the system has any. The warm-up write, loads, bulk writes, model changes and R8 still pay for the first run of their statements.
 
 ## Durability and tags
 
@@ -34,12 +34,12 @@ Embedded systems run inside the runner's process. Servers pay for a network roun
 ## Reset
 
 - After the load, the runner copies each system's data folder as a snapshot. It restores the snapshot before each test.
-- Each repeat writes a new value to a new cell. The runner tracks its changes, so it always knows the expected answer.
+- Each repeat writes a new value to a new cell. The cells and values come with the dataset, in `picks.json`.
 - A rollback is never used to reset, because a rollback skips the commit.
 
 ## The machine
 
-Every result at a size comes from one kind of Google Cloud machine. Every size gets 4 vCPUs of the same CPU series, so times can be compared across sizes. Only the memory grows with the data.
+Every result names its machine, as in ClickBench. The published rankings compare systems on the reference machines below. The website also lets the reader tick several machines and compare across them. Every size gets 4 vCPUs of the same CPU series, so times can be compared across sizes. Only the memory grows with the data. A result from any other machine can be published too, in its own machine's folder of `results/`. 
 
 | Size | Machine | vCPUs | Memory |
 | --- | --- | ---: | ---: |
@@ -59,11 +59,12 @@ At 1b RAMA and DuckDB each needed about 42 to 44 GB, so 16 GB is too small there
 
 | Test kind | Runs | Reported |
 | --- | --- | --- |
-| Read | 1 cold, after a restart and a cleared OS cache. Then 5 warm. | Cold time, and median warm time |
+| Read | 5, after a restore | Median |
+| R8 | 3, each from a stopped system. The timer covers the start. | Median |
 | Single-cell write | 20, each on a new cell, after 1 warm-up. Fewer if a test has fewer cells. | Median and 95th percentile |
 | Bulk write, load, model change | 3, each from the snapshot | Median |
 
-Reads run in a random order from a fixed seed. Every raw time is published.
+Tests run in the order of `tests/tests.json`. Every raw time is published.
 
 ## Scores
 
@@ -73,8 +74,8 @@ score = (c + t) / (c + best)
 
 `t` is the system's time and `best` is the fastest system's time. `c` is 10 ms, so differences no user could feel don't count as big ratios. Lower is better, and 1 is the best.
 
-- Loads, writes and model changes get one score each. Reads get two scores, one from the median warm times and one from the cold times. Each score is the geometric mean of its test scores. There is no combined score.
-- R8 opens a stopped system, so every run of it is cold. It counts in the cold read score only.
+- Loads, writes, reads and model changes get one score each. Each score is the geometric mean of its test scores. There is no combined score.
+- R8 is the only read that starts a stopped system. It counts in the read score like the other reads.
 - Absolute times are always shown next to the scores.
 - A failed, timed-out or wrong test counts as twice the largest of three times. These are 300 s, the system's slowest warm time on any test, and the slowest success of any system on that test.
 
@@ -101,10 +102,9 @@ A cache of answers keyed on a read's text or parameters is not allowed. Neither 
 
 ## Correctness
 
-- **Reference answers.** A plain JavaScript program computes exact answers. It shares no code with any system and covers the 10m size.
-- **Rules at every size.** Every check equals its published value. The P&L lines add up to EBIT. EBIT equals the source amounts. Each cost pool equals what it allocated plus what it could not place. Closed months equal the actuals.
-- **Stated deltas.** A write or model change must move a result by exactly what its test states.
-- **Unchanged values.** Each write and model change checks a value it cannot reach.
+- **Expected answers.** RAMA runs every test once on the dataset's picks, and every answer and check it gives is saved as the expected result. Every other system must give the same. When a system disagrees with RAMA, someone finds out which one is right, and a RAMA error is fixed in RAMA and recorded again.
+- **What RAMA's answers are not checked for.** The runner does not check RAMA's answers against the effects `tests.json` states, such as "the bonus moves by the rate times the sales". If RAMA got one wrong, every correct system would be marked wrong on that test until someone looked. Two independent SQL systems that agree with each other but not with RAMA are the sign to look.
+- **Rules at every size.** Every check of the model is 0. The P&L lines add up to EBIT. Each cost pool equals what it allocated plus what it could not place. Closed months equal the actuals. These hold for RAMA too, so they are never recorded.
 
 The proving read is checked during the run. Full answers are compared after the timer stops, member by member.
 

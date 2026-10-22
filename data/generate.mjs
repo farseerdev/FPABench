@@ -3,10 +3,13 @@
 //   node generate.mjs --size 10m [--out <dir>]
 //
 // Sizes: 10m, 100m, 1b, 10b. The output folder gets master/, actuals/, plan/, increments/, schema.json,
-// manifest.json and README.md. The same size and version always give the same bytes.
+// manifest.json, README.md and picks.json, the picks of the tests (see picks.mjs). The same size and
+// version always give the same bytes.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { params } from './params.mjs';
 import { CsvWriter, money, fixed } from './lib/csv.mjs';
 import { buildWorld } from './lib/world.mjs';
@@ -331,6 +334,8 @@ function main() {
     };
     fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     fs.writeFileSync(path.join(out, 'README.md'), readme(world, results));
+    // The picks of the tests, from the files just written. It adds picks.json to the manifest.
+    execFileSync(process.execPath, [path.join(path.dirname(fileURLToPath(import.meta.url)), 'picks.mjs'), out], { stdio: 'inherit' });
 
     const total = (rel) => results.find((r) => r.path === rel).rows;
     console.log(
