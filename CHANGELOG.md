@@ -27,6 +27,12 @@ Changes to the model, the data, the tests and the method, newest first. A change
 - `data/picks.mjs` keeps its copy of the input cells next to the dataset instead of in `/tmp`, and deletes it also when a pick fails. L3 picks only a SKU with a unit weight. C3 picks only a country with sales, so a leaked write shows. M3 and the sorting do less work, for 10b. The picks of 10m, 100m and 1b stay the same.
 - A run with `--tests` but without L1 makes the snapshot first, untimed and not recorded, when the work folder has none yet. Before, every test then failed to restore.
 - RAMA's L2 reads, sums and writes the July cells one file at a time, straight into RAMA's import file, so it no longer holds every cell in memory twice. At 100m L2 takes 6.0 s instead of 6.6 s.
+- `tests.json` no longer lists the `delta` and `unchanged` expectations, 21 of them. Nothing checked them: every answer is compared with RAMA's recorded one. Each test now lists `value`, plus its other recorded values. The tests README says how answers are checked.
+- R8 no longer clears the OS cache before each run. It still starts the system inside its timer, three times. The results of 2026-10-21 still had the cache cleared.
+- `--record` saves the names of L1's checks, and a later run must return each one. It also saves RAMA's version, the FPABench commit and the tests version, and a run warns when the tests version, or RAMA's own version, differs.
+- `snapshot.ok` holds a SHA-256 of the system's generated SQL or model JSON, its `db.mjs` and its L1. A partial run makes the snapshot again when they changed.
+- The runner prints its usage when an option is missing, and `--dataset 10m` always means the published size.
+- CI runs both generators and the website build with `--check`, so out-of-date generated files fail the build.
 - `systems/risingwave/` is removed, with its SQL dialect in the translator. It had no tests in the new style and no results. The generated SQL of DuckDB and ClickHouse does not change.
 
 ## 0.9-draft, 2026-10-20

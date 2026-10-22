@@ -1,7 +1,9 @@
 // R6 Margin by product attributes, on ClickHouse.
 //
 // Gross margin by country, category and price tier, for the plan year. By country, so each value is in one
-// currency. Setup puts the database back to the snapshot and builds every calculated table. Each run reads.
+// currency.
+// Setup puts the database back to the snapshot, builds every calculated table and reads the member ids.
+// Each run reads by id, and turns the ids into names.
 
 import { restore, members } from '../db.mjs';
 

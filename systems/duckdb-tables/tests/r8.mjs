@@ -1,6 +1,6 @@
 // R8 Open the model, on DuckDB.
 //
-// Each run starts DuckDB on the snapshot file with an empty OS cache, which builds every calculated table,
+// Each run starts DuckDB on the snapshot file, which builds every calculated table,
 // then reads EBIT in euros for the plan year. Timed from the start until the read returns.
 
 import { reset, start, members } from '../db.mjs';

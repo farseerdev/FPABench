@@ -1,7 +1,8 @@
 // R2b P&L by channel, on ClickHouse.
 //
-// The P&L in euros by line and channel, for the plan year. Setup puts the database back to the snapshot,
-// builds every calculated table and reads the member ids. Each run reads by id.
+// The P&L in euros by line and channel, for the plan year.
+// Setup puts the database back to the snapshot, builds every calculated table and reads the member ids.
+// Each run reads by id, and turns the ids into names.
 
 import { restore, members } from '../db.mjs';
 

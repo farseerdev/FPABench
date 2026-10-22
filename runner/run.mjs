@@ -89,10 +89,18 @@ async function download(size, dir) {
 const args = process.argv.slice(2);
 const opt = (name, dflt = null) => (args.includes(`--${name}`) ? args[args.indexOf(`--${name}`) + 1] : dflt);
 const entry = opt('entry');
+if (!entry || !opt('dataset') || !opt('work') || !opt('out') || !(opt('record') || opt('expected') || SIZES.includes(opt('dataset')))) {
+    console.error(`usage:
+  node runner/run.mjs --entry <entry> --dataset <10m|100m|1b|10b> --work <dir> --out <dir>          downloads the size and its expected answers
+  node runner/run.mjs --entry <entry> --dataset <dir> --work <dir> --out <dir> --expected <file>
+  node runner/run.mjs --entry rama --dataset <dir> --work <dir> --out <dir> --record <file>
+  options: [--tests L1,W3] [--machine <name>] [--quick]`);
+    process.exit(2);
+}
 const work = path.resolve(opt('work'));
 let dataset = path.resolve(opt('dataset'));
 let expected = null;
-if (SIZES.includes(opt('dataset')) && !fs.existsSync(dataset)) ({ dataset, expected } = await download(opt('dataset'), path.join(work, 'datasets', opt('dataset'))));
+if (SIZES.includes(opt('dataset'))) ({ dataset, expected } = await download(opt('dataset'), path.join(work, 'datasets', opt('dataset'))));
 const out = path.resolve(opt('out'));
 fs.mkdirSync(work, { recursive: true });
 fs.mkdirSync(out, { recursive: true });
@@ -148,6 +156,26 @@ if (record) {
 }
 const tol = spec.defaults.tolerance;
 const system = (await import(path.join(root, 'systems', entry, 'db.mjs'))).system;
+
+// The FPABench commit, with a + when the working tree has changes of its own.
+const commit = (() => {
+    try {
+        const head = execFileSync('git', ['-C', root, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
+        const dirty = execFileSync('git', ['-C', root, 'status', '--porcelain'], { encoding: 'utf8' }).trim();
+        return dirty ? `${head}+` : head;
+    } catch {
+        return 'unknown';
+    }
+})();
+// What recorded the expected answers. An answer recorded with other tests, or by another version of the
+// reference system, may not fit this run, so the run says so. A commit alone may differ: every system runs
+// later than RAMA records.
+if (record) picks.recorded = { system: system.name, version: system.version, commit, testsVersion: spec.version, date: new Date().toISOString().slice(0, 10) };
+else if (picks.recorded) {
+    const r = picks.recorded;
+    if (r.testsVersion !== spec.version) console.error(`warning: the expected answers were recorded with tests ${r.testsVersion}, and these are tests ${spec.version}`);
+    if (entry === picks.reference && r.version !== system.version) console.error(`warning: the expected answers were recorded on ${r.system} ${r.version}, and this is ${system.version}`);
+}
 
 // --- comparing answers --------------------------------------------------------------------------------------
 
@@ -247,39 +275,25 @@ for (const t of spec.tests) {
     if (fs.existsSync(file) && (!only || only.includes(t.id))) tests.push({ ...t, ...(await import(file)).default });
 }
 
-// Empties the OS file cache, so R8 starts from the disk. Needs passwordless sudo.
-function dropCaches() {
-    try {
-        execSync('sync');
-        if (process.platform === 'linux') execSync('sudo -n sh -c "echo 3 > /proc/sys/vm/drop_caches"', { stdio: 'ignore' });
-        else if (process.platform === 'darwin') execSync('sudo -n purge', { stdio: 'ignore' });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 /**
  * Runs a test.
  * A write test sets up once and runs once per pick, the first ones a warm-up.
  * A read sets up once and runs 5 times.
  * R8, a load, a bulk write, a model change or an untimed check sets up fresh for each of its repeats.
- * R8 starts with an empty OS cache, and its timer includes open(). A load's timer waits until the files are on disk.
+ * A test with open(), R8, has it inside the timer. A load's timer waits until the files are on disk.
  */
 async function runTest(test, p) {
     const runs = [];
     const answers = {};
     const checks = {};
     const context = { ...base, picks: p, pick: Array.isArray(p) ? null : p };
-    let dropped = true;
-    const once = async (run, pick, cold = false) => {
+    const once = async (run, pick) => {
         context.pick = pick;
-        if (cold) dropped = dropCaches() && dropped;
         const t0 = performance.now();
-        if (cold && test.open) await test.open(context);
+        if (test.open) await test.open(context);
         answers[run] = await test.run(context);
         if (test.kind === 'load') execSync('sync');
-        runs.push({ ms: performance.now() - t0, warmup: pick.warmup ?? false, cold });
+        runs.push({ ms: performance.now() - t0, warmup: pick.warmup ?? false });
         if (test.check) checks[run] = await test.check(context);
     };
     // Setup, the runs, then teardown, which runs even when a step throws, so no server is left running. A
@@ -310,19 +324,33 @@ async function runTest(test, p) {
             for (let i = 0; i < p.warm; i++) await once(i, p);
         });
     } else {
-        for (let i = 0; i < p.repeats; i++) await guarded(() => once(i, p, test.kind === 'read' && test.timed !== false));
+        for (let i = 0; i < p.repeats; i++) await guarded(() => once(i, p));
     }
-    return { runs, answers, checks, dropped };
+    return { runs, answers, checks };
 }
 
 log(`entry ${entry}, ${system.name} ${system.version}, scale ${manifest.size}${record ? ', recording the expected results' : ''}`);
 const started = performance.now();
 
-// Every test but L1 starts from the snapshot L1 leaves. A run without L1, on a work folder where L1 has not
-// passed yet, loads once first, untimed and not recorded, to make one. snapshot.ok marks a finished L1.
+// Every test but L1 starts from the snapshot L1 leaves. A run without L1 loads once first, untimed and not
+// recorded, when the work folder has no snapshot of the current system files. snapshot.ok holds a SHA-256 of
+// the files the snapshot is made from: the system's generated SQL or model JSON, its db.mjs and its L1.
 const snapshotMark = path.join(testWork, 'snapshot.ok');
-if (!tests.some((t) => t.id === 'L1') && !fs.existsSync(snapshotMark)) {
-    log('no snapshot in this work folder yet: loading once to make one, untimed');
+const systemHash = (() => {
+    const hash = createHash('sha256');
+    const dir = path.join(root, 'systems', entry);
+    const walk = (rel) => {
+        const full = path.join(dir, rel);
+        if (!fs.existsSync(full)) return;
+        if (fs.statSync(full).isDirectory()) for (const f of fs.readdirSync(full).sort()) walk(path.join(rel, f));
+        else hash.update(`${rel}\n`).update(fs.readFileSync(full));
+    };
+    for (const rel of ['sql', 'model', 'db.mjs', path.join('tests', 'l1.mjs')]) walk(rel);
+    return hash.digest('hex');
+})();
+const markOk = () => fs.existsSync(snapshotMark) && fs.readFileSync(snapshotMark, 'utf8').trim() === systemHash;
+if (!tests.some((t) => t.id === 'L1') && !markOk()) {
+    log('no snapshot of the current system files in this work folder: loading once to make one, untimed');
     const l1 = (await import(path.join(root, 'systems', entry, 'tests', 'l1.mjs'))).default;
     const context = { ...base };
     try {
@@ -334,7 +362,7 @@ if (!tests.some((t) => t.id === 'L1') && !fs.existsSync(snapshotMark)) {
     } finally {
         await l1.teardown(context);
     }
-    fs.writeFileSync(snapshotMark, new Date().toISOString() + '\n');
+    fs.writeFileSync(snapshotMark, systemHash + '\n');
 }
 
 // Whether the expected file has the answers of a test: every run has its expected answer, or must be 0.
@@ -354,7 +382,7 @@ for (const test of tests) {
         // L1 makes the snapshot again, so the mark goes until it has finished.
         if (test.id === 'L1') fs.rmSync(snapshotMark, { force: true });
         const result = await runTest(test, p);
-        if (test.id === 'L1') fs.writeFileSync(snapshotMark, new Date().toISOString() + '\n');
+        if (test.id === 'L1') fs.writeFileSync(snapshotMark, systemHash + '\n');
 
         // Each answer and each check against the expected results. When recording, the first answer is the
         // expected one, and later runs must give it again. What the pick says must be 0 is checked against 0.
@@ -368,7 +396,10 @@ for (const test of tests) {
                 for (const x of compare(want.expect ?? [], rows, ratio)) problems.push(`run ${run}: ${x}`);
             }
             // Every check the expected results have, and every check the pick names as 0, must come back.
-            const named = [...Object.keys(want.checks ?? {}), ...(want.zero ?? []).filter((n) => n !== 'answer' && n !== 'every check')];
+            // A pick whose every check must be 0, L1, keeps the names of the checks RAMA returned, so a system
+            // that leaves one out fails.
+            if (record && want.zero?.includes('every check') && want.checkNames === undefined) want.checkNames = Object.keys(result.checks[run] ?? {}).sort();
+            const named = [...Object.keys(want.checks ?? {}), ...(want.zero ?? []).filter((n) => n !== 'answer' && n !== 'every check'), ...(want.checkNames ?? [])];
             for (const name of named) if (!(name in (result.checks[run] ?? {}))) problems.push(`run ${run}: check ${name} was not returned`);
             for (const [name, got] of Object.entries(result.checks[run] ?? {})) {
                 if (mustBeZero(want, name)) for (const x of nonZero(got)) problems.push(`run ${run}: ${name} ${x}`);
@@ -382,7 +413,6 @@ for (const test of tests) {
         const extra = {
             ...(p.cells ? { cells: p.cells.length } : {}),
             ...(p.notChecked ? { notChecked: p.notChecked } : {}),
-            ...(result.runs.some((r) => r.cold) && !result.dropped ? { notes: 'OS cache not dropped: no passwordless sudo' } : {}),
         };
         let summary;
         if (test.timed === false) summary = { check: problems.length ? 'wrong' : 'ok', timed: false, ...(problems.length ? { problems } : {}) };

@@ -18,15 +18,7 @@ Most writes and some reads pick their cells at random. The test gives a rule, su
 
 Writes go to the FC 6+6 version unless a test says otherwise. Its plan months are Y2026 M7 to M12.
 
-Each test expects one of three kinds of result.
-
-| Kind | Meaning | Example |
-| --- | --- | --- |
-| Value | The reference program's exact answer | The company P&L for FC 6+6 |
-| Delta | A change the test states | 1,000 more in OPEX lowers EBIT by 1,000 |
-| Unchanged | A value that must not move | EBIT of a country the write cannot reach |
-
-[method.md](method.md) has the full rules for checking answers.
+Every answer is compared with RAMA's recorded answer for the same picks, and the model's checks must be 0. The expected result in the tables below says what the answer shows, such as "EBIT falls by the change". The runner does not check those effects on their own: a system that disagrees with RAMA is what starts a look. [method.md](method.md) has the full rules for checking answers.
 
 ## Loads
 

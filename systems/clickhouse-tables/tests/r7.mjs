@@ -1,8 +1,9 @@
 // R7 Top customers, on ClickHouse.
 //
-// The 100 customers of one country with the highest contribution margin III in the plan year, highest first.
-// One country, so every value is in one currency. Setup puts the database back to the snapshot and builds
-// every calculated table. Each run reads.
+// The 100 customers of one country with the highest contribution margin III in the plan year, highest
+// first. One country, so every value is in one currency.
+// Setup puts the database back to the snapshot, builds every calculated table and reads the member ids.
+// Each run reads by id, and turns the ids into names.
 
 import { restore, members } from '../db.mjs';
 

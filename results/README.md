@@ -14,7 +14,7 @@ Each entry ran on its own Google Cloud `n2d-standard-4` in europe-west1-b: AMD E
 
 The SQL entries rebuild only the calculated tables a change reaches, and use integer member ids. The method may count that dependency logic as tuning. That is not decided yet. ClickHouse runs with the two settings it needs to keep missing values missing, and keeps the translator's join order. Settings are in each system's README.
 
-Seconds. A write is the median of up to 20 writes after one warm-up, each to a fresh cell, with the 95th percentile after it. Fewer cells fit some pick rules: W4 has 19 writes at 10m, W5 17 at both sizes, and W8 7 at 10m and 11 at 100m. A load, bulk write or model change is the median of 3 runs. A read is the median of 5 runs after a restore. R8 is the median of 3 runs, each from a stopped system and a cleared OS cache, and its time includes the start.
+Seconds. A write is the median of up to 20 writes after one warm-up, each to a fresh cell, with the 95th percentile after it. Fewer cells fit some pick rules: W4 has 19 writes at 10m, W5 17 at both sizes, and W8 7 at 10m and 11 at 100m. A load, bulk write or model change is the median of 3 runs. A read is the median of 5 runs after a restore. R8 is the median of 3 runs, each from a stopped system, and its time includes the start. In these runs R8 also cleared the OS cache first. The runner no longer does that.
 
 ## 10m
 

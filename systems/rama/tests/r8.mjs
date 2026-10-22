@@ -1,6 +1,6 @@
 // R8 Open the model, on RAMA.
 //
-// Each run opens the snapshot database with an empty OS cache, then reads EBIT in euros for the plan year.
+// Each run opens the snapshot database, then reads EBIT in euros for the plan year.
 // Timed from openDB until the read returns.
 
 import { reset, open } from '../db.mjs';

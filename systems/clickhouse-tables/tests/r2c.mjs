@@ -1,7 +1,8 @@
 // R2c P&L by country, in its own currency, on ClickHouse.
 //
-// The P&L in each country's own currency by line and country, for the plan year. Setup puts the database back
-// to the snapshot and builds every calculated table. Each run reads.
+// The P&L in each country's own currency by line and country, for the plan year.
+// Setup puts the database back to the snapshot, builds every calculated table and reads the member ids.
+// Each run reads by id, and turns the ids into names.
 
 import { restore, members } from '../db.mjs';
 

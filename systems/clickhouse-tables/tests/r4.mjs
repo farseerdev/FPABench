@@ -1,8 +1,9 @@
 // R4 Ratios, on ClickHouse.
 //
 // Every KPI measure of the report, such as gross margin %, by country and version for the plan year. A
-// measure has no table: sql/reads/R4.sql computes each one from the sums it needs, in one query. Setup puts
-// the database back to the snapshot and builds every calculated table. Each run reads.
+// measure has no table: sql/reads/R4.sql computes each one from the sums it needs, in one query.
+// Setup puts the database back to the snapshot, builds every calculated table and reads the member ids.
+// Each run reads by id, and turns the ids into names.
 
 import { restore, members, sqlFile } from '../db.mjs';
 

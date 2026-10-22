@@ -1,8 +1,9 @@
 // R3 Plan against last year, on ClickHouse.
 //
 // Three P&Ls in euros by line, side by side: the budget and the forecast of the plan year, and last year's
-// actuals. Each row is tagged with the index of its read. Setup puts the database back to the snapshot,
-// builds every calculated table and reads the member ids. Each run reads by id.
+// actuals. Each row is tagged with the index of its read.
+// Setup puts the database back to the snapshot, builds every calculated table and reads the member ids.
+// Each run reads by id, and turns the ids into names.
 
 import { restore, members } from '../db.mjs';
 

@@ -34,8 +34,6 @@ The dataset brings `picks.json`: for each test, the cells it writes and the valu
 | `--machine` | The machine, as it goes in the results, such as `n2d-standard-4, local NVMe SSD`. A published result goes in `results/<machine>/<size>/`, with the machine in lower case and hyphens: `results/n2d-standard-4-local-nvme-ssd/10m/rama.json`. |
 | `--quick` | One run of each load, bulk write, model change and read, and three writes per write test, to try the runner. Not for results. A quick record goes with quick runs only. |
 
-On Linux the runner drops the OS cache before each run of R8 with `sudo -n`. Without passwordless sudo the result notes that the cache was not dropped.
-
 ## The tests
 
 Each test is one file per system, `systems/<entry>/tests/<id>.mjs`, written in the system's own calls. A test exports:

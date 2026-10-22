@@ -1,8 +1,9 @@
 // R5 Drill to the detail, on ClickHouse.
 //
 // Twelve lines of the P&L, from gross sales to gross margin, by customer and SKU, for one customer group in
-// one plan month. Setup puts the database back to the snapshot and builds every calculated table. Each run
-// reads.
+// one plan month.
+// Setup puts the database back to the snapshot, builds every calculated table and reads the member ids.
+// Each run reads by id, and turns the ids into names.
 
 import { restore, members } from '../db.mjs';
 

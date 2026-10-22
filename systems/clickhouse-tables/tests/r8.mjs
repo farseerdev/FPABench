@@ -1,6 +1,6 @@
 // R8 Open the model, on ClickHouse.
 //
-// Each run starts the server on the snapshot's data with an empty OS cache, which builds every calculated
+// Each run starts the server on the snapshot's data, which builds every calculated
 // table, then reads EBIT in euros for the plan year. Timed from the start until the read returns.
 
 import { reset, start, members } from '../db.mjs';

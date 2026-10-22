@@ -60,7 +60,7 @@ At 1b RAMA and DuckDB each needed about 42 to 44 GB, so 16 GB is too small there
 | Test kind | Runs | Reported |
 | --- | --- | --- |
 | Read | 5, after a restore | Median |
-| R8 | 3, each after a stop and a cleared OS cache | Median |
+| R8 | 3, each from a stopped system. The timer covers the start. | Median |
 | Single-cell write | 20, each on a new cell, after 1 warm-up. Fewer if a test has fewer cells. | Median and 95th percentile |
 | Bulk write, load, model change | 3, each from the snapshot | Median |
 

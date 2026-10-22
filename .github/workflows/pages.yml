@@ -24,6 +24,10 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+      # Committed SQL, model JSON or website that is out of date fails here.
+      - run: node model/lib/sql/generate.mjs --check
+      - run: node model/lib/rama/generate.mjs --check
+      - run: node website/build.mjs --check
       - run: node website/build.mjs
       - if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v5
