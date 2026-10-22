@@ -34,6 +34,7 @@ Embedded systems run inside the runner's process. Servers pay for a network roun
 ## Reset
 
 - After the load, the runner copies each system's data folder as a snapshot. It restores the snapshot before each test.
+- After a test's setup, the runner calls `sync`, untimed, so the restored copy is on disk before the timer starts. Else the first durable commit of the test also pays for writing the copy to disk.
 - Each repeat writes a new value to a new cell. The cells and values come with the dataset, in `picks.json`.
 - A rollback is never used to reset, because a rollback skips the commit.
 

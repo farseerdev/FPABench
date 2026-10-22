@@ -302,6 +302,9 @@ async function runTest(test, p) {
     const guarded = async (runs) => {
         try {
             await test.setup(context);
+            // Untimed: every write setup made, such as the restored copy of the snapshot, goes to disk now. Else
+            // the first durable commit of the test pays for writing the copy, and a single run counts it (#26).
+            execSync('sync');
             await runs();
         } catch (e) {
             context.failed = true;

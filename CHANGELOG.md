@@ -2,6 +2,10 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
+## 0.9-draft, 2026-10-22
+
+- The runner calls `sync` after each test's setup, untimed, so the restored snapshot is on disk before the timer starts. Before, the first durable commit of a test also wrote the copied files, and a test with one run counted it. At 100m that made RAMA's first W3 write 2.4 s instead of 0.39 s, and M4 3.4 s instead of 1.2 s, in psiha's measurements (#26). It moves the results of tests that run once from the snapshot: L2, L3, W2 and M1 to M4.
+
 ## 0.9-draft, 2026-10-21
 
 - The picks come with the dataset. `data/picks.mjs` chooses each test's cells and values from the input cells only, and `generate.mjs` runs it last, so `picks.json` is in every dataset and its manifest. No system is needed to make them. Some pick rules now use what the model calculates from instead of the calculated value. A plan-month cell must have last year's volume, which is what plan volume grows from. A group's size is its gross sales last year. W3 writes a rate from 1 % to 5 % instead of the old rate plus 0.5 to 2 points. W5 starts from the last actual rate instead of the plan rate. The cells chosen change, so every write result can move. W8's threshold still comes from the model's planned growth, so RAMA works it out when it records.
