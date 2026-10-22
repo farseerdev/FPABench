@@ -4,6 +4,7 @@ Changes to the model, the data, the tests and the method, newest first. A change
 
 ## 0.9-draft, 2026-10-22
 
+- RAMA's reads define the filters every combination shares as one named filter, once per query call, and name it in each formula. Before, each formula wrote them out again. RAMA parses the body once and caches its result. At 100m on a laptop R5 and R7 take less than half the time, and R1 and R2a about 40% less. The answers stay the same (#32).
 - The runner calls `sync` after each test's setup, untimed, so the restored snapshot is on disk before the timer starts. Before, the first durable commit of a test also wrote the copied files, and a test with one run counted it. At 100m that made RAMA's first W3 write 2.4 s instead of 0.39 s, and M4 3.4 s instead of 1.2 s, in psiha's measurements (#26). It moves the results of tests that run once from the snapshot: L2, L3, W2 and M1 to M4.
 
 ## 0.9-draft, 2026-10-21

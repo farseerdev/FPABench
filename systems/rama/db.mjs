@@ -124,7 +124,13 @@ function handles(db) {
                     const names = by.map((d) => dimension(tx, d).byGid);
                     combos = found.memberGids.map((g) => Object.fromEntries(by.map((d, i) => [d, names[i].get(g[i])])));
                 }
-                const values = tx.query([], combos.map((key) => ({ type: 'VARIABLE', formula: cell(variable, { ...rest, ...key }) })), []);
+                // The filters every combination shares are one named filter, defined once for the query call and
+                // named in each formula, instead of written out in each (#32). RAMA parses that body once and
+                // caches its result for every formula.
+                const shared = Object.entries(rest).map(([d, m]) => filter(d, m));
+                const named = shared.length ? [['shared', `and(${shared.join(', ')})`]] : [];
+                const formula = (key) => `sum(${[q(variable), ...(shared.length ? ['shared'] : []), ...Object.entries(key).map(([d, m]) => filter(d, m))].join(', ')})`;
+                const values = tx.query(named, combos.map((key) => ({ type: 'VARIABLE', formula: formula(key) })), []);
                 const out = [];
                 combos.forEach((key, i) => {
                     const v = values[i].value;
