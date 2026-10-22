@@ -109,3 +109,15 @@ A cache of answers keyed on a read's text or parameters is not allowed. Neither 
 The proving read is checked during the run. Full answers are compared after the timer stops, member by member.
 
 Amounts must match within 0.01 or a relative 1e-9, whichever is larger. Ratios must match within a relative 1e-6.
+
+## Limitations
+
+All benchmarks are wrong in some way, and this one is too. [ClickBench](https://github.com/ClickHouse/ClickBench#limitations) says the same about itself. Read the results with that in mind.
+
+- **One model, one kind of work.** FPABench runs one P&L model with a set list of tasks. Your own model and your own way of working may give a different order.
+- **The databases are not planning engines.** DuckDB and ClickHouse have no way to recalculate only the cells a write reaches. Their entries keep each calculated variable as a table. After a write they rebuild every table that depends on it. So their write and model change times show the cost of that rebuild. A planning engine updates only what changed. These times are not a like-for-like match.
+- **The SQL entries are a baseline.** They show what a plain database does with this model. Each was set up by Farseer, and a better setup may exist. Each system's makers are welcome to send one.
+- **Farseer makes RAMA.** We follow the same rules for RAMA as for every other entry. Even so, we know RAMA best, and that can help it.
+- **A small reference machine.** The rankings use one small cloud machine. A bigger machine or a different disk can change the order.
+
+If you find a mistake or an unfair setup, please [open an issue](https://github.com/farseerdev/FPABench/issues).
