@@ -420,7 +420,7 @@ ${scripts.map((s) => `<script src="${s}" defer></script>`).join('\n')}
 <header class="site-header">
 <div class="title-row">
 <h1 class="site-title"><a href="index.html">${escapeHtml(siteName)}</a>: ${escapeHtml(title)}</h1>
-<div class="theme-switch"><button type="button" data-theme-choice="dark" aria-label="Dark theme" title="Dark theme">☾</button><button type="button" data-theme-choice="light" aria-label="Light theme" title="Light theme">☀</button></div>
+<div class="theme-switch"><a class="star" href="${REPO_URL}" data-repo="${REPO_URL.replace('https://github.com/', '')}" aria-label="Star FPABench on GitHub"><span aria-hidden="true">★</span> Star<span class="star-count" hidden></span></a><button type="button" data-theme-choice="dark" aria-label="Dark theme" title="Dark theme">☾</button><button type="button" data-theme-choice="light" aria-label="Light theme" title="Light theme">☀</button></div>
 </div>
 <nav class="nav">${nav}</nav>
 </header>

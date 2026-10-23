@@ -119,6 +119,29 @@ main,
     cursor: pointer;
 }
 
+.star {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    margin-right: 4px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    color: var(--text-2);
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.star:hover {
+    color: var(--text);
+}
+
+.star-count {
+    padding-left: 8px;
+    border-left: 1px solid var(--border);
+}
+
 .theme-switch button:hover {
     color: var(--text);
 }
