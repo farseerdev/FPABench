@@ -2,7 +2,14 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
-## 0.9-draft, 2026-10-22
+## 0.9-draft, 2026-10-23
+
+- The SQL entries build their tables faster, following a reviewer's suggestions. `if(c, A, B)` is two parts joined by `UNION ALL`, A where c holds and B where it does not. Before, one statement listed the cells of both branches, removed duplicates, and joined A, B and c to them. An operand read twice in one formula is joined once. The joins to the dimension lookups are inner joins, since every member is in its lookup. Versions, Years and Months keys are one byte. `cumsum` is an ASOF JOIN instead of a window over every period. ClickHouse makes each calculated table with plain column types, so no column is `Nullable`, and inserts with `insert_null_as_default = 0`. It also runs with `join_algorithm = 'hash'`.
+- R4 scans each variable once. Each sum with a filter is a conditional sum in that scan, `sumIf` in ClickHouse and `FILTER` in DuckDB. Before, each of the 18 measures scanned its variables again. `readSql` is gone, since R4 was its only user.
+- At 10m on a laptop, ClickHouse writes take 15 to 40% less time, R8 1.8 s instead of 2.5 s, and R4 0.020 s instead of 0.062 s. DuckDB's writes take about 10% less, and R4 0.009 s instead of 0.016 s. Most of a rebuild at 10m is the fixed cost of about 170 statements. All 29 answers stay the same on both.
+- At 100m on an n2d-standard-4, ClickHouse writes take about a third of the time they did, W1 4.4 s instead of 15.7 s, R8 7.5 s instead of 24.1 s, and L1 12.5 s instead of 28.5 s. DuckDB's writes take 15 to 30% less, W1 7.0 s instead of 10.1 s. The results for 10m and 100m are run again with this version, and with #35 and #36. So RAMA's results moved too, from the `sync` after setup and the shared read filter.
+- At 1b on an n2d-highmem-8, ClickHouse writes take a fifth of the time they did, W1 19.4 s instead of 110 s, R8 26.9 s instead of 128 s, and M2 25.8 s instead of 127 s. Its whole run took 1 hour instead of 4.5, with a peak of 18.5 GB instead of 39.2 GB. DuckDB's writes take about 30% less, W1 34.3 s instead of 51.0 s, and its run 1 hour 47 minutes instead of 2 hours 22. The 1b results are run again too. RAMA's moved only in the reads, from the shared read filter, and in R8.
+
 
 - RAMA's reads define the filters every combination shares as one named filter, once per query call, and name it in each formula. Before, each formula wrote them out again. RAMA parses the body once and caches its result. At 100m on a laptop R5 and R7 take less than half the time, and R1 and R2a about 40% less. The answers stay the same (#32).
 - The runner calls `sync` after each test's setup, untimed, so the restored snapshot is on disk before the timer starts. Before, the first durable commit of a test also wrote the copied files, and a test with one run counted it. At 100m that made RAMA's first W3 write 2.4 s instead of 0.39 s, and M4 3.4 s instead of 1.2 s, in psiha's measurements (#26). It moves the results of tests that run once from the snapshot: L2, L3, W2 and M1 to M4.

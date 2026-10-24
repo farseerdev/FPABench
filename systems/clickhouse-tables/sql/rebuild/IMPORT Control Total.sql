@@ -2,7 +2,8 @@
 
 -- @table "CHECK Import Total"
 -- CHECK Import Total = "IMPORT Control Total" - "Gross Sales Loaded by Country"
-CREATE OR REPLACE TABLE "CHECK Import Total" ENGINE = Memory AS
+CREATE OR REPLACE TABLE "CHECK Import Total" ("Country" Int32, "Years" UInt8, "Months" UInt8, v Float64) ENGINE = Memory;
+INSERT INTO "CHECK Import Total" SETTINGS insert_null_as_default = 0
 SELECT u."Country" AS "Country", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
 FROM (SELECT "Country", "Years", "Months", v AS v FROM (SELECT s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Control Total" AS s FINAL) r0 UNION ALL SELECT "Country", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Sales Loaded by Country" s) r1) u
 GROUP BY u."Country", u."Years", u."Months";

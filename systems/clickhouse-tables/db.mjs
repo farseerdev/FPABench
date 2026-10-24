@@ -19,7 +19,9 @@ const PORT = Number(process.env.FPABENCH_CLICKHOUSE_PORT ?? 18123);
 // "missing" silently turns into 0. mutations_sync = 2 makes an ALTER TABLE ... UPDATE wait until it is done.
 // query_plan_optimize_join_order_limit = 0 keeps the join order the SQL is written in. At 100m ClickHouse
 // 26.9 reordered one table's joins and the statement ran for more than 15 minutes instead of 0.04 s.
-export const SETTINGS = { join_use_nulls: 1, aggregate_functions_null_for_empty: 1, mutations_sync: 2, query_plan_optimize_join_order_limit: 0 };
+// join_algorithm = 'hash' builds one hash table per join. Most joins are to small lookups, and at 10m it made
+// the writes 5 to 15% faster than the default, which may pick a parallel hash join.
+export const SETTINGS = { join_use_nulls: 1, aggregate_functions_null_for_empty: 1, mutations_sync: 2, query_plan_optimize_join_order_limit: 0, join_algorithm: 'hash' };
 
 /** What goes in the results about the system. */
 export const system = {

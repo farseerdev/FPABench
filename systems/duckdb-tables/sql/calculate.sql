@@ -59,7 +59,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Volume ACT" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Volume" s LEFT JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
+    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Volume" s JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Gross Sales ACT"
@@ -67,7 +67,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Gross Sales ACT" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Gross Sales" s LEFT JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
+    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Gross Sales" s JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Standard Discounts ACT"
@@ -75,7 +75,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Standard Discounts ACT" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Standard Discounts" s LEFT JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
+    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Standard Discounts" s JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Promo Discounts ACT"
@@ -83,7 +83,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Promo Discounts ACT" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Promo Discounts" s LEFT JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
+    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Promo Discounts" s JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Logistics Discounts ACT"
@@ -91,7 +91,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Logistics Discounts ACT" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Logistics Discounts" s LEFT JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
+    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Logistics Discounts" s JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Promo Funding ACT"
@@ -99,7 +99,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Promo Funding ACT" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Promo Funding" s LEFT JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
+    FROM (SELECT s."Customer" AS "Customer", s."Years" AS "Years", s."Months" AS "Months", u0."SKU" AS "SKU", sum(s.v) AS v FROM "IMPORT Promo Funding" s JOIN "flat Material" u0 ON u0."Material" = s."Material" GROUP BY s."Customer", s."Years", s."Months", u0."SKU") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Invoice Sales ACT"
@@ -114,7 +114,7 @@ GROUP BY u."Customer", u."SKU", u."Years", u."Months";
 CREATE OR REPLACE TEMP TABLE "Invoice Sales ACT by Group" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Invoice Sales ACT" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") d
+    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Invoice Sales ACT" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Group Key ACT"
@@ -152,14 +152,14 @@ SELECT * FROM (
 -- Rebates Unallocated ACT = "Rebate Expense ACT" - "Rebates ACT"
 CREATE OR REPLACE TEMP TABLE "Rebates Unallocated ACT" AS
 SELECT u."Customer Group" AS "Customer Group", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
-FROM (SELECT "Customer Group", "Years", "Months", v AS v FROM (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Expense ACT" s) r0 UNION ALL SELECT "Customer Group", "Years", "Months", -v AS v FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Rebates ACT" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") r1) u
+FROM (SELECT "Customer Group", "Years", "Months", v AS v FROM (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Expense ACT" s) r0 UNION ALL SELECT "Customer Group", "Years", "Months", -v AS v FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Rebates ACT" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") r1) u
 GROUP BY u."Customer Group", u."Years", u."Months";
 
 -- @table "Growth Bonus Unallocated ACT"
 -- Growth Bonus Unallocated ACT = "IMPORT Growth Bonus" - "Growth Bonus ACT"
 CREATE OR REPLACE TEMP TABLE "Growth Bonus Unallocated ACT" AS
 SELECT u."Customer Group" AS "Customer Group", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
-FROM (SELECT "Customer Group", "Years", "Months", v AS v FROM (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Growth Bonus" s) r0 UNION ALL SELECT "Customer Group", "Years", "Months", -v AS v FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Growth Bonus ACT" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") r1) u
+FROM (SELECT "Customer Group", "Years", "Months", v AS v FROM (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Growth Bonus" s) r0 UNION ALL SELECT "Customer Group", "Years", "Months", -v AS v FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Growth Bonus ACT" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") r1) u
 GROUP BY u."Customer Group", u."Years", u."Months";
 
 -- @table "Gross Sales ACT by Group Brand"
@@ -167,7 +167,7 @@ GROUP BY u."Customer Group", u."Years", u."Months";
 CREATE OR REPLACE TEMP TABLE "Gross Sales ACT by Group Brand" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Gross Sales ACT" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Years", s."Months", u0."Customer Group", u1."Brand") d
+    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Gross Sales ACT" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Years", s."Months", u0."Customer Group", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Standard Discounts ACT by Group Brand"
@@ -175,7 +175,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Standard Discounts ACT by Group Brand" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Standard Discounts ACT" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Years", s."Months", u0."Customer Group", u1."Brand") d
+    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Standard Discounts ACT" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Years", s."Months", u0."Customer Group", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Standard Discount Rate ACT"
@@ -201,7 +201,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Gross Sales ACT by Group" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Gross Sales ACT" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") d
+    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Gross Sales ACT" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Logistics Discounts ACT by Group"
@@ -209,7 +209,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Logistics Discounts ACT by Group" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Logistics Discounts ACT" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") d
+    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Logistics Discounts ACT" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Customer Group") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Logistics Discount Rate ACT"
@@ -246,7 +246,7 @@ FROM "Invoice Sales ACT" s JOIN period p ON p."Years" = s."Years" AND p."Months"
 CREATE OR REPLACE TEMP TABLE "Invoice Sales LY by Group" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Years" AS "Years", d.v AS v
-    FROM (SELECT s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Invoice Sales ACT LY" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", u0."Customer Group") d
+    FROM (SELECT s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Invoice Sales ACT LY" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", u0."Customer Group") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Volume LY Plan"
@@ -263,8 +263,8 @@ CREATE OR REPLACE TEMP TABLE "Volume Growth Baseline" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (d.v * (CASE WHEN CAST(1 AS DOUBLE) IS NULL AND r1.v IS NULL THEN NULL ELSE coalesce(CAST(1 AS DOUBLE), 0) + coalesce(r1.v, 0) END)) AS v
     FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume LY Plan" s) d
-    LEFT JOIN "flat SKU" f_1 ON f_1."SKU" = d."SKU"
-    LEFT JOIN "flat Customer" f_0 ON f_0."Customer" = d."Customer"
+    JOIN "flat SKU" f_1 ON f_1."SKU" = d."SKU"
+    JOIN "flat Customer" f_0 ON f_0."Customer" = d."Customer"
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Brand" AS "Brand", s."Channel" AS "Channel", s.v AS v FROM "Volume Growth IN" s) r1 ON r1."Versions" = d."Versions" AND r1."Years" = d."Years" AND r1."Brand" = f_1."Brand" AND r1."Channel" = f_0."Channel"
 ) WHERE v IS NOT NULL;
 
@@ -273,7 +273,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Volume LY by Group Category" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Category" AS "Category", d."Years" AS "Years", d.v AS v
-    FROM (SELECT s."Years" AS "Years", u0."Customer Group" AS "Customer Group", u1."Category" AS "Category", sum(s.v) AS v FROM "Volume LY" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Years", u0."Customer Group", u1."Category") d
+    FROM (SELECT s."Years" AS "Years", u0."Customer Group" AS "Customer Group", u1."Category" AS "Category", sum(s.v) AS v FROM "Volume LY" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Years", u0."Customer Group", u1."Category") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Volume Target Key"
@@ -296,22 +296,28 @@ SELECT * FROM (
 -- Volume Baseline = if(hasValue("Volume Target Cascade"), "Volume Target Cascade", "Volume Growth Baseline")
 CREATE OR REPLACE TEMP TABLE "Volume Baseline" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (r0.v IS NOT NULL) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Target Cascade" s) p0 UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Growth Baseline" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (d.v IS NOT NULL) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Target Cascade" s) d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Growth Baseline" s) d
     LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Target Cascade" s) r0 ON r0."Customer" = d."Customer" AND r0."SKU" = d."SKU" AND r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Target Cascade" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Growth Baseline" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Volume Planned"
 -- Volume Planned = if(hasValue("Volume Override IN"), "Volume Override IN", "Volume Baseline")
 CREATE OR REPLACE TEMP TABLE "Volume Planned" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (r0.v IS NOT NULL) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Override IN" s) p0 UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Baseline" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (d.v IS NOT NULL) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Override IN" s) d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Baseline" s) d
     LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Override IN" s) r0 ON r0."Customer" = d."Customer" AND r0."SKU" = d."SKU" AND r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Override IN" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Baseline" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Volume Plan"
@@ -336,8 +342,8 @@ CREATE OR REPLACE TEMP TABLE "List Price Carry" AS
 WITH s AS (SELECT x."SKU" AS "SKU", x."Country" AS "Country", x."Versions" AS "Versions", x."Years" AS "Years", x."Months" AS "Months", x.v AS v, p.p AS p FROM "List Price Reset" x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months"),
 f0 AS (SELECT "SKU", "Country", "Versions", min(p) AS p0 FROM s GROUP BY "SKU", "Country", "Versions"),
 g AS (SELECT f."SKU" AS "SKU", f."Country" AS "Country", f."Versions" AS "Versions", p."Years" AS "Years", p."Months" AS "Months", p.p AS p FROM f0 f CROSS JOIN period p WHERE p.p >= f.p0)
-SELECT g."SKU" AS "SKU", g."Country" AS "Country", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", last_value(s.v IGNORE NULLS) OVER (PARTITION BY g."SKU", g."Country", g."Versions" ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS v
-FROM g LEFT JOIN s ON s."SKU" = g."SKU" AND s."Country" = g."Country" AND s."Versions" = g."Versions" AND s."Years" = g."Years" AND s."Months" = g."Months";
+SELECT g."SKU" AS "SKU", g."Country" AS "Country", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", s.v AS v
+FROM g ASOF JOIN s ON s."SKU" = g."SKU" AND s."Country" = g."Country" AND s."Versions" = g."Versions" AND g.p >= s.p;
 
 -- @table "List Price Plan"
 -- List Price Plan = "List Price Carry" * (1 + "Price Increase IN")
@@ -345,7 +351,7 @@ CREATE OR REPLACE TEMP TABLE "List Price Plan" AS
 SELECT * FROM (
     SELECT d."SKU" AS "SKU", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (d.v * (CASE WHEN CAST(1 AS DOUBLE) IS NULL AND r1.v IS NULL THEN NULL ELSE coalesce(CAST(1 AS DOUBLE), 0) + coalesce(r1.v, 0) END)) AS v
     FROM (SELECT s."SKU" AS "SKU", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "List Price Carry" s) d
-    LEFT JOIN "flat SKU" f_0 ON f_0."SKU" = d."SKU"
+    JOIN "flat SKU" f_0 ON f_0."SKU" = d."SKU"
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Brand" AS "Brand", s.v AS v FROM "Price Increase IN" s) r1 ON r1."Versions" = d."Versions" AND r1."Years" = d."Years" AND r1."Brand" = f_0."Brand"
 ) WHERE v IS NOT NULL;
 
@@ -363,18 +369,21 @@ CREATE OR REPLACE TEMP TABLE "Standard Discount Rate Carry" AS
 WITH s AS (SELECT x."Customer Group" AS "Customer Group", x."Brand" AS "Brand", x."Versions" AS "Versions", x."Years" AS "Years", x."Months" AS "Months", x.v AS v, p.p AS p FROM "Standard Discount Rate Reset" x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months"),
 f0 AS (SELECT "Customer Group", "Brand", "Versions", min(p) AS p0 FROM s GROUP BY "Customer Group", "Brand", "Versions"),
 g AS (SELECT f."Customer Group" AS "Customer Group", f."Brand" AS "Brand", f."Versions" AS "Versions", p."Years" AS "Years", p."Months" AS "Months", p.p AS p FROM f0 f CROSS JOIN period p WHERE p.p >= f.p0)
-SELECT g."Customer Group" AS "Customer Group", g."Brand" AS "Brand", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", last_value(s.v IGNORE NULLS) OVER (PARTITION BY g."Customer Group", g."Brand", g."Versions" ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS v
-FROM g LEFT JOIN s ON s."Customer Group" = g."Customer Group" AND s."Brand" = g."Brand" AND s."Versions" = g."Versions" AND s."Years" = g."Years" AND s."Months" = g."Months";
+SELECT g."Customer Group" AS "Customer Group", g."Brand" AS "Brand", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", s.v AS v
+FROM g ASOF JOIN s ON s."Customer Group" = g."Customer Group" AND s."Brand" = g."Brand" AND s."Versions" = g."Versions" AND g.p >= s.p;
 
 -- @table "Standard Discount Rate"
 -- Standard Discount Rate = if(hasValue("Standard Discount IN"), "Standard Discount IN", "Standard Discount Rate Carry")
 CREATE OR REPLACE TEMP TABLE "Standard Discount Rate" AS
 SELECT * FROM (
-    SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (r0.v IS NOT NULL) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Brand" AS "Brand", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discount IN" s) p0 UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Brand" AS "Brand", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discount Rate Carry" s) p0) d
+    SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (d.v IS NOT NULL) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discount IN" s) d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discount Rate Carry" s) d
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discount IN" s) r0 ON r0."Customer Group" = d."Customer Group" AND r0."Brand" = d."Brand" AND r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discount IN" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Brand" = d."Brand" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discount Rate Carry" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Brand" = d."Brand" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Rebate Rate Reset"
@@ -391,18 +400,21 @@ CREATE OR REPLACE TEMP TABLE "Rebate Rate Carry" AS
 WITH s AS (SELECT x."Customer Group" AS "Customer Group", x."Versions" AS "Versions", x."Years" AS "Years", x."Months" AS "Months", x.v AS v, p.p AS p FROM "Rebate Rate Reset" x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months"),
 f0 AS (SELECT "Customer Group", "Versions", min(p) AS p0 FROM s GROUP BY "Customer Group", "Versions"),
 g AS (SELECT f."Customer Group" AS "Customer Group", f."Versions" AS "Versions", p."Years" AS "Years", p."Months" AS "Months", p.p AS p FROM f0 f CROSS JOIN period p WHERE p.p >= f.p0)
-SELECT g."Customer Group" AS "Customer Group", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", last_value(s.v IGNORE NULLS) OVER (PARTITION BY g."Customer Group", g."Versions" ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS v
-FROM g LEFT JOIN s ON s."Customer Group" = g."Customer Group" AND s."Versions" = g."Versions" AND s."Years" = g."Years" AND s."Months" = g."Months";
+SELECT g."Customer Group" AS "Customer Group", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", s.v AS v
+FROM g ASOF JOIN s ON s."Customer Group" = g."Customer Group" AND s."Versions" = g."Versions" AND g.p >= s.p;
 
 -- @table "Rebate Rate"
 -- Rebate Rate = if(hasValue("Rebate Rate IN"), "Rebate Rate IN", "Rebate Rate Carry")
 CREATE OR REPLACE TEMP TABLE "Rebate Rate" AS
 SELECT * FROM (
-    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (r0.v IS NOT NULL) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Rate IN" s) p0 UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Rate Carry" s) p0) d
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (d.v IS NOT NULL) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Rate IN" s) d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Rate Carry" s) d
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Rate IN" s) r0 ON r0."Customer Group" = d."Customer Group" AND r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Rate IN" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebate Rate Carry" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Logistics Discount Rate Reset"
@@ -419,18 +431,21 @@ CREATE OR REPLACE TEMP TABLE "Logistics Discount Rate Carry" AS
 WITH s AS (SELECT x."Customer Group" AS "Customer Group", x."Versions" AS "Versions", x."Years" AS "Years", x."Months" AS "Months", x.v AS v, p.p AS p FROM "Logistics Discount Rate Reset" x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months"),
 f0 AS (SELECT "Customer Group", "Versions", min(p) AS p0 FROM s GROUP BY "Customer Group", "Versions"),
 g AS (SELECT f."Customer Group" AS "Customer Group", f."Versions" AS "Versions", p."Years" AS "Years", p."Months" AS "Months", p.p AS p FROM f0 f CROSS JOIN period p WHERE p.p >= f.p0)
-SELECT g."Customer Group" AS "Customer Group", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", last_value(s.v IGNORE NULLS) OVER (PARTITION BY g."Customer Group", g."Versions" ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS v
-FROM g LEFT JOIN s ON s."Customer Group" = g."Customer Group" AND s."Versions" = g."Versions" AND s."Years" = g."Years" AND s."Months" = g."Months";
+SELECT g."Customer Group" AS "Customer Group", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", s.v AS v
+FROM g ASOF JOIN s ON s."Customer Group" = g."Customer Group" AND s."Versions" = g."Versions" AND g.p >= s.p;
 
 -- @table "Logistics Discount Rate"
 -- Logistics Discount Rate = if(hasValue("Logistics Discount IN"), "Logistics Discount IN", "Logistics Discount Rate Carry")
 CREATE OR REPLACE TEMP TABLE "Logistics Discount Rate" AS
 SELECT * FROM (
-    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (r0.v IS NOT NULL) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discount IN" s) p0 UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discount Rate Carry" s) p0) d
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (d.v IS NOT NULL) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discount IN" s) d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discount Rate Carry" s) d
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discount IN" s) r0 ON r0."Customer Group" = d."Customer Group" AND r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discount IN" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discount Rate Carry" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "FX Rate Reset"
@@ -447,19 +462,18 @@ CREATE OR REPLACE TEMP TABLE "FX Rate Carry" AS
 WITH s AS (SELECT x."Currency" AS "Currency", x."Versions" AS "Versions", x."Years" AS "Years", x."Months" AS "Months", x.v AS v, p.p AS p FROM "FX Rate Reset" x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months"),
 f0 AS (SELECT "Currency", "Versions", min(p) AS p0 FROM s GROUP BY "Currency", "Versions"),
 g AS (SELECT f."Currency" AS "Currency", f."Versions" AS "Versions", p."Years" AS "Years", p."Months" AS "Months", p.p AS p FROM f0 f CROSS JOIN period p WHERE p.p >= f.p0)
-SELECT g."Currency" AS "Currency", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", last_value(s.v IGNORE NULLS) OVER (PARTITION BY g."Currency", g."Versions" ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS v
-FROM g LEFT JOIN s ON s."Currency" = g."Currency" AND s."Versions" = g."Versions" AND s."Years" = g."Years" AND s."Months" = g."Months";
+SELECT g."Currency" AS "Currency", g."Versions" AS "Versions", g."Years" AS "Years", g."Months" AS "Months", s.v AS v
+FROM g ASOF JOIN s ON s."Currency" = g."Currency" AND s."Versions" = g."Versions" AND g.p >= s.p;
 
 -- @table "FX Rate Plan"
 -- FX Rate Plan = if(eq("FC Plan", 1), if(hasValue("FX Rate IN"), "FX Rate IN", "FX Rate Carry"))
 CREATE OR REPLACE TEMP TABLE "FX Rate Plan" AS
 SELECT * FROM (
-    SELECT d."Currency" AS "Currency", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN (CASE WHEN (r1.v IS NOT NULL) THEN r2.v ELSE r3.v END) ELSE NULL END) AS v
+    SELECT d."Currency" AS "Currency", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN (CASE WHEN (r1.v IS NOT NULL) THEN r1.v ELSE r2.v END) ELSE NULL END) AS v
     FROM (SELECT DISTINCT p0."Currency" AS "Currency", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate IN" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Plan" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Currency" AS "Currency", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate Carry" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Plan" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Plan" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
     LEFT JOIN (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate IN" s) r1 ON r1."Currency" = d."Currency" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate IN" s) r2 ON r2."Currency" = d."Currency" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
-    LEFT JOIN (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate Carry" s) r3 ON r3."Currency" = d."Currency" AND r3."Versions" = d."Versions" AND r3."Years" = d."Years" AND r3."Months" = d."Months"
+    LEFT JOIN (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate Carry" s) r2 ON r2."Currency" = d."Currency" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Gross Sales Plan"
@@ -506,11 +520,14 @@ SELECT * FROM (
 -- Standard Cost Plan = if(hasValue("Standard Cost IN"), "Standard Cost IN", "IMPORT Standard Cost")
 CREATE OR REPLACE TEMP TABLE "Standard Cost Plan" AS
 SELECT * FROM (
-    SELECT d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (r0.v IS NOT NULL) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Standard Cost IN" s) p0 UNION SELECT DISTINCT p0."SKU" AS "SKU", m_1."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."SKU" AS "SKU", s."Years" AS "Years", s.v AS v FROM "IMPORT Standard Cost" s) p0 CROSS JOIN (SELECT unnest([1, 2, 3, 4, 5]) AS "Versions") m_1) d
+    SELECT d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (d.v IS NOT NULL) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Standard Cost IN" s) d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."SKU" AS "SKU", m_1."Versions" AS "Versions", p0."Years" AS "Years", p0.v AS p0_v FROM (SELECT s."SKU" AS "SKU", s."Years" AS "Years", s.v AS v FROM "IMPORT Standard Cost" s) p0 CROSS JOIN (SELECT unnest([1, 2, 3, 4, 5]) AS "Versions") m_1) d
     LEFT JOIN (SELECT s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Standard Cost IN" s) r0 ON r0."SKU" = d."SKU" AND r0."Versions" = d."Versions" AND r0."Years" = d."Years"
-    LEFT JOIN (SELECT s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Standard Cost IN" s) r1 ON r1."SKU" = d."SKU" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years"
-    LEFT JOIN (SELECT s."SKU" AS "SKU", s."Years" AS "Years", s.v AS v FROM "IMPORT Standard Cost" s) r2 ON r2."SKU" = d."SKU" AND r2."Years" = d."Years"
 ) WHERE v IS NOT NULL;
 
 -- @table "COGS Plan"
@@ -525,44 +542,56 @@ SELECT * FROM (
 -- Gross Sales = if(eq("FC Actual", 1), "Gross Sales ACT", "Gross Sales Plan")
 CREATE OR REPLACE TEMP TABLE "Gross Sales" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Sales ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Sales Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Sales ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Sales Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Sales ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Sales Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Standard Discounts"
 -- Standard Discounts = if(eq("FC Actual", 1), "Standard Discounts ACT", "Standard Discounts Plan")
 CREATE OR REPLACE TEMP TABLE "Standard Discounts" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discounts ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discounts Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discounts ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discounts Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discounts ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Standard Discounts Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Promo Discounts"
 -- Promo Discounts = if(eq("FC Actual", 1), "Promo Discounts ACT", "Promo Discounts Plan")
 CREATE OR REPLACE TEMP TABLE "Promo Discounts" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Discounts ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Discounts Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Discounts ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Discounts Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Discounts ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Discounts Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Logistics Discounts"
 -- Logistics Discounts = if(eq("FC Actual", 1), "Logistics Discounts ACT", "Logistics Discounts Plan")
 CREATE OR REPLACE TEMP TABLE "Logistics Discounts" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discounts ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discounts Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discounts ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discounts Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discounts ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Discounts Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Invoice Sales"
@@ -593,28 +622,27 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Invoice Sales by Group Year" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Invoice Sales" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", u0."Customer Group") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Invoice Sales" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", u0."Customer Group") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Growth Bonus Rate"
 -- Growth Bonus Rate = if(hasValue("Growth Bonus Rate IN"), if(gt("Invoice Sales LY by Group", 0), if(gt("Invoice Sales by Group Year", "Invoice Sales LY by Group" * (1 + "Growth Bonus Threshold IN")), "Growth Bonus Rate IN", 0), 0))
 CREATE OR REPLACE TEMP TABLE "Growth Bonus Rate" AS
 SELECT * FROM (
-    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (d.v IS NOT NULL) THEN (CASE WHEN (coalesce(r1.v, 0) > coalesce(CAST(0 AS DOUBLE), 0)) THEN (CASE WHEN (coalesce(r2.v, 0) > coalesce((r3.v * (CASE WHEN CAST(1 AS DOUBLE) IS NULL AND r4.v IS NULL THEN NULL ELSE coalesce(CAST(1 AS DOUBLE), 0) + coalesce(r4.v, 0) END)), 0)) THEN d.v ELSE CAST(0 AS DOUBLE) END) ELSE CAST(0 AS DOUBLE) END) ELSE NULL END) AS v
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (d.v IS NOT NULL) THEN (CASE WHEN (coalesce(r1.v, 0) > coalesce(CAST(0 AS DOUBLE), 0)) THEN (CASE WHEN (coalesce(r2.v, 0) > coalesce((r1.v * (CASE WHEN CAST(1 AS DOUBLE) IS NULL AND r3.v IS NULL THEN NULL ELSE coalesce(CAST(1 AS DOUBLE), 0) + coalesce(r3.v, 0) END)), 0)) THEN d.v ELSE CAST(0 AS DOUBLE) END) ELSE CAST(0 AS DOUBLE) END) ELSE NULL END) AS v
     FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Rate IN" s) d
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s.v AS v FROM "Invoice Sales LY by Group" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Years" = d."Years"
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Invoice Sales by Group Year" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s.v AS v FROM "Invoice Sales LY by Group" s) r3 ON r3."Customer Group" = d."Customer Group" AND r3."Years" = d."Years"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Threshold IN" s) r4 ON r4."Customer Group" = d."Customer Group" AND r4."Versions" = d."Versions" AND r4."Years" = d."Years"
+    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Threshold IN" s) r3 ON r3."Customer Group" = d."Customer Group" AND r3."Versions" = d."Versions" AND r3."Years" = d."Years"
 ) WHERE v IS NOT NULL;
 
 -- @table "Growth Bonus Entitlement"
 -- Growth Bonus Entitlement = if(hasValue("Growth Bonus Rate"), if(gt("Growth Bonus Rate", 0), "Invoice Sales by Group Year" * "Growth Bonus Rate", 0))
 CREATE OR REPLACE TEMP TABLE "Growth Bonus Entitlement" AS
 SELECT * FROM (
-    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (d.v IS NOT NULL) THEN (CASE WHEN (coalesce(d.v, 0) > coalesce(CAST(0 AS DOUBLE), 0)) THEN (r2.v * d.v) ELSE CAST(0 AS DOUBLE) END) ELSE NULL END) AS v
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (d.v IS NOT NULL) THEN (CASE WHEN (coalesce(d.v, 0) > coalesce(CAST(0 AS DOUBLE), 0)) THEN (r1.v * d.v) ELSE CAST(0 AS DOUBLE) END) ELSE NULL END) AS v
     FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Rate" s) d
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Invoice Sales by Group Year" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years"
+    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Invoice Sales by Group Year" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years"
 ) WHERE v IS NOT NULL;
 
 -- @table "Growth Bonus Booked Monthly"
@@ -638,19 +666,18 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Invoice Sales Plan by Group Year" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Invoice Sales Plan" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", u0."Customer Group") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Invoice Sales Plan" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", u0."Customer Group") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Growth Bonus Remaining"
 -- Growth Bonus Remaining = if(gt("FC Plan Months", 0), if(hasValue("Growth Bonus Entitlement"), "Growth Bonus Entitlement" - "Growth Bonus Booked"))
 CREATE OR REPLACE TEMP TABLE "Growth Bonus Remaining" AS
 SELECT * FROM (
-    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (coalesce(r0.v, 0) > coalesce(CAST(0 AS DOUBLE), 0)) THEN (CASE WHEN (r1.v IS NOT NULL) THEN (CASE WHEN r2.v IS NULL AND r3.v IS NULL THEN NULL ELSE coalesce(r2.v, 0) - coalesce(r3.v, 0) END) ELSE NULL END) ELSE NULL END) AS v
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (coalesce(r0.v, 0) > coalesce(CAST(0 AS DOUBLE), 0)) THEN (CASE WHEN (r1.v IS NOT NULL) THEN (CASE WHEN r1.v IS NULL AND r2.v IS NULL THEN NULL ELSE coalesce(r1.v, 0) - coalesce(r2.v, 0) END) ELSE NULL END) ELSE NULL END) AS v
     FROM (SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Entitlement" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Booked" s) p0 JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Entitlement" s) p1 ON p1."Customer Group" = p0."Customer Group" AND p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p2 ON p2."Versions" = p0."Versions" AND p2."Years" = p0."Years") d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years"
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Entitlement" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Entitlement" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Booked" s) r3 ON r3."Customer Group" = d."Customer Group" AND r3."Versions" = d."Versions" AND r3."Years" = d."Years"
+    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Booked" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years"
 ) WHERE v IS NOT NULL;
 
 -- @table "Growth Bonus Plan"
@@ -722,55 +749,70 @@ SELECT * FROM (
 -- Volume = if(eq("FC Actual", 1), "Volume ACT", "Volume Plan")
 CREATE OR REPLACE TEMP TABLE "Volume" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Promo Funding"
 -- Promo Funding = if(eq("FC Actual", 1), "Promo Funding ACT", "Promo Funding Plan")
 CREATE OR REPLACE TEMP TABLE "Promo Funding" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Funding ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Funding Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Funding ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Funding Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Funding ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Promo Funding Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "COGS"
 -- COGS = if(eq("FC Actual", 1), "COGS ACT", "COGS Plan")
 CREATE OR REPLACE TEMP TABLE "COGS" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "COGS ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "COGS Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "COGS ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "COGS Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "COGS ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "COGS Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Rebates"
 -- Rebates = if(eq("FC Actual", 1), "Rebates ACT", "Rebates Plan")
 CREATE OR REPLACE TEMP TABLE "Rebates" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebates ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebates Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebates ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebates Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebates ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Rebates Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Growth Bonus"
 -- Growth Bonus = if(eq("FC Actual", 1), "Growth Bonus ACT", "Growth Bonus Plan")
 CREATE OR REPLACE TEMP TABLE "Growth Bonus" AS
 SELECT * FROM (
-    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Plan" s) p0) d
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus ACT" s) r1 ON r1."Customer" = d."Customer" AND r1."SKU" = d."SKU" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Plan" s) r2 ON r2."Customer" = d."Customer" AND r2."SKU" = d."SKU" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Rebates Unallocated"
@@ -785,55 +827,70 @@ SELECT * FROM (
 -- Growth Bonus Unallocated = if(eq("FC Actual", 1), "Growth Bonus Unallocated ACT", "Growth Bonus Plan Unallocated")
 CREATE OR REPLACE TEMP TABLE "Growth Bonus Unallocated" AS
 SELECT * FROM (
-    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p1."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p0 JOIN (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Unallocated ACT" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Plan Unallocated" s) p0) d
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p0_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p1_v ELSE NULL END) AS v
+    FROM (SELECT p1."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p0 JOIN (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Unallocated ACT" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Plan Unallocated" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Unallocated ACT" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Growth Bonus Plan Unallocated" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Trade Fees Pool"
 -- Trade Fees Pool = if(eq("FC Actual", 1), "IMPORT Trade Fees", "Trade Fees Plan")
 CREATE OR REPLACE TEMP TABLE "Trade Fees Pool" AS
 SELECT * FROM (
-    SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Brand" AS "Brand", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Trade Fees" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Brand" AS "Brand", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Trade Fees Plan" s) p0) d
+    SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Customer Group" AS "Customer Group", p0."Brand" AS "Brand", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Trade Fees" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Trade Fees Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Trade Fees" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Brand" = d."Brand" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Trade Fees Plan" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Brand" = d."Brand" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Marketing Pool"
 -- Marketing Pool = if(eq("FC Actual", 1), "IMPORT Marketing", "Marketing Plan")
 CREATE OR REPLACE TEMP TABLE "Marketing Pool" AS
 SELECT * FROM (
-    SELECT d."Brand" AS "Brand", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Brand" AS "Brand", p0."Country" AS "Country", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Marketing" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Brand" AS "Brand", p0."Country" AS "Country", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Plan" s) p0) d
+    SELECT d."Brand" AS "Brand", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Brand" AS "Brand", p0."Country" AS "Country", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Marketing" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Brand" AS "Brand", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Marketing" s) r1 ON r1."Brand" = d."Brand" AND r1."Country" = d."Country" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Plan" s) r2 ON r2."Brand" = d."Brand" AND r2."Country" = d."Country" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "OPEX"
 -- OPEX = if(eq("FC Actual", 1), "IMPORT OPEX", "OPEX Plan")
 CREATE OR REPLACE TEMP TABLE "OPEX" AS
 SELECT * FROM (
-    SELECT d."Cost Center" AS "Cost Center", d."Account" AS "Account", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Cost Center" AS "Cost Center", p0."Account" AS "Account", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Cost Center" AS "Cost Center", s."Account" AS "Account", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT OPEX" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Cost Center" AS "Cost Center", p0."Account" AS "Account", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Cost Center" AS "Cost Center", s."Account" AS "Account", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "OPEX Plan" s) p0) d
+    SELECT d."Cost Center" AS "Cost Center", d."Account" AS "Account", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Cost Center" AS "Cost Center", p0."Account" AS "Account", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Cost Center" AS "Cost Center", s."Account" AS "Account", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT OPEX" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Cost Center" AS "Cost Center", d."Account" AS "Account", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Cost Center" AS "Cost Center", s."Account" AS "Account", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "OPEX Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Cost Center" AS "Cost Center", s."Account" AS "Account", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT OPEX" s) r1 ON r1."Cost Center" = d."Cost Center" AND r1."Account" = d."Account" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Cost Center" AS "Cost Center", s."Account" AS "Account", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "OPEX Plan" s) r2 ON r2."Cost Center" = d."Cost Center" AND r2."Account" = d."Account" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "FX Rate"
 -- FX Rate = if(eq("FC Actual", 1), "IMPORT FX Rate", "FX Rate Plan")
 CREATE OR REPLACE TEMP TABLE "FX Rate" AS
 SELECT * FROM (
-    SELECT d."Currency" AS "Currency", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p1."Currency" AS "Currency", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p0 JOIN (SELECT s."Currency" AS "Currency", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT FX Rate" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Currency" AS "Currency", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate Plan" s) p0) d
+    SELECT d."Currency" AS "Currency", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p0_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p1_v ELSE NULL END) AS v
+    FROM (SELECT p1."Currency" AS "Currency", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p0 JOIN (SELECT s."Currency" AS "Currency", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT FX Rate" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Currency" AS "Currency", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Currency" AS "Currency", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT FX Rate" s) r1 ON r1."Currency" = d."Currency" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Currency" AS "Currency", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FX Rate Plan" s) r2 ON r2."Currency" = d."Currency" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Volume KG"
@@ -865,7 +922,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Invoice Sales by Group Brand" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Invoice Sales Positive" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Customer Group", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Invoice Sales Positive" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Customer Group", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Trade Fees Key"
@@ -888,7 +945,7 @@ SELECT * FROM (
 -- Trade Fees Unallocated = "Trade Fees Pool" - "Trade Fees"
 CREATE OR REPLACE TEMP TABLE "Trade Fees Unallocated" AS
 SELECT u."Customer Group" AS "Customer Group", u."Brand" AS "Brand", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
-FROM (SELECT "Customer Group", "Brand", "Versions", "Years", "Months", v AS v FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Trade Fees Pool" s) r0 UNION ALL SELECT "Customer Group", "Brand", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Trade Fees" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Customer Group", u1."Brand") r1) u
+FROM (SELECT "Customer Group", "Brand", "Versions", "Years", "Months", v AS v FROM (SELECT s."Customer Group" AS "Customer Group", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Trade Fees Pool" s) r0 UNION ALL SELECT "Customer Group", "Brand", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Customer Group" AS "Customer Group", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Trade Fees" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Customer Group", u1."Brand") r1) u
 GROUP BY u."Customer Group", u."Brand", u."Versions", u."Years", u."Months";
 
 -- @table "Net Sales"
@@ -910,7 +967,7 @@ GROUP BY u."Customer", u."SKU", u."Versions", u."Years", u."Months";
 CREATE OR REPLACE TEMP TABLE "Invoice Sales by Customer Brand" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Invoice Sales" s LEFT JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
+    FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Invoice Sales" s JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Net Sales by Customer Brand"
@@ -918,7 +975,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Net Sales by Customer Brand" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Net Sales" s LEFT JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
+    FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Net Sales" s JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Gross Margin by Customer Brand"
@@ -926,7 +983,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Gross Margin by Customer Brand" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Gross Margin" s LEFT JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
+    FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Gross Margin" s JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Handling KG by Customer Brand"
@@ -934,7 +991,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Handling KG by Customer Brand" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Handling KG" s LEFT JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
+    FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Handling KG" s JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Logistics Pool"
@@ -942,7 +999,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Logistics Pool" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "OPEX" s LEFT JOIN "flat Cost Center" u0 ON u0."Cost Center" = s."Cost Center" WHERE u0."Function" = 2 GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "OPEX" s JOIN "flat Cost Center" u0 ON u0."Cost Center" = s."Cost Center" WHERE u0."Function" = 2 GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Handling KG Positive"
@@ -958,7 +1015,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Handling KG by Country" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Handling KG Positive" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Handling KG Positive" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Logistics Key"
@@ -981,7 +1038,7 @@ SELECT * FROM (
 -- Logistics Unallocated = "Logistics Pool" - "Logistics Cost"
 CREATE OR REPLACE TEMP TABLE "Logistics Unallocated" AS
 SELECT u."Country" AS "Country", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
-FROM (SELECT "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Pool" s) r0 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Logistics Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") r1) u
+FROM (SELECT "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Pool" s) r0 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Logistics Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") r1) u
 GROUP BY u."Country", u."Versions", u."Years", u."Months";
 
 -- @table "Sales Force Pool"
@@ -989,7 +1046,7 @@ GROUP BY u."Country", u."Versions", u."Years", u."Months";
 CREATE OR REPLACE TEMP TABLE "Sales Force Pool" AS
 SELECT * FROM (
     SELECT d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "OPEX" s LEFT JOIN "flat Cost Center" u0 ON u0."Cost Center" = s."Cost Center" WHERE u0."Function" = 5 GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "OPEX" s JOIN "flat Cost Center" u0 ON u0."Cost Center" = s."Cost Center" WHERE u0."Function" = 5 GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Invoice Sales Positive by Customer Brand"
@@ -1005,7 +1062,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Invoice Sales by Channel Country" AS
 SELECT * FROM (
     SELECT d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Invoice Sales Positive by Customer Brand" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Invoice Sales Positive by Customer Brand" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Sales Force Key"
@@ -1028,7 +1085,7 @@ SELECT * FROM (
 -- Sales Force Unallocated = "Sales Force Pool" - "Sales Force Cost"
 CREATE OR REPLACE TEMP TABLE "Sales Force Unallocated" AS
 SELECT u."Channel" AS "Channel", u."Country" AS "Country", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
-FROM (SELECT "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Sales Force Pool" s) r0 UNION ALL SELECT "Channel", "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Sales Force Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") r1) u
+FROM (SELECT "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Sales Force Pool" s) r0 UNION ALL SELECT "Channel", "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Sales Force Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") r1) u
 GROUP BY u."Channel", u."Country", u."Versions", u."Years", u."Months";
 
 -- @table "Contribution Margin II"
@@ -1051,7 +1108,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Net Sales by Brand Country" AS
 SELECT * FROM (
     SELECT d."Brand" AS "Brand", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Net Sales Positive" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Net Sales Positive" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Marketing Key"
@@ -1074,7 +1131,7 @@ SELECT * FROM (
 -- Marketing Unallocated = "Marketing Pool" - "Marketing Cost"
 CREATE OR REPLACE TEMP TABLE "Marketing Unallocated" AS
 SELECT u."Brand" AS "Brand", u."Country" AS "Country", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
-FROM (SELECT "Brand", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Pool" s) r0 UNION ALL SELECT "Brand", "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Marketing Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Country") r1) u
+FROM (SELECT "Brand", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Pool" s) r0 UNION ALL SELECT "Brand", "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Marketing Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Country") r1) u
 GROUP BY u."Brand", u."Country", u."Versions", u."Years", u."Months";
 
 -- @table "Contribution Margin III"
@@ -1089,7 +1146,7 @@ GROUP BY u."Customer", u."Brand", u."Versions", u."Years", u."Months";
 CREATE OR REPLACE TEMP TABLE "Overheads" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "OPEX" s LEFT JOIN "flat Cost Center" u0 ON u0."Cost Center" = s."Cost Center" WHERE (NOT (u0."Function" = 2 OR u0."Function" = 5)) GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "OPEX" s JOIN "flat Cost Center" u0 ON u0."Cost Center" = s."Cost Center" WHERE (NOT (u0."Function" = 2 OR u0."Function" = 5)) GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Contribution Margin III by Country"
@@ -1097,7 +1154,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Contribution Margin III by Country" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Contribution Margin III" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Contribution Margin III" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Trade Fees Unallocated by Country"
@@ -1105,7 +1162,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Trade Fees Unallocated by Country" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Trade Fees Unallocated" s LEFT JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Trade Fees Unallocated" s JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Rebates Unallocated by Country"
@@ -1113,7 +1170,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Rebates Unallocated by Country" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Rebates Unallocated" s LEFT JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Rebates Unallocated" s JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Growth Bonus Unallocated by Country"
@@ -1121,7 +1178,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Growth Bonus Unallocated by Country" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Growth Bonus Unallocated" s LEFT JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Growth Bonus Unallocated" s JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Unallocated by Country"
@@ -1151,7 +1208,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Gross Sales" AS
 SELECT * FROM (
     SELECT 2 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Gross Sales" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Gross Sales" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Standard Discounts"
@@ -1159,7 +1216,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Standard Discounts" AS
 SELECT * FROM (
     SELECT 3 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Standard Discounts" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Standard Discounts" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Promo Discounts"
@@ -1167,7 +1224,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Promo Discounts" AS
 SELECT * FROM (
     SELECT 4 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Promo Discounts" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Promo Discounts" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Logistics Discounts"
@@ -1175,7 +1232,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Logistics Discounts" AS
 SELECT * FROM (
     SELECT 5 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Logistics Discounts" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Logistics Discounts" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Rebates"
@@ -1183,7 +1240,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Rebates" AS
 SELECT * FROM (
     SELECT 6 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Rebates" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Rebates" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Growth Bonus"
@@ -1191,7 +1248,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Growth Bonus" AS
 SELECT * FROM (
     SELECT 7 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Growth Bonus" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Growth Bonus" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Trade Fees"
@@ -1199,7 +1256,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Trade Fees" AS
 SELECT * FROM (
     SELECT 8 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Trade Fees" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Trade Fees" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Promo Funding"
@@ -1207,7 +1264,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Promo Funding" AS
 SELECT * FROM (
     SELECT 9 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Promo Funding" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Promo Funding" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL COGS"
@@ -1215,7 +1272,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL COGS" AS
 SELECT * FROM (
     SELECT 10 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "COGS" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "COGS" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Logistics"
@@ -1223,7 +1280,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Logistics" AS
 SELECT * FROM (
     SELECT 11 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Logistics Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Logistics Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Sales Force"
@@ -1231,7 +1288,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Sales Force" AS
 SELECT * FROM (
     SELECT 12 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Sales Force Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Sales Force Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Marketing"
@@ -1239,7 +1296,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Marketing" AS
 SELECT * FROM (
     SELECT 13 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Marketing Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Marketing Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Overheads"
@@ -1255,7 +1312,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Rebates Unallocated" AS
 SELECT * FROM (
     SELECT 6 AS "PL Line", 1 AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Rebates Unallocated" s LEFT JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Rebates Unallocated" s JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Growth Bonus Unallocated"
@@ -1263,7 +1320,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Growth Bonus Unallocated" AS
 SELECT * FROM (
     SELECT 7 AS "PL Line", 1 AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Growth Bonus Unallocated" s LEFT JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Growth Bonus Unallocated" s JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Trade Fees Unallocated"
@@ -1271,7 +1328,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Trade Fees Unallocated" AS
 SELECT * FROM (
     SELECT 8 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Trade Fees Unallocated" s LEFT JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Trade Fees Unallocated" s JOIN "flat Customer Group" u0 ON u0."Customer Group" = s."Customer Group" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Logistics Unallocated"
@@ -1318,7 +1375,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Volume by Brand Channel Country" AS
 SELECT * FROM (
     SELECT d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Volume" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" LEFT JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "Volume" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Volume for KPIs"
@@ -1334,7 +1391,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "Gross Sales Loaded by Country" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "IMPORT Gross Sales" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "IMPORT Gross Sales" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "CHECK Import Total"
@@ -1356,11 +1413,11 @@ GROUP BY u."Brand", u."Versions", u."Years", u."Months";
 CREATE OR REPLACE TEMP TABLE "CHECK Growth Bonus" AS
 SELECT * FROM (
     SELECT d."Customer Group" AS "Customer Group", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (coalesce(r0.v, 0) > coalesce(CAST(0 AS DOUBLE), 0)) THEN (CASE WHEN r1.v IS NULL AND r2.v IS NULL AND r3.v IS NULL AND r4.v IS NULL THEN NULL ELSE coalesce(r1.v, 0) - coalesce(r2.v, 0) - coalesce(r3.v, 0) - coalesce(r4.v, 0) END) ELSE NULL END) AS v
-    FROM (SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Entitlement" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Booked" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Growth Bonus Plan" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", u0."Customer Group") p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", sum(s.v) AS v FROM "Growth Bonus Plan Unallocated" s GROUP BY s."Customer Group", s."Versions", s."Years") p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years") d
+    FROM (SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Entitlement" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Booked" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Growth Bonus Plan" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", u0."Customer Group") p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" UNION SELECT DISTINCT p0."Customer Group" AS "Customer Group", p0."Versions" AS "Versions", p0."Years" AS "Years" FROM (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", sum(s.v) AS v FROM "Growth Bonus Plan Unallocated" s GROUP BY s."Customer Group", s."Versions", s."Years") p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years") d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "FC Plan Months" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years"
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Entitlement" s) r1 ON r1."Customer Group" = d."Customer Group" AND r1."Versions" = d."Versions" AND r1."Years" = d."Years"
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Growth Bonus Booked" s) r2 ON r2."Customer Group" = d."Customer Group" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years"
-    LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Growth Bonus Plan" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", u0."Customer Group") r3 ON r3."Customer Group" = d."Customer Group" AND r3."Versions" = d."Versions" AND r3."Years" = d."Years"
+    LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", u0."Customer Group" AS "Customer Group", sum(s.v) AS v FROM "Growth Bonus Plan" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", u0."Customer Group") r3 ON r3."Customer Group" = d."Customer Group" AND r3."Versions" = d."Versions" AND r3."Years" = d."Years"
     LEFT JOIN (SELECT s."Customer Group" AS "Customer Group", s."Versions" AS "Versions", s."Years" AS "Years", sum(s.v) AS v FROM "Growth Bonus Plan Unallocated" s GROUP BY s."Customer Group", s."Versions", s."Years") r4 ON r4."Customer Group" = d."Customer Group" AND r4."Versions" = d."Versions" AND r4."Years" = d."Years"
 ) WHERE v IS NOT NULL;
 
@@ -1369,14 +1426,14 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "OPEX by Country" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "OPEX" s LEFT JOIN "flat Cost Center" u0 ON u0."Cost Center" = s."Cost Center" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "OPEX" s JOIN "flat Cost Center" u0 ON u0."Cost Center" = s."Cost Center" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "CHECK OPEX in EBIT"
 -- CHECK OPEX in EBIT = "OPEX by Country" - "Overheads" - "Logistics Cost" - "Logistics Unallocated" - "Sales Force Cost" - "Sales Force Unallocated"
 CREATE OR REPLACE TEMP TABLE "CHECK OPEX in EBIT" AS
 SELECT u."Country" AS "Country", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
-FROM (SELECT "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "OPEX by Country" s) r0 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Overheads" s) r1 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Logistics Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") r2 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Unallocated" s) r3 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Sales Force Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") r4 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", sum(s.v) AS v FROM "Sales Force Unallocated" s GROUP BY s."Country", s."Versions", s."Years", s."Months") r5) u
+FROM (SELECT "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "OPEX by Country" s) r0 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Overheads" s) r1 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Logistics Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") r2 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Unallocated" s) r3 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Sales Force Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") r4 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", sum(s.v) AS v FROM "Sales Force Unallocated" s GROUP BY s."Country", s."Versions", s."Years", s."Months") r5) u
 GROUP BY u."Country", u."Versions", u."Years", u."Months";
 
 -- @table "CHECK Uncosted Volume"
@@ -1403,7 +1460,7 @@ CREATE OR REPLACE TEMP TABLE "CHECK Unpriced Volume" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.v ELSE NULL END) AS v
     FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Plan" s) d
-    LEFT JOIN "flat Customer" f_0 ON f_0."Customer" = d."Customer"
+    JOIN "flat Customer" f_0 ON f_0."Customer" = d."Customer"
     LEFT JOIN (SELECT s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s."Country" AS "Country", s.v AS v FROM "List Price Plan" s) r0 ON r0."SKU" = d."SKU" AND r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months" AND r0."Country" = f_0."Country"
 ) WHERE v IS NOT NULL;
 
@@ -1413,7 +1470,7 @@ CREATE OR REPLACE TEMP TABLE "CHECK Volume without FX Rate" AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) > coalesce(CAST(0 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
     FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume" s) d
-    LEFT JOIN "flat Customer" f_0 ON f_0."Customer" = d."Customer"
+    JOIN "flat Customer" f_0 ON f_0."Customer" = d."Customer"
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s."Currency" AS "Currency", s.v AS v FROM "FX Rate" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months" AND r0."Currency" = f_0."Currency"
 ) WHERE v IS NOT NULL;
 
@@ -1423,7 +1480,7 @@ CREATE OR REPLACE TEMP TABLE "CHECK Marketing without FX Rate" AS
 SELECT * FROM (
     SELECT d."Brand" AS "Brand", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) > coalesce(CAST(0 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
     FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Plan EUR" s) d
-    LEFT JOIN "flat Country" f_1 ON f_1."Country" = d."Country"
+    JOIN "flat Country" f_1 ON f_1."Country" = d."Country"
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s."Currency" AS "Currency", s.v AS v FROM "FX Rate Plan" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months" AND r0."Currency" = f_1."Currency"
 ) WHERE v IS NOT NULL;
 
@@ -1433,7 +1490,7 @@ CREATE OR REPLACE TEMP TABLE "CHECK PL without FX Rate" AS
 SELECT * FROM (
     SELECT d."PL Line" AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) > coalesce(CAST(0 AS DOUBLE), 0))) THEN abs(d.v) ELSE NULL END) AS v
     FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL OUT" s) d
-    LEFT JOIN "flat Country" f_3 ON f_3."Country" = d."Country"
+    JOIN "flat Country" f_3 ON f_3."Country" = d."Country"
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s."Currency" AS "Currency", s.v AS v FROM "FX Rate" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months" AND r0."Currency" = f_3."Currency"
 ) WHERE v IS NOT NULL;
 

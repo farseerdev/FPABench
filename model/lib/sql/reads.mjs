@@ -1,12 +1,18 @@
-// SQL for the runner's reads, in DuckDB's or ClickHouse's dialect: one stored variable summed over a
-// slice, or a measure computed at a slice from the sums it needs.
+// SQL for the reads of test R4, in DuckDB's or ClickHouse's dialect: measures computed at a slice from the
+// sums they need. The other reads are written in each test.
 
 import { parseFormula } from '../rql.mjs';
 
 const id = (s) => `"${String(s).replace(/"/g, '""')}"`;
 const lit = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
-export function readSql(model, { variable, by = [], where = {} }, dialect = 'duckdb', dict) {
+/**
+ * Several measures at once, by `by` where `where`: one row per measure and key, with the columns measure,
+ * the `by` dimensions and v. Each variable is scanned once. A sum with a filter is a conditional sum in
+ * that scan, sumIf in ClickHouse and FILTER in DuckDB, so a variable that many measures read is still read
+ * once. `by` must not be empty.
+ */
+export function measuresSql(model, names, { by, where = {} }, dialect = 'duckdb', dict) {
     const CH = dialect === 'clickhouse';
     // Members are stored as integer ids (see translate.mjs). The caller maps the ids of the result back to names.
     const mid = (dim, name) => {
@@ -21,7 +27,7 @@ export function readSql(model, { variable, by = [], where = {} }, dialect = 'duc
         const g = x.dims.find((g) => model.isAncestor(d, g));
         if (!g) throw new Error(`"${x.name}" cannot be read by ${d}`);
         const alias = `f_${x.dims.indexOf(g)}`;
-        if (!joins.has(alias)) joins.set(alias, `LEFT JOIN ${id(`flat ${g}`)} ${alias} ON ${alias}.${id(g)} = s.${id(g)}`);
+        if (!joins.has(alias)) joins.set(alias, `JOIN ${id(`flat ${g}`)} ${alias} ON ${alias}.${id(g)} = s.${id(g)}`);
         return `${alias}.${id(d)}`;
     }
     function filterSql(x, f, joins) {
@@ -31,70 +37,67 @@ export function readSql(model, { variable, by = [], where = {} }, dialect = 'duc
         if (f.type === 'call' && (f.name === 'or' || f.name === 'and')) return `(${f.args.map((a) => filterSql(x, a, joins)).join(f.name === 'or' ? ' OR ' : ' AND ')})`;
         throw new Error(`cannot filter by ${f.type}`);
     }
-    // One stored variable, summed (or averaged, by its rollup) over `by`.
-    function aggregateSql(x, by, where, extra = []) {
-        const joins = new Map();
+    const scans = new Map(); // variable name -> { x, joins, cols: Map(condition -> column) }
+    let n = 0;
+    const sumOf = (x, filters) => {
+        if (!scans.has(x.name)) scans.set(x.name, { x, joins: new Map(), cols: new Map() });
+        const scan = scans.get(x.name);
+        const cond = filters.map((f) => filterSql(x, f, scan.joins)).join(' AND ');
+        if (!scan.cols.has(cond)) scan.cols.set(cond, `c${n++}`);
+        return `k.${scan.cols.get(cond)}`;
+    };
+    // A measure's formula over the sums, with RAMA's rules for missing values.
+    const walk = (v, e) => {
+        switch (e.type) {
+            case 'paren':
+                return walk(v, e.expr);
+            case 'num':
+                return `CAST(${e.value} AS DOUBLE)`;
+            case 'neg':
+                return `(-${walk(v, e.expr)})`;
+            case 'name':
+                return sumOf(model.variable(e.name), []);
+            case 'call':
+                if (e.name !== 'sum') throw new Error(`${v.name}: ${e.fn} in a measure`);
+                return sumOf(model.variable(e.args[0].name), e.args.slice(1));
+            case 'bin': {
+                const a = walk(v, e.left);
+                const b = walk(v, e.right);
+                if (e.op === '+' || e.op === '-') return `(CASE WHEN ${a} IS NULL AND ${b} IS NULL THEN NULL ELSE coalesce(${a}, 0) ${e.op} coalesce(${b}, 0) END)`;
+                if (e.op === '*') return `(${a} * ${b})`;
+                // Read as a measure, RAMA gives a missing numerator over a number as missing, not 0.
+                return `(CASE WHEN ${b} IS NULL OR ${b} = 0 THEN NULL ELSE ${a} / ${b} END)`;
+            }
+            default:
+                throw new Error(`${v.name}: ${e.type} in a measure`);
+        }
+    };
+    const exprs = names.map((name) => [name, walk(model.variable(name), parseFormula(model.variable(name).formula))]);
+    const keyCols = by.map(id);
+    const all = [...scans.values()].flatMap((scan) => [...scan.cols.values()]);
+    // One scan per variable. Each gives its own columns and NULL for the others, so the scans can be united
+    // and one GROUP BY puts every sum of a key side by side.
+    const parts = [...scans.values()].map(({ x, joins, cols }) => {
         const keys = by.map((d) => `${dimExpr(x, d, joins)} AS ${id(d)}`);
         const conds = Object.entries(where).map(([d, m]) => {
             const e = dimExpr(x, d, joins);
             return Array.isArray(m) ? `${e} IN (${m.map((x) => mid(d, x)).join(', ')})` : `${e} = ${mid(d, m)}`;
         });
-        for (const f of extra) conds.push(filterSql(x, f, joins));
+        // A key whose rows match no condition would give only missing sums, so those rows are left out early.
+        if (![...cols.keys()].includes('')) conds.push(`(${[...cols.keys()].join(' OR ')})`);
         const fn = x.rollupType === 'AVERAGE' ? 'avg' : 'sum';
-        return `SELECT ${[...keys, `${fn}(s.v) AS v`].join(', ')} FROM ${from(x)} ${[...joins.values()].join(' ')}${conds.length ? ` WHERE ${conds.join(' AND ')}` : ''}${keys.length ? ` GROUP BY ${by.map((_, i) => i + 1).join(', ')}` : ''}`;
+        const own = new Map([...cols].map(([cond, c]) => [c, !cond ? `${fn}(s.v)` : CH ? `${fn}If(s.v, ${cond})` : `${fn}(s.v) FILTER (WHERE ${cond})`]));
+        const none = CH ? 'CAST(NULL AS Nullable(Float64))' : 'CAST(NULL AS DOUBLE)';
+        const sel = all.map((c) => `${own.get(c) ?? none} AS ${c}`);
+        return `SELECT ${[...keys, ...sel].join(', ')} FROM ${from(x)} ${[...joins.values()].join(' ')}${conds.length ? ` WHERE ${conds.join(' AND ')}` : ''} GROUP BY ${by.map((_, i) => i + 1).join(', ')}`;
+    });
+    const k = `SELECT ${[...keyCols, ...all.map((c) => `max(${c}) AS ${c}`)].join(', ')} FROM (${parts.join(' UNION ALL ')}) u GROUP BY ${keyCols.join(', ')}`;
+    const outKeys = by.map((d) => `k.${id(d)} AS ${id(d)}`);
+    if (CH) {
+        // ARRAY JOIN gives each key one row per measure, from one pass over the sums.
+        const list = exprs.map(([name, e]) => `(${lit(name)}, ${e})`).join(', ');
+        return `SELECT tupleElement(m, 1) AS measure, ${outKeys.join(', ')}, tupleElement(m, 2) AS v FROM (${k}) AS k ARRAY JOIN [${list}] AS m WHERE tupleElement(m, 2) IS NOT NULL`;
     }
-    // A measure: its formula over sums at the read's slice, with RAMA's rules for missing values.
-    function measureSql(v, by, where) {
-        const parts = [];
-        // With `by`, sum i is column v<i> of the row k. Else it is column v of t<i>.
-        const onePass = by.length > 0;
-        const ref = (i) => (onePass ? `k.v${i}` : `t${i}.v`);
-        const walk = (n) => {
-            switch (n.type) {
-                case 'paren':
-                    return walk(n.expr);
-                case 'num':
-                    return `CAST(${n.value} AS DOUBLE)`;
-                case 'neg':
-                    return `(-${walk(n.expr)})`;
-                case 'name':
-                    parts.push(aggregateSql(model.variable(n.name), by, where));
-                    return ref(parts.length - 1);
-                case 'call':
-                    if (n.name !== 'sum') throw new Error(`${v.name}: ${n.fn} in a measure`);
-                    parts.push(aggregateSql(model.variable(n.args[0].name), by, where, n.args.slice(1)));
-                    return ref(parts.length - 1);
-                case 'bin': {
-                    const a = walk(n.left);
-                    const b = walk(n.right);
-                    if (n.op === '+' || n.op === '-') return `(CASE WHEN ${a} IS NULL AND ${b} IS NULL THEN NULL ELSE coalesce(${a}, 0) ${n.op} coalesce(${b}, 0) END)`;
-                    if (n.op === '*') return `(${a} * ${b})`;
-                    // Read as a measure, RAMA gives a missing numerator over a number as missing, not 0.
-                    return `(CASE WHEN ${b} IS NULL OR ${b} = 0 THEN NULL ELSE ${a} / ${b} END)`;
-                }
-                default:
-                    throw new Error(`${v.name}: ${n.type} in a measure`);
-            }
-        };
-        const expr = walk(parseFormula(v.formula));
-        const keyCols = by.map(id);
-        const outer = by.map((d) => `k.${id(d)} AS ${id(d)}`);
-        // The sums are tagged with their index and united, and one GROUP BY puts the sums of each key side by
-        // side, so each sum runs once and no list of keys is joined back to them. Each sum has one row per
-        // key. A key is there when any sum has a row for it, and a sum without a row for it is NULL, as with
-        // the LEFT JOINs below.
-        if (onePass) {
-            const tagged = parts.map((p, i) => `SELECT ${i} AS part, ${keyCols.join(', ')}, v FROM (${p}) t${i}`).join(' UNION ALL ');
-            const sums = parts.map((_, i) => `max(CASE WHEN part = ${i} THEN v END) AS v${i}`);
-            return `SELECT * FROM (SELECT ${[...outer, `${expr} AS v`].join(', ')} FROM (SELECT ${[...keyCols, ...sums].join(', ')} FROM (${tagged}) u GROUP BY ${keyCols.join(', ')}) k) WHERE v IS NOT NULL`;
-        }
-        const ctes = parts.map((p, i) => `t${i} AS (${p})`);
-        const keys = by.length ? `(${parts.map((_, i) => `SELECT ${keyCols.join(', ')} FROM t${i}`).join(CH ? ' UNION DISTINCT ' : ' UNION ')})` : '(SELECT 1 AS one)';
-        const joins = parts.map((_, i) => (by.length ? `LEFT JOIN t${i} ON ${by.map((d) => `t${i}.${id(d)} = k.${id(d)}`).join(' AND ')}` : `CROSS JOIN t${i}`));
-        return `WITH ${ctes.join(', ')} SELECT * FROM (SELECT ${[...outer, `${expr} AS v`].join(', ')} FROM ${keys} k ${joins.join(' ')}) WHERE v IS NOT NULL`;
-    }
-
-
-    const x = model.variable(variable);
-    return x.measure ? measureSql(x, by, where) : `SELECT * FROM (${aggregateSql(x, by, where)}) WHERE v IS NOT NULL`;
+    // DuckDB keeps a MATERIALIZED CTE once, so each measure reads the sums without scanning again.
+    return `WITH k AS MATERIALIZED (${k})\n${exprs.map(([name, e]) => `SELECT ${lit(name)} AS measure, ${outKeys.join(', ')}, v FROM (SELECT ${outKeys.join(', ')}, ${e} AS v FROM k) k WHERE v IS NOT NULL`).join('\nUNION ALL\n')}`;
 }
