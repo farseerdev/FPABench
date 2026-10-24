@@ -23,7 +23,9 @@ The SQL is in [`sql/`](sql/), generated from the model by [`model/lib/sql/genera
 | Read | One `GROUP BY` query. A measure is one query over the sums it needs. |
 | Model change | Translate the changed model, then build again the changed tables and every table that reads them. New or moved members change the dimension lookups, so then every table is built again. |
 
-ClickHouse has no row update that suits typed values. So each input table is a `ReplacingMergeTree(ver, is_deleted)`. A write is a row with a higher version, a delete is a row with `is_deleted = 1`, and every read of an input table uses `FINAL`. Calculated tables are `Memory` tables, made with `CREATE OR REPLACE TABLE ... ENGINE = Memory AS SELECT`. They can always be built again from the inputs, so only the inputs are written to disk.
+ClickHouse has no row update that suits typed values. So each input table is a `ReplacingMergeTree(ver, is_deleted)`. A write is a row with a higher version, a delete is a row with `is_deleted = 1`, and every read of an input table uses `FINAL`. Calculated tables are `Memory` tables. Each is made with `CREATE OR REPLACE TABLE ... ENGINE = Memory` and its column types, then filled with `INSERT ... SELECT`. They can always be built again from the inputs, so only the inputs are written to disk.
+
+The keys are plain integers. Versions, Years and Months use `UInt8`, the other dimensions `Int32`. No column is `Nullable`. A table made straight from the `SELECT` would get `Nullable` columns from `join_use_nulls`, and those are slower to read.
 
 ## Settings
 
@@ -32,6 +34,8 @@ ClickHouse has no row update that suits typed values. So each input table is a `
 | `join_use_nulls` | 1 | Required. With the default 0, the missing side of an outer join is 0 or `''`, and "missing" turns into 0. |
 | `aggregate_functions_null_for_empty` | 1 | Required. With the default 0, a sum over no rows is 0 instead of missing. |
 | `query_plan_optimize_join_order_limit` | 0 | Keeps the join order the translator writes, widest operand first. At 100m, ClickHouse's own join reordering made one statement (`Growth Bonus Plan`, 1 million rows joined to three lookups of up to 3,351 rows) run for more than 15 minutes. With this setting it takes 0.04 s. |
+| `insert_null_as_default` | 0, on each insert into a calculated table | A NULL value fails the insert instead of turning into 0. The SQL drops missing values before the insert, so none should come. |
+| `join_algorithm` | `hash` | Most joins are to small dimension lookups. At 10m on a laptop the writes took 5 to 15% less time than with the default, which may pick a parallel hash join. |
 | `mutations_sync` | 2 | No mutations run in the tests. Set so one would finish before the next statement. |
 | `fsync_after_insert`, `fsync_part_directory` | 1, on every table on disk | The method turns durability on where a system has a setting for it |
 | Threads, memory | ClickHouse's defaults | |

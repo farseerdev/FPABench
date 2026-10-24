@@ -4,11 +4,14 @@
 -- Marketing Pool = if(eq("FC Actual", 1), "IMPORT Marketing", "Marketing Plan")
 CREATE OR REPLACE TEMP TABLE "Marketing Pool" AS
 SELECT * FROM (
-    SELECT d."Brand" AS "Brand", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN r1.v ELSE r2.v END) AS v
-    FROM (SELECT DISTINCT p0."Brand" AS "Brand", p0."Country" AS "Country", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Marketing" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months" UNION SELECT DISTINCT p0."Brand" AS "Brand", p0."Country" AS "Country", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months" FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Plan" s) p0) d
+    SELECT d."Brand" AS "Brand", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE), 0)) THEN d.p0_v ELSE NULL END) AS v
+    FROM (SELECT p0."Brand" AS "Brand", p0."Country" AS "Country", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Marketing" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
+) WHERE v IS NOT NULL
+UNION ALL
+SELECT * FROM (
+    SELECT d."Brand" AS "Brand", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) = coalesce(CAST(1 AS DOUBLE), 0))) THEN d.v ELSE NULL END) AS v
+    FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Plan" s) d
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months"
-    LEFT JOIN (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Marketing" s) r1 ON r1."Brand" = d."Brand" AND r1."Country" = d."Country" AND r1."Years" = d."Years" AND r1."Months" = d."Months"
-    LEFT JOIN (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Plan" s) r2 ON r2."Brand" = d."Brand" AND r2."Country" = d."Country" AND r2."Versions" = d."Versions" AND r2."Years" = d."Years" AND r2."Months" = d."Months"
 ) WHERE v IS NOT NULL;
 
 -- @table "Marketing Cost"
@@ -23,7 +26,7 @@ SELECT * FROM (
 -- Marketing Unallocated = "Marketing Pool" - "Marketing Cost"
 CREATE OR REPLACE TEMP TABLE "Marketing Unallocated" AS
 SELECT u."Brand" AS "Brand", u."Country" AS "Country", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
-FROM (SELECT "Brand", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Pool" s) r0 UNION ALL SELECT "Brand", "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Marketing Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Country") r1) u
+FROM (SELECT "Brand", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Brand" AS "Brand", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Pool" s) r0 UNION ALL SELECT "Brand", "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Marketing Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Country") r1) u
 GROUP BY u."Brand", u."Country", u."Versions", u."Years", u."Months";
 
 -- @table "Contribution Margin III"
@@ -38,7 +41,7 @@ GROUP BY u."Customer", u."Brand", u."Versions", u."Years", u."Months";
 CREATE OR REPLACE TEMP TABLE "Contribution Margin III by Country" AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
-    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Contribution Margin III" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
+    FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Contribution Margin III" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "Unallocated by Country"
@@ -68,7 +71,7 @@ SELECT * FROM (
 CREATE OR REPLACE TEMP TABLE "PL Marketing" AS
 SELECT * FROM (
     SELECT 13 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE)) * d.v) AS v
-    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Marketing Cost" s LEFT JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
+    FROM (SELECT s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", sum(s.v) AS v FROM "Marketing Cost" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Brand", s."Versions", s."Years", s."Months", u0."Channel", u0."Country") d
 ) WHERE v IS NOT NULL;
 
 -- @table "PL Marketing Unallocated"
@@ -100,6 +103,6 @@ CREATE OR REPLACE TEMP TABLE "CHECK PL without FX Rate" AS
 SELECT * FROM (
     SELECT d."PL Line" AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) > coalesce(CAST(0 AS DOUBLE), 0))) THEN abs(d.v) ELSE NULL END) AS v
     FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL OUT" s) d
-    LEFT JOIN "flat Country" f_3 ON f_3."Country" = d."Country"
+    JOIN "flat Country" f_3 ON f_3."Country" = d."Country"
     LEFT JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s."Currency" AS "Currency", s.v AS v FROM "FX Rate" s) r0 ON r0."Versions" = d."Versions" AND r0."Years" = d."Years" AND r0."Months" = d."Months" AND r0."Currency" = f_3."Currency"
 ) WHERE v IS NOT NULL;

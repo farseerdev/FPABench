@@ -33,7 +33,10 @@ import { parseFormula, nodesOf } from '../rql.mjs';
 export function translate(model, { versions, years, dialect = 'duckdb', dict }) {
     const CH = dialect === 'clickhouse';
     const DOUBLE = 'DOUBLE';
-    const KEY = CH ? 'Int32' : 'INTEGER';
+    // Versions, Years and Months have few members, so their ids fit in one byte. Smaller keys make the joins
+    // and GROUP BYs faster.
+    const SMALL = new Set(['Versions', 'Years', 'Months']);
+    const keyType = (d) => (SMALL.has(d) ? (CH ? 'UInt8' : 'UTINYINT') : CH ? 'Int32' : 'INTEGER');
     const mid = (dim, name) => {
         const v = dict.get(dim)?.get(name);
         if (v === undefined) throw new Error(`no id for member ${name} of ${dim}`);
@@ -46,7 +49,13 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
     // Calculated tables live in memory: DuckDB TEMP tables, ClickHouse Memory tables. Only the inputs need
     // to survive a crash, since every calculated table can be built again from them. After a restart the
     // system builds them again on start, and that time counts in R8.
-    const createAs = (name) => (CH ? `CREATE OR REPLACE TABLE ${name} ENGINE = Memory AS` : `CREATE OR REPLACE TEMP TABLE ${name} AS`);
+    // In ClickHouse the table is created first with plain column types, then filled. A table created from the
+    // SELECT would get Nullable columns from join_use_nulls, and Nullable columns are slower to read.
+    // insert_null_as_default = 0 makes a NULL fail the insert instead of turning into 0.
+    const createAs = (name, dims, value = true) =>
+        CH
+            ? `CREATE OR REPLACE TABLE ${name} (${[...dims.map((d) => `${id(d)} ${keyType(d)}`), ...(value ? ['v Float64'] : [])].join(', ')}) ENGINE = Memory;\nINSERT INTO ${name} SETTINGS insert_null_as_default = 0`
+            : `CREATE OR REPLACE TEMP TABLE ${name} AS`;
     // An input table with an alias. In ClickHouse it keeps old row versions until a merge, so it is read FINAL.
     const from = (x, alias) => (CH && !x.formula ? `${rel(x)} AS ${alias} FINAL` : `${rel(x)} ${alias}`);
     const VERSIONS = versions;
@@ -100,13 +109,26 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
     // --- one calculated variable ----------------------------------------------------------------------------
 
     function translateVariable(v) {
-        const T = openOf(v);
-        const pins = pinsOf(v);
         const ast = parseFormula(v.formula);
         const top = ast.type === 'paren' ? ast.expr : ast;
-        if (top.type === 'call' && top.name === 'cumsum') return carryView(v, T, pins, top);
-        if (top.type === 'call' && top.name === 'delay') return delayView(v, T, pins, top);
+        if (top.type === 'call' && top.name === 'cumsum') return carryView(v, openOf(v), pinsOf(v), top);
+        if (top.type === 'call' && top.name === 'delay') return delayView(v, openOf(v), pinsOf(v), top);
+        // if(c, A, B) is two parts: A where c holds, and B where it does not. A coordinate is in one part
+        // only, so the parts need no DISTINCT and no join of A's cells with B's. That is several times faster
+        // than one statement over both branches' cells, and gives the same rows.
+        if (top.type === 'call' && top.name === 'if' && top.args.length === 3) {
+            const [c, a, b] = top.args;
+            const yes = selectOf(v, { type: 'call', name: 'if', args: [c, a] });
+            const no = selectOf(v, { type: 'call', name: 'if', args: [{ type: 'call', name: 'not', args: [c] }, b] });
+            return [createAs(rel(v), grainOf(v)), yes, 'UNION ALL', `${no};`].join('\n');
+        }
+        return [createAs(rel(v), grainOf(v)), `${selectOf(v, top)};`].join('\n');
+    }
 
+    /** The SELECT of a calculated variable's rows, for the formula `top`. */
+    function selectOf(v, top) {
+        const T = openOf(v);
+        const pins = pinsOf(v);
         const refs = [];
         // An operand, aligned to the target grain. keys: direct target dims. via: [x, t] pairs, the operand's
         // dimension x is an ancestor of target dimension t, so the operand is copied down to t.
@@ -130,6 +152,9 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
                 }
             }
             r.sql = alignSql(r);
+            // An operand read twice is joined once.
+            const same = refs.find((o) => o.sql === r.sql && JSON.stringify(o.via) === JSON.stringify(r.via));
+            if (same) return same;
             refs.push(r);
             return r;
         }
@@ -314,7 +339,7 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
             const keys = T.map(id).join(', ');
             const parts = refs.map((r, k) => `SELECT ${keys}, ${chain[k].sign < 0 ? '-' : ''}v AS v FROM (${r.sql}) r${k}`);
             const cols = grainOf(v).map((g) => (pins[g] !== undefined ? `${mid(g, pins[g])} AS ${id(g)}` : `u.${id(g)} AS ${id(g)}`));
-            return [createAs(rel(v)), `SELECT ${[...cols, 'sum(u.v) AS v'].join(', ')}`, `FROM (${parts.join(' UNION ALL ')}) u`, `GROUP BY ${T.map((t) => `u.${id(t)}`).join(', ')};`].join('\n');
+            return [`SELECT ${[...cols, 'sum(u.v) AS v'].join(', ')}`, `FROM (${parts.join(' UNION ALL ')}) u`, `GROUP BY ${T.map((t) => `u.${id(t)}`).join(', ')}`].join('\n');
         }
         let cells = value.cells;
         if (cells.u) cells = { join: [] };
@@ -347,16 +372,15 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
             return `f_${T.indexOf(t)}.${id(x)}`;
         }
         // memberColVia fills `flats`, so the flat joins are built after the operand joins.
-        const flatJoins = [...flats].map(([t, _]) => `LEFT JOIN ${flatView(t)} f_${T.indexOf(t)} ON f_${T.indexOf(t)}.${id(t)} = d.${id(t)}`);
+        const flatJoins = [...flats].map(([t, _]) => `JOIN ${flatView(t)} f_${T.indexOf(t)} ON f_${T.indexOf(t)}.${id(t)} = d.${id(t)}`);
         const cols = grainOf(v).map((g) => (pins[g] !== undefined ? `${mid(g, pins[g])} AS ${id(g)}` : `d.${id(g)} AS ${id(g)}`));
         return [
-            createAs(rel(v)),
             `SELECT * FROM (`,
             `    SELECT ${[...cols, `${value.sql} AS v`].join(', ')}`,
             `    FROM (${driver}) d`,
             ...flatJoins.map((j) => `    ${j}`),
             ...joins.map((j) => `    ${j}`),
-            `) WHERE v IS NOT NULL;`,
+            `) WHERE v IS NOT NULL`,
         ].join('\n');
 
         // The distinct target coordinates of a list of cell sets, united.
@@ -438,7 +462,7 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
         const flat = (d) => {
             if (!flatFor.has(d)) {
                 flatFor.set(d, `u${flatFor.size}`);
-                joins.push(`LEFT JOIN ${flatView(d)} ${flatFor.get(d)} ON ${flatFor.get(d)}.${id(d)} = s.${id(d)}`);
+                joins.push(`JOIN ${flatView(d)} ${flatFor.get(d)} ON ${flatFor.get(d)}.${id(d)} = s.${id(d)}`);
             }
             return flatFor.get(d);
         };
@@ -471,7 +495,8 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
         throw new Error(`${x.name}: cannot use ${f.type} as a filter`);
     }
 
-    // cumsum(0, 0, X): from the first value of X, every later period holds the last value of X.
+    // cumsum(0, 0, X): from the first value of X, every later period holds the last value of X. X has no
+    // NULL values, since a missing value is a missing row.
     function carryView(v, T, pins, n) {
         const [a, b, src] = n.args;
         if (a.type !== 'num' || b.type !== 'num' || Number(a.value) !== 0 || Number(b.value) !== 0 || src.type !== 'name')
@@ -481,12 +506,18 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
         const other = T.filter((t) => !TIME.has(t)).map(id);
         const part = other.length ? `PARTITION BY ${other.map((o) => `g.${o}`).join(', ')} ` : '';
         return [
-            createAs(rel(v)),
+            createAs(rel(v), grainOf(v)),
             `WITH s AS (SELECT ${[...grainOf(v).filter((d) => !TIME.has(d)).map((d) => `x.${id(d)} AS ${id(d)}`), 'x."Years" AS "Years"', 'x."Months" AS "Months"', 'x.v AS v', 'p.p AS p'].join(', ')} FROM ${rel(x)} x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months"),`,
             `f0 AS (SELECT ${[...other, 'min(p) AS p0'].join(', ')} FROM s${other.length ? ` GROUP BY ${other.join(', ')}` : ''}),`,
             `g AS (SELECT ${[...other.map((o) => `f.${o} AS ${o}`), 'p."Years" AS "Years"', 'p."Months" AS "Months"', 'p.p AS p'].join(', ')} FROM f0 f CROSS JOIN period p WHERE p.p >= f.p0)`,
-            `SELECT ${grainOf(v).map((d) => `g.${id(d)} AS ${id(d)}`).join(', ')}, ${CH ? 'last_value(s.v) IGNORE NULLS' : 'last_value(s.v IGNORE NULLS)'} OVER (${part}ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS v`,
-            `FROM g LEFT JOIN s ON ${[...other, '"Years"', '"Months"'].map((o) => `s.${o} = g.${o}`).join(' AND ')};`,
+            ...(other.length
+                ? // Each period takes the value of the latest period of X at or before it: one ASOF JOIN, no window.
+                  [`SELECT ${grainOf(v).map((d) => `g.${id(d)} AS ${id(d)}`).join(', ')}, s.v AS v`, `FROM g ASOF JOIN s ON ${other.map((o) => `s.${o} = g.${o}`).join(' AND ')} AND g.p >= s.p;`]
+                : // An ASOF JOIN needs a column to match on, so with none the last value comes from a window.
+                  [
+                      `SELECT ${grainOf(v).map((d) => `g.${id(d)} AS ${id(d)}`).join(', ')}, ${CH ? 'last_value(s.v) IGNORE NULLS' : 'last_value(s.v IGNORE NULLS)'} OVER (${part}ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS v`,
+                      `FROM g LEFT JOIN s ON ${[...other, '"Years"', '"Months"'].map((o) => `s.${o} = g.${o}`).join(' AND ')};`,
+                  ]),
         ].join('\n');
     }
 
@@ -498,7 +529,7 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
         if (grainOf(x).join() !== grainOf(v).join()) throw new Error(`${v.name}: delay over another grain`);
         const other = grainOf(v).filter((t) => !TIME.has(t)).map((o) => `s.${id(o)} AS ${id(o)}`);
         return [
-            createAs(rel(v)),
+            createAs(rel(v), grainOf(v)),
             `SELECT ${[...other, 'q."Years" AS "Years"', 'q."Months" AS "Months"', 's.v AS v'].join(', ')}`,
             `FROM ${rel(x)} s JOIN period p ON p."Years" = s."Years" AND p."Months" = s."Months" JOIN period q ON q.p = p.p + ${Number(k.value)};`,
         ].join('\n');
@@ -512,23 +543,23 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
         const periods = YEARS.flatMap((y, i) => MONTHS.map((m, k) => `(${mid('Years', y)}, ${mid('Months', m)}, ${i * 12 + k})`));
         out.push(
             CH
-                ? `CREATE TABLE period ENGINE = MergeTree ORDER BY p ${DURABLE} AS SELECT * FROM values('"Years" Int32, "Months" Int32, p Int64', ${periods.join(', ')});`
-                : `CREATE TABLE period AS SELECT * FROM (VALUES ${periods.join(', ')}) t("Years", "Months", p);`
+                ? `CREATE TABLE period ENGINE = MergeTree ORDER BY p ${DURABLE} AS SELECT * FROM values('"Years" UInt8, "Months" UInt8, p Int64', ${periods.join(', ')});`
+                : `CREATE TABLE period AS SELECT "Years"::UTINYINT AS "Years", "Months"::UTINYINT AS "Months", p FROM (VALUES ${periods.join(', ')}) t("Years", "Months", p);`
         );
         // A dimension table holds each member's id, its name, and the ids of its parents.
         for (const d of [...userDims, 'Versions', 'Years', 'Months']) {
-            const cols = [`${id(d)} ${KEY}`, `name ${CH ? 'String' : 'VARCHAR'}`, ...parentsOf(d).map((c) => `${id(c)} ${KEY}`)];
+            const cols = [`${id(d)} ${keyType(d)}`, `name ${CH ? 'String' : 'VARCHAR'}`, ...parentsOf(d).map((c) => `${id(c)} ${keyType(c)}`)];
             out.push(CH ? `CREATE TABLE ${dimTable(d)} (${cols.join(', ')}) ENGINE = MergeTree ORDER BY ${id(d)} ${DURABLE};` : `CREATE TABLE ${dimTable(d)} (${cols.join(', ')}, PRIMARY KEY (${id(d)}));`);
         }
         for (const v of model.variables.filter(isInput)) {
             const keys = grainOf(v).map(id);
+            const typed = grainOf(v).map((d) => `${id(d)} ${keyType(d)}`);
             if (CH) {
                 // A write is a new row with a higher version. A delete is a row with is_deleted = 1. FINAL keeps the latest.
-                const cols = [...keys.map((k) => `${k} ${KEY}`), 'v Float64', 'ver UInt64', 'is_deleted UInt8'];
+                const cols = [...typed, 'v Float64', 'ver UInt64', 'is_deleted UInt8'];
                 out.push(`CREATE TABLE ${rel(v)} (${cols.join(', ')}) ENGINE = ReplacingMergeTree(ver, is_deleted) ORDER BY ${keys.length ? `(${keys.join(', ')})` : 'tuple()'} ${DURABLE};`);
             } else {
-                const cols = keys.map((k) => `${k} ${KEY}`);
-                out.push(`CREATE TABLE ${rel(v)} (${[...cols, `v ${DOUBLE}`].join(', ')}${cols.length ? `, PRIMARY KEY (${keys.join(', ')})` : ''});`);
+                out.push(`CREATE TABLE ${rel(v)} (${[...typed, `v ${DOUBLE}`].join(', ')}${keys.length ? `, PRIMARY KEY (${keys.join(', ')})` : ''});`);
             }
         }
         return out.join('\n') + '\n';
@@ -554,7 +585,7 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
                 cols.push(`coalesce(${alias.get(a)}.${id(a)}, ${mid(a, `NULL (${a})`)}) AS ${id(a)}`);
             }
             // A small table per dimension, built once per rebuild, instead of a view joined again in every statement.
-            out.push(`${createAs(flatView(d))} SELECT ${cols.join(', ')} FROM ${dimTable(d)} t0${joins.length ? ' ' + joins.join(' ') : ''};`);
+            out.push(`${createAs(flatView(d), [d, ...anc], false)} SELECT ${cols.join(', ')} FROM ${dimTable(d)} t0${joins.length ? ' ' + joins.join(' ') : ''};`);
         }
         return out.join('\n');
     }
