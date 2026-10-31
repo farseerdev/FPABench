@@ -14,13 +14,13 @@ export default {
     async run({ db, pick: { at, country, value } }) {
         db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Volume Override IN', at), value }], [], false));
 
-        return db.rows('EBIT OUT', [], { Country: country, Versions: at.Versions, Years: at.Years });
+        return await db.rows('EBIT OUT', [], { Country: country, Versions: at.Versions, Years: at.Years });
     },
 
     // Untimed: the volume is the typed one, and no other country's EBIT moved.
-    check: ({ db, pick: { at } }) => ({
-        Volume: db.rows('Volume', [], at),
-        'EBIT OUT by country': db.rows('EBIT OUT', ['Country'], { Versions: at.Versions, Years: at.Years }),
+    check: async ({ db, pick: { at } }) => ({
+        Volume: await db.rows('Volume', [], at),
+        'EBIT OUT by country': await db.rows('EBIT OUT', ['Country'], { Versions: at.Versions, Years: at.Years }),
     }),
 
     teardown: ({ db }) => db.close(),

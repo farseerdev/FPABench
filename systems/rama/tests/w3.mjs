@@ -13,7 +13,7 @@ export default {
     async run({ db, pick: { at, country, value } }) {
         db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Rebate Rate IN', at), value }], [], false));
 
-        return db.rows('EBIT OUT', [], { Country: country, Versions: at.Versions, Years: at.Years, Months: at.Months });
+        return await db.rows('EBIT OUT', [], { Country: country, Versions: at.Versions, Years: at.Years, Months: at.Months });
     },
 
     teardown: ({ db }) => db.close(),

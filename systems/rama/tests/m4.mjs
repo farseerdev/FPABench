@@ -18,15 +18,15 @@ export default {
     async run({ db }) {
         db.rw((tx) => tx.modelImport(CHANGE, { dryRun: false, deleteEnabled: NO_DELETE }));
 
-        return db.rows('Contribution Margin III by Country', ['Country'], { Versions: 'FC 6+6', Years: 'Y2026' });
+        return await db.rows('Contribution Margin III by Country', ['Country'], { Versions: 'FC 6+6', Years: 'Y2026' });
     },
 
     // Untimed: the new cost and the overheads by country, the OPEX check, and EBIT, which must not move.
-    check: ({ db }) => ({
-        'Marketing Staff Cost by country': db.rows('Marketing Staff Cost', ['Country'], { Versions: 'FC 6+6', Years: 'Y2026' }),
-        'Overheads by country': db.rows('Overheads', ['Country'], { Versions: 'FC 6+6', Years: 'Y2026' }),
-        'CHECK OPEX in EBIT': db.rows('CHECK OPEX in EBIT', ['Country', 'Versions', 'Years', 'Months']),
-        'EBIT OUT by country and month': db.rows('EBIT OUT', ['Country', 'Versions', 'Years', 'Months']),
+    check: async ({ db }) => ({
+        'Marketing Staff Cost by country': await db.rows('Marketing Staff Cost', ['Country'], { Versions: 'FC 6+6', Years: 'Y2026' }),
+        'Overheads by country': await db.rows('Overheads', ['Country'], { Versions: 'FC 6+6', Years: 'Y2026' }),
+        'CHECK OPEX in EBIT': await db.rows('CHECK OPEX in EBIT', ['Country', 'Versions', 'Years', 'Months']),
+        'EBIT OUT by country and month': await db.rows('EBIT OUT', ['Country', 'Versions', 'Years', 'Months']),
     }),
 
     teardown: ({ db }) => db.close(),

@@ -14,11 +14,11 @@ export default {
     async run({ db, pick: { cells, country, months } }) {
         db.rw((tx) => tx.updateCells([], cells.map(({ at, value }) => ({ type: 'VARIABLE', formula: cell('Volume Override IN', at), value })), [], false));
 
-        return db.rows('Volume', [], { Country: country, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
+        return await db.rows('Volume', [], { Country: country, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
     },
 
     // The country's EBIT for the year, untimed.
-    check: ({ db, pick: { country } }) => ({ 'EBIT OUT': db.rows('EBIT OUT', [], { Country: country, Versions: 'FC 6+6', Years: 'Y2026' }) }),
+    check: async ({ db, pick: { country } }) => ({ 'EBIT OUT': await db.rows('EBIT OUT', [], { Country: country, Versions: 'FC 6+6', Years: 'Y2026' }) }),
 
     teardown: ({ db }) => db.close(),
 };

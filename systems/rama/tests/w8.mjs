@@ -16,10 +16,10 @@ export default {
         for (const pick of context.picks) {
             if (pick.value !== undefined) continue;
             const at = { 'Customer Group': pick.group, Versions: 'FC 6+6', Years: 'Y2026' };
-            const year = context.db.rows('Invoice Sales by Group Year', [], at)[0].value;
-            const lastYear = context.db.rows('Invoice Sales LY by Group', [], { 'Customer Group': pick.group, Years: 'Y2026' })[0].value;
+            const year = (await context.db.rows('Invoice Sales by Group Year', [], at))[0].value;
+            const lastYear = (await context.db.rows('Invoice Sales LY by Group', [], { 'Customer Group': pick.group, Years: 'Y2026' }))[0].value;
             const growth = year / lastYear - 1;
-            const on = (context.db.rows('Growth Bonus Rate', [], at)[0]?.value ?? 0) > 0;
+            const on = ((await context.db.rows('Growth Bonus Rate', [], at))[0]?.value ?? 0) > 0;
             pick.value = on ? growth + 0.001 : growth - 0.001;
         }
     },
@@ -28,11 +28,11 @@ export default {
         const at = { 'Customer Group': group, Versions: 'FC 6+6', Years: 'Y2026' };
         db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Growth Bonus Threshold IN', at), value }], [], false));
 
-        return db.rows('Growth Bonus', [], at);
+        return await db.rows('Growth Bonus', [], at);
     },
 
     // The bonus check of the group, untimed. It must stay 0.
-    check: ({ db, pick: { group } }) => ({ 'CHECK Growth Bonus': db.rows('CHECK Growth Bonus', [], { 'Customer Group': group, Versions: 'FC 6+6', Years: 'Y2026' }) }),
+    check: async ({ db, pick: { group } }) => ({ 'CHECK Growth Bonus': await db.rows('CHECK Growth Bonus', [], { 'Customer Group': group, Versions: 'FC 6+6', Years: 'Y2026' }) }),
 
     teardown: ({ db }) => db.close(),
 };

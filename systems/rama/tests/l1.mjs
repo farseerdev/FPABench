@@ -81,7 +81,7 @@ export default {
         fs.rmSync(file, { force: true });
 
         // 4. Read EBIT in euros for every country, version, year and month.
-        return db.rows('EBIT EUR OUT', ['Country', 'Versions', 'Years', 'Months']);
+        return await db.rows('EBIT EUR OUT', ['Country', 'Versions', 'Years', 'Months']);
     },
 
     // The invariants of the loaded model, untimed. Every row they return must be 0.
@@ -111,7 +111,7 @@ export default {
             });
         }
         // The P&L adds up to EBIT, per country, version, year and month.
-        zero['PL OUT - EBIT OUT'] = difference(db.rows('PL OUT', all4), db.rows('EBIT OUT', all4));
+        zero['PL OUT - EBIT OUT'] = difference(await db.rows('PL OUT', all4), await db.rows('EBIT OUT', all4));
         // Every allocation pool is spread in full: pool = allocated cost + unallocated, per country, version and year.
         const by = ['Country', 'Versions', 'Years'];
         for (const [pool, cost, rest] of [
@@ -120,18 +120,18 @@ export default {
             ['Sales Force Pool', 'Sales Force Cost', 'Sales Force Unallocated'],
             ['Marketing Pool', 'Marketing Cost', 'Marketing Unallocated'],
         ]) {
-            zero[`${pool} - ${cost} - ${rest}`] = difference(db.rows(pool, by), db.rows(cost, by), db.rows(rest, by));
+            zero[`${pool} - ${cost} - ${rest}`] = difference(await db.rows(pool, by), await db.rows(cost, by), await db.rows(rest, by));
         }
         // Closed months hold the actuals: Volume, Gross Sales and COGS equal their ACT, where FC Actual is 1.
-        const closed = db.rows('FC Actual', ['Versions', 'Years', 'Months']).filter((r) => r.value === 1);
+        const closed = (await db.rows('FC Actual', ['Versions', 'Years', 'Months'])).filter((r) => r.value === 1);
         for (const [merged, actual] of [
             ['Volume', 'Volume ACT'],
             ['Gross Sales', 'Gross Sales ACT'],
             ['COGS', 'COGS ACT'],
         ]) {
-            const acts = new Map(db.rows(actual, ['Country', 'Years', 'Months']).map((r) => [keyOf([r.key.Country, r.key.Years, r.key.Months]), r.value]));
+            const acts = new Map((await db.rows(actual, ['Country', 'Years', 'Months'])).map((r) => [keyOf([r.key.Country, r.key.Years, r.key.Months]), r.value]));
             const rows = [];
-            for (const r of db.rows(merged, all4)) {
+            for (const r of await db.rows(merged, all4)) {
                 if (!closed.some((f) => f.key.Versions === r.key.Versions && f.key.Years === r.key.Years && f.key.Months === r.key.Months)) continue;
                 rows.push({ key: r.key, value: r.value - (acts.get(keyOf([r.key.Country, r.key.Years, r.key.Months])) ?? 0) });
             }

@@ -63,11 +63,11 @@ export default {
         });
         fs.rmSync(file, { force: true });
 
-        return db.rows('EBIT OUT', ['Country'], { Versions: 'Actual', Years: 'Y2026', Months: 'M7' });
+        return await db.rows('EBIT OUT', ['Country'], { Versions: 'Actual', Years: 'Y2026', Months: 'M7' });
     },
 
     // The import control totals of M7, by country, untimed.
-    check: ({ db }) => ({ 'CHECK Import Total by country': db.rows('CHECK Import Total', ['Country'], { Years: 'Y2026', Months: 'M7' }) }),
+    check: async ({ db }) => ({ 'CHECK Import Total by country': await db.rows('CHECK Import Total', ['Country'], { Years: 'Y2026', Months: 'M7' }) }),
 
     teardown: ({ db }) => db.close(),
 };

@@ -24,11 +24,11 @@ export default {
             tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Volume Override IN', { Customer: customer, SKU: sku, Versions: 'FC 6+6', Years: 'Y2026', Months: 'M7' }), value }], [], false);
         });
 
-        return db.rows('Volume', [], { 'Customer Group': group, Versions: 'FC 6+6', Years: 'Y2026', Months: 'M7' });
+        return await db.rows('Volume', [], { 'Customer Group': group, Versions: 'FC 6+6', Years: 'Y2026', Months: 'M7' });
     },
 
     // The EBIT of the group's country, untimed.
-    check: ({ db, pick: { country } }) => ({ 'EBIT OUT': db.rows('EBIT OUT', [], { Country: country, Versions: 'FC 6+6', Years: 'Y2026' }) }),
+    check: async ({ db, pick: { country } }) => ({ 'EBIT OUT': await db.rows('EBIT OUT', [], { Country: country, Versions: 'FC 6+6', Years: 'Y2026' }) }),
 
     teardown: ({ db }) => db.close(),
 };

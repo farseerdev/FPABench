@@ -11,8 +11,8 @@ export default {
         context.db = restore(context.work);
     },
 
-    run({ db, pick: { country } }) {
-        const rows = db.rows('Contribution Margin III', ['Customer'], { Country: country, Versions: 'FC 6+6', Years: 'Y2026' });
+    async run({ db, pick: { country } }) {
+        const rows = await db.rows('Contribution Margin III', ['Customer'], { Country: country, Versions: 'FC 6+6', Years: 'Y2026' });
         return rows.sort((a, b) => b.value - a.value || (a.key.Customer < b.key.Customer ? -1 : 1)).slice(0, 100);
     },
 

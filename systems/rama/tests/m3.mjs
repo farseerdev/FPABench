@@ -25,11 +25,11 @@ export default {
     async run({ db, region, pick: { customer, group, target } }) {
         db.rw((tx) => tx.modelImport(JSON.stringify({ tables: [customerTable(customer, target, region)], variables: [] }), { dryRun: false, deleteEnabled: NO_DELETE }));
 
-        return db.rows('Gross Sales', ['Customer Group'], { 'Customer Group': [group, target], Versions: 'FC 6+6', Years: 'Y2026' });
+        return await db.rows('Gross Sales', ['Customer Group'], { 'Customer Group': [group, target], Versions: 'FC 6+6', Years: 'Y2026' });
     },
 
     // Actual EBIT by country and month, untimed. The past does not move.
-    check: ({ db }) => ({ 'Actual EBIT OUT by country and month': db.rows('EBIT OUT', ['Country', 'Years', 'Months'], { Versions: 'Actual' }) }),
+    check: async ({ db }) => ({ 'Actual EBIT OUT by country and month': await db.rows('EBIT OUT', ['Country', 'Years', 'Months'], { Versions: 'Actual' }) }),
 
     teardown: ({ db }) => db.close(),
 };

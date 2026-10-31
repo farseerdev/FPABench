@@ -51,7 +51,6 @@ export const cell = (variable, where) => `sum(${[q(variable), ...Object.entries(
  */
 export function open(work) {
     const db = rama.openDB(dbOf(work));
-    db.enableAbakus(true);
     return handles(db);
 }
 
@@ -59,7 +58,6 @@ export function open(work) {
 export function create(work) {
     rama.dropDB(dbOf(work));
     const db = rama.createDB(dbOf(work), true);
-    db.enableAbakus(true);
     return handles(db);
 }
 
@@ -111,32 +109,35 @@ function handles(db) {
             return g;
         },
         /**
-         * Rows { key, value } of a stored variable summed over `by`, where the filters hold. RAMA lists the
-         * combinations of `by` members that have a value (generateCombinations, what a Farseer sheet uses for
-         * rows with data), and one query call reads them all.
+         * Rows { key, value } of a stored variable summed over `by`, where the filters hold. With `by`, one
+         * GROUPED_READ command gives the groups of `by` members that have a value, each folded by the variable's
+         * rollup in one scan. It runs outside any transaction, since the command opens one of its own. Without
+         * `by`, one query call reads the one cell.
          */
-        rows(variable, by = [], where = {}) {
-            const rest = Object.fromEntries(Object.entries(where).filter(([d]) => !by.includes(d)));
-            return ro((tx) => {
-                let combos = [{}];
-                if (by.length) {
-                    const found = tx.generateCombinations(by.map((d) => tx.dimensionByName(d).gid()), [], cell(variable, where), [], false);
-                    const names = by.map((d) => dimension(tx, d).byGid);
-                    combos = found.memberGids.map((g) => Object.fromEntries(by.map((d, i) => [d, names[i].get(g[i])])));
-                }
-                // The filters every combination shares are one named filter, defined once for the query call and
-                // named in each formula, instead of written out in each (#32). RAMA parses that body once and
-                // caches its result for every formula.
-                const shared = Object.entries(rest).map(([d, m]) => filter(d, m));
-                const named = shared.length ? [['shared', `and(${shared.join(', ')})`]] : [];
-                const formula = (key) => `sum(${[q(variable), ...(shared.length ? ['shared'] : []), ...Object.entries(key).map(([d, m]) => filter(d, m))].join(', ')})`;
-                const values = tx.query(named, combos.map((key) => ({ type: 'VARIABLE', formula: formula(key) })), []);
+        async rows(variable, by = [], where = {}) {
+            if (by.length) {
+                const { gids, names } = ro((tx) => ({
+                    gids: by.map((d) => tx.dimensionByName(d).gid()),
+                    names: by.map((d) => dimension(tx, d).byGid),
+                }));
+                const body = { type: 'GROUPED_READ', groupTableGids: gids, formulas: [cell(variable, where)], filters: [] };
+                const outcome = await db.runCommand(Buffer.from(JSON.stringify(body), 'utf8'));
+                if (outcome.status !== 'executed') throw new Error(`GROUPED_READ was not executed: ${outcome.status}`);
+                const { memberGids, values } = JSON.parse(Buffer.from(outcome.result).toString('utf8')).data;
                 const out = [];
-                combos.forEach((key, i) => {
-                    const v = values[i].value;
-                    if (v !== null && v !== undefined) out.push({ key, value: v });
+                memberGids.forEach((g, i) => {
+                    const v = values[0][i];
+                    if (v !== null && v !== undefined) out.push({ key: Object.fromEntries(by.map((d, j) => [d, names[j].get(g[j])])), value: v });
                 });
                 return out;
+            }
+            return ro((tx) => {
+                // The filters are one named filter, defined once for the query call and named in the formula.
+                const shared = Object.entries(where).map(([d, m]) => filter(d, m));
+                const named = shared.length ? [['shared', `and(${shared.join(', ')})`]] : [];
+                const formula = `sum(${[q(variable), ...(shared.length ? ['shared'] : [])].join(', ')})`;
+                const [{ value }] = tx.query(named, [{ type: 'VARIABLE', formula }], []);
+                return value !== null && value !== undefined ? [{ key: {}, value }] : [];
             });
         },
         close: () => db.close(),

@@ -14,7 +14,7 @@ export default {
     async run({ db, pick: { group, category, months, value } }) {
         db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Volume Target IN', { 'Customer Group': group, Category: category, Versions: 'FC 6+6', Years: 'Y2026' }), value }], [], false));
 
-        return db.rows('Volume', [], { 'Customer Group': group, Category: category, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
+        return await db.rows('Volume', [], { 'Customer Group': group, Category: category, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
     },
 
     teardown: ({ db }) => db.close(),

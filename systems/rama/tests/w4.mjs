@@ -16,12 +16,12 @@ export default {
     async run({ db, pick: { brand, value, months } }) {
         db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Price Increase IN', { Brand: brand, Versions: 'FC 6+6', Years: 'Y2026' }), value }], [], false));
 
-        return db.rows('Gross Sales', ['Country', 'Months'], { Brand: brand, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
+        return await db.rows('Gross Sales', ['Country', 'Months'], { Brand: brand, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
     },
 
     // The brand's gross sales in the closed months, untimed. They must not move.
-    check: ({ db, pick: { brand, months } }) => ({
-        'Gross Sales in closed months': db.rows('Gross Sales', ['Country', 'Months'], { Brand: brand, Versions: 'FC 6+6', Years: 'Y2026', Months: MONTHS.filter((m) => !months.includes(m)) }),
+    check: async ({ db, pick: { brand, months } }) => ({
+        'Gross Sales in closed months': await db.rows('Gross Sales', ['Country', 'Months'], { Brand: brand, Versions: 'FC 6+6', Years: 'Y2026', Months: MONTHS.filter((m) => !months.includes(m)) }),
     }),
 
     teardown: ({ db }) => db.close(),
