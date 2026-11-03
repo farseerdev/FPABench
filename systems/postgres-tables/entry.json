@@ -1,5 +1,22 @@
 {
     "name": "PostgreSQL (tables)",
     "approach": "tables",
-    "open": true
+    "open": true,
+    "programs": [
+        {
+            "name": "postgres server",
+            "env": "POSTGRES_BIN",
+            "path": [
+                "/usr/lib/postgresql/18/bin",
+                "/opt/homebrew/opt/postgresql@18/bin",
+                "/usr/local/opt/postgresql@18/bin"
+            ],
+            "probe": "postgres",
+            "extra": [
+                "../lib",
+                "../share",
+                "/usr/share/postgresql/18"
+            ]
+        }
+    ]
 }
