@@ -1,7 +1,8 @@
 // R8 Open the model, on PostgreSQL.
 //
-// Each run starts the server on the snapshot's data, which builds every calculated table,
-// then reads EBIT in euros for the plan year. Timed from the start until the read returns.
+// Each run starts the server on the snapshot's data, then reads EBIT in euros for the plan year. The snapshot
+// was stopped cleanly, so its UNLOGGED calculated tables are all there, and the start only checks them. Timed
+// from the start until the read returns.
 
 import { reset, start, members } from '../db.mjs';
 

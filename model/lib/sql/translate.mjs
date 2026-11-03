@@ -12,7 +12,7 @@
 // as a new row version (ReplacingMergeTree) instead of updating in place. ClickHouse must run with
 // join_use_nulls = 1 and aggregate_functions_null_for_empty = 1, or a missing value turns into 0.
 // PostgreSQL has no CREATE OR REPLACE TABLE, no ASOF JOIN and no IGNORE NULLS, so it drops and creates each
-// calculated table, and cumsum carries the last value with a window instead.
+// calculated table, and cumsum carries the last value with lead() instead.
 //
 // Semantics follow RAMA:
 //   - a missing cell is a missing row, never NULL in a table and never 0
@@ -52,17 +52,21 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
     const DURABLE = "SETTINGS fsync_after_insert = 1, fsync_part_directory = 1";
     // Calculated tables live in memory: DuckDB TEMP tables, ClickHouse Memory tables. PostgreSQL's are
     // UNLOGGED tables, which skip the write-ahead log, since its TEMP tables belong to one session. Only the inputs need
-    // to survive a crash, since every calculated table can be built again from them. After a restart the
-    // system builds them again on start, and that time counts in R8.
+    // to survive a crash, since every calculated table can be built again from them. After a restart DuckDB and
+    // ClickHouse build them again on start, and that time counts in R8. PostgreSQL keeps UNLOGGED tables over a
+    // clean restart, and empties them only in crash recovery.
     // In ClickHouse the table is created first with plain column types, then filled. A table created from the
     // SELECT would get Nullable columns from join_use_nulls, and Nullable columns are slower to read.
     // insert_null_as_default = 0 makes a NULL fail the insert instead of turning into 0.
+    // PostgreSQL's calculated tables have autovacuum off. A rebuild drops and creates each table, so it leaves no
+    // dead rows, and it analyzes each table itself. Autovacuum still came after each rebuild, since an ANALYZE in
+    // the rebuild's transaction does not reset its counters, and the next write's DROP TABLE waited for it.
     const createAs = (name, dims, value = true) =>
         CH
             ? `CREATE OR REPLACE TABLE ${name} (${[...dims.map((d) => `${id(d)} ${keyType(d)}`), ...(value ? ['v Float64'] : [])].join(', ')}) ENGINE = Memory;\nINSERT INTO ${name} SETTINGS insert_null_as_default = 0`
             : PG
               ? `DROP TABLE IF EXISTS ${name};
-CREATE UNLOGGED TABLE ${name} AS`
+CREATE UNLOGGED TABLE ${name} WITH (autovacuum_enabled = false) AS`
               : `CREATE OR REPLACE TEMP TABLE ${name} AS`;
     // PostgreSQL plans each statement from the statistics of the tables it reads, and a new table has none until
     // autovacuum gets to it. So each calculated table is analyzed as soon as it is built. At 10m a full rebuild
@@ -516,21 +520,26 @@ CREATE UNLOGGED TABLE ${name} AS`
         const x = varOf(src.name);
         if (grainOf(x).join() !== grainOf(v).join()) throw new Error(`${v.name}: cumsum over another grain`);
         const other = T.filter((t) => !TIME.has(t)).map(id);
+        if (PG) {
+            // PostgreSQL has neither ASOF JOIN nor IGNORE NULLS. lead() gives each value of X the period of the
+            // next value of the same key. The value holds from its own period up to the one before that, or to
+            // the end of the timeline. This reads only the rows of X, where a window over every period of every
+            // key, joined back to X, took twice as long at 10m.
+            const last = YEARS.length * MONTHS.length - 1;
+            return [
+                createAs(rel(v), grainOf(v)),
+                `WITH s AS (SELECT ${[...grainOf(v).filter((d) => !TIME.has(d)).map((d) => `x.${id(d)} AS ${id(d)}`), 'x.v AS v', 'p.p AS p', `lead(p.p) OVER (${other.length ? `PARTITION BY ${other.map((o) => `x.${o}`).join(', ')} ` : ''}ORDER BY p.p) AS next_p`].join(', ')} FROM ${rel(x)} x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months")`,
+                `SELECT ${grainOf(v).map((d) => `${TIME.has(d) ? 'q' : 's'}.${id(d)} AS ${id(d)}`).join(', ')}, s.v AS v`,
+                `FROM s CROSS JOIN LATERAL generate_series(s.p, coalesce(s.next_p - 1, ${last})) t(p) JOIN period q ON q.p = t.p;`,
+            ].join('\n');
+        }
         const part = other.length ? `PARTITION BY ${other.map((o) => `g.${o}`).join(', ')} ` : '';
         return [
             createAs(rel(v), grainOf(v)),
             `WITH s AS (SELECT ${[...grainOf(v).filter((d) => !TIME.has(d)).map((d) => `x.${id(d)} AS ${id(d)}`), 'x."Years" AS "Years"', 'x."Months" AS "Months"', 'x.v AS v', 'p.p AS p'].join(', ')} FROM ${rel(x)} x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months"),`,
             `f0 AS (SELECT ${[...other, 'min(p) AS p0'].join(', ')} FROM s${other.length ? ` GROUP BY ${other.join(', ')}` : ''}),`,
             `g AS (SELECT ${[...other.map((o) => `f.${o} AS ${o}`), 'p."Years" AS "Years"', 'p."Months" AS "Months"', 'p.p AS p'].join(', ')} FROM f0 f CROSS JOIN period p WHERE p.p >= f.p0)`,
-            ...(PG
-                ? // PostgreSQL has neither ASOF JOIN nor IGNORE NULLS. A running count of X's values numbers each
-                  // run of periods that starts at a value of X, and every period of a run takes that value.
-                  [
-                      `SELECT ${grainOf(v).map((d) => `w.${id(d)} AS ${id(d)}`).join(', ')}, max(w.v) OVER (PARTITION BY ${[...other.map((o) => `w.${o}`), 'w.run'].join(', ')}) AS v`,
-                      `FROM (SELECT ${grainOf(v).map((d) => `g.${id(d)} AS ${id(d)}`).join(', ')}, s.v AS v, count(s.v) OVER (${part}ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run`,
-                      `FROM g LEFT JOIN s ON ${[...other, '"Years"', '"Months"'].map((o) => `s.${o} = g.${o}`).join(' AND ')}) w;`,
-                  ]
-                : other.length
+            ...(other.length
                 ? // Each period takes the value of the latest period of X at or before it: one ASOF JOIN, no window.
                   [`SELECT ${grainOf(v).map((d) => `g.${id(d)} AS ${id(d)}`).join(', ')}, s.v AS v`, `FROM g ASOF JOIN s ON ${other.map((o) => `s.${o} = g.${o}`).join(' AND ')} AND g.p >= s.p;`]
                 : // An ASOF JOIN needs a column to match on, so with none the last value comes from a window.

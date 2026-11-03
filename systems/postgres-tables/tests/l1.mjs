@@ -13,7 +13,8 @@ const SCHEMA = sqlFile('schema.sql');
 const MEMBERS = sqlFile('members.sql');
 const DIMENSIONS = sqlFile('dimensions.sql');
 const CALCULATE = sqlFile('calculate.sql');
-const IMPORTS = sqlFolder('import');
+// Every table is empty, so each input variable's file goes in with load/<Variable>.sql, a plain INSERT.
+const LOADS = sqlFolder('load');
 
 export default {
     // No data yet: the load starts from an empty data folder, made by initdb.
@@ -36,7 +37,7 @@ export default {
         // SQL names each CSV by its path in the folder of input cells.
         await load(db, DIMENSIONS, cells.base);
         await db.run('BEGIN');
-        for (const file of fs.readdirSync(path.join(cells.base, 'cells'))) await load(db, IMPORTS.get(file.replace(/\.csv$/, '')), cells.base);
+        for (const file of fs.readdirSync(path.join(cells.base, 'cells'))) await load(db, LOADS.get(file.replace(/\.csv$/, '')), cells.base);
         await db.run('COMMIT');
         // Every calculated table, in dependency order, and the data to disk.
         await db.run(CALCULATE);
@@ -103,7 +104,8 @@ export default {
         return Object.fromEntries(Object.entries(zero).map(([name, rows]) => [name, rows.map((r, k) => ({ key: { row: k }, value: r.v }))]));
     },
 
-    // The data folder after the last load, with the server stopped, is the snapshot.
+    // The data folder after the last load, with the server stopped, is the snapshot. A clean stop keeps the
+    // UNLOGGED calculated tables, so a start from the snapshot does not build them again.
     async teardown({ db, work, failed }) {
         await db?.close();
         if (failed) return;

@@ -3,7 +3,7 @@
 //
 // One server runs on the same machine, with its own data folder in the work folder, and the tests talk to it
 // over TCP with node-postgres. The input tables are ordinary tables. The calculated tables are UNLOGGED
-// tables, and a start builds them again from the inputs.
+// tables. A clean stop keeps them, and a start after crash recovery builds them again from the inputs.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,7 +29,7 @@ export const system = {
         server: 'single server on the same machine, TCP',
         nonDefault: 'none. initdb with UTF8 and the C locale.',
         inputs: 'tables, durable',
-        calculated: 'UNLOGGED tables, rebuilt on start',
+        calculated: 'UNLOGGED tables without autovacuum, kept over a clean restart, rebuilt after a crash',
         durable: true,
         keys: 'integer member ids',
         threads: 'default',
@@ -42,7 +42,7 @@ export const sqlFile = (name) => fs.readFileSync(path.join(path.dirname(fileURLT
 /** Every SQL file of a folder in sql/, by its name without .sql, such as the import files by input variable. */
 export const sqlFolder = (folder) => new Map(fs.readdirSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'sql', folder)).map((f) => [f.slice(0, -'.sql'.length), sqlFile(`${folder}/${f}`)]));
 
-// Every calculated table, built on each start. Read once when the file loads, so no file read is timed.
+// Every calculated table, built on a start after crash recovery. Read once when the file loads, so no file read is timed.
 const CALCULATE = sqlFile('calculate.sql');
 
 /** The server's data folder in a work folder, and the snapshot of it L1 leaves next to it. */
@@ -154,16 +154,28 @@ export function reset(work) {
     fs.chmodSync(dataOf(work), 0o700);
 }
 
-/** Starts the server and builds every calculated table. */
+/**
+ * Starts the server, and builds every calculated table if they are not all there. A clean stop keeps UNLOGGED
+ * tables, so a start from the snapshot only checks them. Crash recovery empties every UNLOGGED table, and then
+ * a start builds them all again.
+ */
 export async function start(work) {
     const db = await connect(work);
     try {
-        await db.run(CALCULATE);
+        if (!(await whole(db))) await db.run(CALCULATE);
     } catch (e) {
         await db.close();
         throw e;
     }
     return db;
+}
+
+// Whether the calculated tables are all there: calculate.sql ends with one row in the UNLOGGED table
+// fpabench_calculated. The row is gone after crash recovery, and the table is missing in a data folder from
+// before it.
+async function whole(db) {
+    const [{ found }] = await db.rows(`SELECT to_regclass('fpabench_calculated') IS NOT NULL AS found`);
+    return found && (await db.rows('SELECT 1 FROM fpabench_calculated')).length > 0;
 }
 
 /** Puts the server's data back to the snapshot and starts it. */

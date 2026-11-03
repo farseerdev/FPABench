@@ -3,7 +3,7 @@
 -- @table "COGS ACT"
 -- COGS ACT = "Volume ACT" * "IMPORT Standard Cost" * "IMPORT FX Rate"
 DROP TABLE IF EXISTS "COGS ACT";
-CREATE UNLOGGED TABLE "COGS ACT" AS
+CREATE UNLOGGED TABLE "COGS ACT" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Years" AS "Years", d."Months" AS "Months", ((d.p0_v * d.p1_v) * d.p2_v) AS v
     FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v, p2.v AS p2_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume ACT" s) p0 JOIN (SELECT s."SKU" AS "SKU", s."Years" AS "Years", s.v AS v FROM "IMPORT Standard Cost" s) p1 ON p1."SKU" = p0."SKU" AND p1."Years" = p0."Years" JOIN "flat Customer" g_0 ON g_0."Customer" = p0."Customer" JOIN (SELECT s."Years" AS "Years", s."Months" AS "Months", s."Currency" AS "Currency", s.v AS v FROM "IMPORT FX Rate" s) p2 ON p2."Years" = p0."Years" AND p2."Months" = p0."Months" AND p2."Currency" = g_0."Currency") d
@@ -13,7 +13,7 @@ ANALYZE "COGS ACT";
 -- @table "Standard Cost Plan"
 -- Standard Cost Plan = if(hasValue("Standard Cost IN"), "Standard Cost IN", "IMPORT Standard Cost")
 DROP TABLE IF EXISTS "Standard Cost Plan";
-CREATE UNLOGGED TABLE "Standard Cost Plan" AS
+CREATE UNLOGGED TABLE "Standard Cost Plan" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", (CASE WHEN (d.v IS NOT NULL) THEN d.v ELSE NULL END) AS v
     FROM (SELECT s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Standard Cost IN" s) d
@@ -29,7 +29,7 @@ ANALYZE "Standard Cost Plan";
 -- @table "COGS Plan"
 -- COGS Plan = "Volume Plan" * "Standard Cost Plan" * "FX Rate Plan"
 DROP TABLE IF EXISTS "COGS Plan";
-CREATE UNLOGGED TABLE "COGS Plan" AS
+CREATE UNLOGGED TABLE "COGS Plan" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((d.p0_v * d.p1_v) * d.p2_v) AS v
     FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v, p2.v AS p2_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Plan" s) p0 JOIN (SELECT s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s.v AS v FROM "Standard Cost Plan" s) p1 ON p1."SKU" = p0."SKU" AND p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" JOIN "flat Customer" g_0 ON g_0."Customer" = p0."Customer" JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s."Currency" AS "Currency", s.v AS v FROM "FX Rate Plan" s) p2 ON p2."Versions" = p0."Versions" AND p2."Years" = p0."Years" AND p2."Months" = p0."Months" AND p2."Currency" = g_0."Currency") d
@@ -39,7 +39,7 @@ ANALYZE "COGS Plan";
 -- @table "COGS"
 -- COGS = if(eq("FC Actual", 1), "COGS ACT", "COGS Plan")
 DROP TABLE IF EXISTS "COGS";
-CREATE UNLOGGED TABLE "COGS" AS
+CREATE UNLOGGED TABLE "COGS" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) = coalesce(CAST(1 AS DOUBLE PRECISION), 0)) THEN d.p0_v ELSE NULL END) AS v
     FROM (SELECT p0."Customer" AS "Customer", p0."SKU" AS "SKU", p1."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "COGS ACT" s) p0 JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "FC Actual" s) p1 ON p1."Years" = p0."Years" AND p1."Months" = p0."Months") d
@@ -55,7 +55,7 @@ ANALYZE "COGS";
 -- @table "Gross Margin"
 -- Gross Margin = "Net Sales" - "COGS"
 DROP TABLE IF EXISTS "Gross Margin";
-CREATE UNLOGGED TABLE "Gross Margin" AS
+CREATE UNLOGGED TABLE "Gross Margin" WITH (autovacuum_enabled = false) AS
 SELECT u."Customer" AS "Customer", u."SKU" AS "SKU", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
 FROM (SELECT "Customer", "SKU", "Versions", "Years", "Months", v AS v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Net Sales" s) r0 UNION ALL SELECT "Customer", "SKU", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "COGS" s) r1) u
 GROUP BY u."Customer", u."SKU", u."Versions", u."Years", u."Months";
@@ -64,7 +64,7 @@ ANALYZE "Gross Margin";
 -- @table "Gross Margin by Customer Brand"
 -- Gross Margin by Customer Brand = "Gross Margin"
 DROP TABLE IF EXISTS "Gross Margin by Customer Brand";
-CREATE UNLOGGED TABLE "Gross Margin by Customer Brand" AS
+CREATE UNLOGGED TABLE "Gross Margin by Customer Brand" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."Brand" AS "Brand", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
     FROM (SELECT s."Customer" AS "Customer", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Brand" AS "Brand", sum(s.v) AS v FROM "Gross Margin" s JOIN "flat SKU" u0 ON u0."SKU" = s."SKU" GROUP BY s."Customer", s."Versions", s."Years", s."Months", u0."Brand") d
@@ -74,7 +74,7 @@ ANALYZE "Gross Margin by Customer Brand";
 -- @table "Contribution Margin II"
 -- Contribution Margin II = "Gross Margin by Customer Brand" - "Logistics Cost" - "Sales Force Cost"
 DROP TABLE IF EXISTS "Contribution Margin II";
-CREATE UNLOGGED TABLE "Contribution Margin II" AS
+CREATE UNLOGGED TABLE "Contribution Margin II" WITH (autovacuum_enabled = false) AS
 SELECT u."Customer" AS "Customer", u."Brand" AS "Brand", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
 FROM (SELECT "Customer", "Brand", "Versions", "Years", "Months", v AS v FROM (SELECT s."Customer" AS "Customer", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Margin by Customer Brand" s) r0 UNION ALL SELECT "Customer", "Brand", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Customer" AS "Customer", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Logistics Cost" s) r1 UNION ALL SELECT "Customer", "Brand", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Customer" AS "Customer", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Sales Force Cost" s) r2) u
 GROUP BY u."Customer", u."Brand", u."Versions", u."Years", u."Months";
@@ -83,7 +83,7 @@ ANALYZE "Contribution Margin II";
 -- @table "Contribution Margin III"
 -- Contribution Margin III = "Contribution Margin II" - "Marketing Cost"
 DROP TABLE IF EXISTS "Contribution Margin III";
-CREATE UNLOGGED TABLE "Contribution Margin III" AS
+CREATE UNLOGGED TABLE "Contribution Margin III" WITH (autovacuum_enabled = false) AS
 SELECT u."Customer" AS "Customer", u."Brand" AS "Brand", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
 FROM (SELECT "Customer", "Brand", "Versions", "Years", "Months", v AS v FROM (SELECT s."Customer" AS "Customer", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Contribution Margin II" s) r0 UNION ALL SELECT "Customer", "Brand", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Customer" AS "Customer", s."Brand" AS "Brand", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Marketing Cost" s) r1) u
 GROUP BY u."Customer", u."Brand", u."Versions", u."Years", u."Months";
@@ -92,7 +92,7 @@ ANALYZE "Contribution Margin III";
 -- @table "Contribution Margin III by Country"
 -- Contribution Margin III by Country = "Contribution Margin III"
 DROP TABLE IF EXISTS "Contribution Margin III by Country";
-CREATE UNLOGGED TABLE "Contribution Margin III by Country" AS
+CREATE UNLOGGED TABLE "Contribution Margin III by Country" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", d.v AS v
     FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Country" AS "Country", sum(s.v) AS v FROM "Contribution Margin III" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" GROUP BY s."Versions", s."Years", s."Months", u0."Country") d
@@ -102,7 +102,7 @@ ANALYZE "Contribution Margin III by Country";
 -- @table "EBIT OUT"
 -- EBIT OUT = "Contribution Margin III by Country" - "Overheads" - "Unallocated by Country"
 DROP TABLE IF EXISTS "EBIT OUT";
-CREATE UNLOGGED TABLE "EBIT OUT" AS
+CREATE UNLOGGED TABLE "EBIT OUT" WITH (autovacuum_enabled = false) AS
 SELECT u."Country" AS "Country", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
 FROM (SELECT "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Contribution Margin III by Country" s) r0 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Overheads" s) r1 UNION ALL SELECT "Country", "Versions", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Unallocated by Country" s) r2) u
 GROUP BY u."Country", u."Versions", u."Years", u."Months";
@@ -111,7 +111,7 @@ ANALYZE "EBIT OUT";
 -- @table "EBIT EUR OUT"
 -- EBIT EUR OUT = if(gt("FX Rate", 0), "EBIT OUT" / "FX Rate")
 DROP TABLE IF EXISTS "EBIT EUR OUT";
-CREATE UNLOGGED TABLE "EBIT EUR OUT" AS
+CREATE UNLOGGED TABLE "EBIT EUR OUT" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) > coalesce(CAST(0 AS DOUBLE PRECISION), 0)) THEN (CASE WHEN d.p1_v IS NULL OR d.p1_v = 0 THEN NULL ELSE coalesce(d.p0_v, 0) / d.p1_v END) ELSE NULL END) AS v
     FROM (SELECT p0."Country" AS "Country", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "EBIT OUT" s) p0 JOIN "flat Country" g_0 ON g_0."Country" = p0."Country" JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s."Currency" AS "Currency", s.v AS v FROM "FX Rate" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" AND p1."Months" = p0."Months" AND p1."Currency" = g_0."Currency") d
@@ -121,7 +121,7 @@ ANALYZE "EBIT EUR OUT";
 -- @table "PL COGS"
 -- PL COGS = -1 * "COGS"
 DROP TABLE IF EXISTS "PL COGS";
-CREATE UNLOGGED TABLE "PL COGS" AS
+CREATE UNLOGGED TABLE "PL COGS" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT 10 AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", ((-CAST(1 AS DOUBLE PRECISION)) * d.v) AS v
     FROM (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", u0."Channel" AS "Channel", u0."Country" AS "Country", u1."Brand" AS "Brand", sum(s.v) AS v FROM "COGS" s JOIN "flat Customer" u0 ON u0."Customer" = s."Customer" JOIN "flat SKU" u1 ON u1."SKU" = s."SKU" GROUP BY s."Versions", s."Years", s."Months", u0."Channel", u0."Country", u1."Brand") d
@@ -131,7 +131,7 @@ ANALYZE "PL COGS";
 -- @table "PL OUT"
 -- PL OUT = "PL Gross Sales" + "PL Standard Discounts" + "PL Promo Discounts" + "PL Logistics Discounts" + "PL Rebates" + "PL Growth Bonus" + "PL Trade Fees" + "PL Promo Funding" + "PL COGS" + "PL Logistics" + "PL Sales Force" + "PL Marketing" + "PL Overheads" + "PL Rebates Unallocated" + "PL Growth Bonus Unallocated" + "PL Trade Fees Unallocated" + "PL Logistics Unallocated" + "PL Sales Force Unallocated" + "PL Marketing Unallocated"
 DROP TABLE IF EXISTS "PL OUT";
-CREATE UNLOGGED TABLE "PL OUT" AS
+CREATE UNLOGGED TABLE "PL OUT" WITH (autovacuum_enabled = false) AS
 SELECT u."PL Line" AS "PL Line", u."Brand" AS "Brand", u."Channel" AS "Channel", u."Country" AS "Country", u."Versions" AS "Versions", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
 FROM (SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Gross Sales" s) r0 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Standard Discounts" s) r1 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Promo Discounts" s) r2 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Logistics Discounts" s) r3 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Rebates" s) r4 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Growth Bonus" s) r5 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Trade Fees" s) r6 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Promo Funding" s) r7 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL COGS" s) r8 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Logistics" s) r9 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Sales Force" s) r10 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Marketing" s) r11 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Overheads" s) r12 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Rebates Unallocated" s) r13 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Growth Bonus Unallocated" s) r14 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Trade Fees Unallocated" s) r15 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Logistics Unallocated" s) r16 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Sales Force Unallocated" s) r17 UNION ALL SELECT "PL Line", "Brand", "Channel", "Country", "Versions", "Years", "Months", v AS v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL Marketing Unallocated" s) r18) u
 GROUP BY u."PL Line", u."Brand", u."Channel", u."Country", u."Versions", u."Years", u."Months";
@@ -140,7 +140,7 @@ ANALYZE "PL OUT";
 -- @table "PL EUR OUT"
 -- PL EUR OUT = if(gt("FX Rate", 0), "PL OUT" / "FX Rate")
 DROP TABLE IF EXISTS "PL EUR OUT";
-CREATE UNLOGGED TABLE "PL EUR OUT" AS
+CREATE UNLOGGED TABLE "PL EUR OUT" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."PL Line" AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (coalesce(d.p1_v, 0) > coalesce(CAST(0 AS DOUBLE PRECISION), 0)) THEN (CASE WHEN d.p1_v IS NULL OR d.p1_v = 0 THEN NULL ELSE coalesce(d.p0_v, 0) / d.p1_v END) ELSE NULL END) AS v
     FROM (SELECT p0."PL Line" AS "PL Line", p0."Brand" AS "Brand", p0."Channel" AS "Channel", p0."Country" AS "Country", p0."Versions" AS "Versions", p0."Years" AS "Years", p0."Months" AS "Months", p0.v AS p0_v, p1.v AS p1_v FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL OUT" s) p0 JOIN "flat Country" g_3 ON g_3."Country" = p0."Country" JOIN (SELECT s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s."Currency" AS "Currency", s.v AS v FROM "FX Rate" s) p1 ON p1."Versions" = p0."Versions" AND p1."Years" = p0."Years" AND p1."Months" = p0."Months" AND p1."Currency" = g_3."Currency") d
@@ -150,7 +150,7 @@ ANALYZE "PL EUR OUT";
 -- @table "CHECK Uncosted Volume"
 -- CHECK Uncosted Volume = if(not(hasValue("IMPORT Standard Cost")), "Volume ACT")
 DROP TABLE IF EXISTS "CHECK Uncosted Volume";
-CREATE UNLOGGED TABLE "CHECK Uncosted Volume" AS
+CREATE UNLOGGED TABLE "CHECK Uncosted Volume" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.v ELSE NULL END) AS v
     FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume ACT" s) d
@@ -161,7 +161,7 @@ ANALYZE "CHECK Uncosted Volume";
 -- @table "CHECK Uncosted Plan Volume"
 -- CHECK Uncosted Plan Volume = if(not(hasValue("Standard Cost Plan")), "Volume Plan")
 DROP TABLE IF EXISTS "CHECK Uncosted Plan Volume";
-CREATE UNLOGGED TABLE "CHECK Uncosted Plan Volume" AS
+CREATE UNLOGGED TABLE "CHECK Uncosted Plan Volume" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."Customer" AS "Customer", d."SKU" AS "SKU", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (r0.v IS NOT NULL)) THEN d.v ELSE NULL END) AS v
     FROM (SELECT s."Customer" AS "Customer", s."SKU" AS "SKU", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Volume Plan" s) d
@@ -172,7 +172,7 @@ ANALYZE "CHECK Uncosted Plan Volume";
 -- @table "CHECK PL without FX Rate"
 -- CHECK PL without FX Rate = if(not(gt("FX Rate", 0)), abs("PL OUT"))
 DROP TABLE IF EXISTS "CHECK PL without FX Rate";
-CREATE UNLOGGED TABLE "CHECK PL without FX Rate" AS
+CREATE UNLOGGED TABLE "CHECK PL without FX Rate" WITH (autovacuum_enabled = false) AS
 SELECT * FROM (
     SELECT d."PL Line" AS "PL Line", d."Brand" AS "Brand", d."Channel" AS "Channel", d."Country" AS "Country", d."Versions" AS "Versions", d."Years" AS "Years", d."Months" AS "Months", (CASE WHEN (NOT (coalesce(r0.v, 0) > coalesce(CAST(0 AS DOUBLE PRECISION), 0))) THEN abs(d.v) ELSE NULL END) AS v
     FROM (SELECT s."PL Line" AS "PL Line", s."Brand" AS "Brand", s."Channel" AS "Channel", s."Country" AS "Country", s."Versions" AS "Versions", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "PL OUT" s) d
