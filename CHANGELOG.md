@@ -2,6 +2,13 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
+## 0.9-draft, 2026-11-03
+
+- RAMA is pinned to `2.0.0-7528851.0`, from 2026-11-03, instead of `2.0.0-0868758.0`. It is newer and has `GROUPED_READ` too. At 10m, 100m and 1b it gives the same answers on all 29 tests, so the recorded answers stay.
+- A result file is named by its entry and the system's version: `results/<machine>/<size>/<entry>-<version>.json`. The website shows each version as its own entry, such as RAMA 1.9.0-c9c20e7.0 and RAMA 2.0.0-7528851.0 side by side. The build fails when a file's name does not match the entry and version inside it. The published files are renamed. No time changes.
+- New results for RAMA 2.0.0-7528851.0 with `GROUPED_READ` (#41), at 10m and 100m on an n2d-standard-4 and at 1b on an n2d-highmem-8. The RAMA 1.9 results stay. Against RAMA 1.9 at 1b, loads take about 29% less time, one-cell writes up to 70% less, and model changes 54 to 78% less. Most reads are 1.2 to 39 times as fast. The whole run took 88 minutes instead of 124, with a peak of 30.0 GB instead of 37.3 GB.
+- `results/README.md` is written again from the current results, with RAMA 2.0 next to RAMA 1.9, DuckDB and ClickHouse.
+
 ## 0.9-draft, 2026-10-23
 
 - The SQL entries build their tables faster, following a reviewer's suggestions. `if(c, A, B)` is two parts joined by `UNION ALL`, A where c holds and B where it does not. Before, one statement listed the cells of both branches, removed duplicates, and joined A, B and c to them. An operand read twice in one formula is joined once. The joins to the dimension lookups are inner joins, since every member is in its lookup. Versions, Years and Months keys are one byte. `cumsum` is an ASOF JOIN instead of a window over every period. ClickHouse makes each calculated table with plain column types, so no column is `Nullable`, and inserts with `insert_null_as_default = 0`. It also runs with `join_algorithm = 'hash'`.

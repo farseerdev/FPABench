@@ -269,9 +269,10 @@ const MACHINE_MEMORY_GB = { 'n2d-standard-4': 16, 'n2d-highmem-8': 64 };
 // A machine's folder name: its name in lower case, with every run of other characters a hyphen.
 const machineId = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-// The results, from results/<machine>/<size>/<entry>.json, as ClickBench keeps one file per system and
-// machine. Each entry describes itself in systems/<entry>/entry.json. Entries are only scored against
-// others on the same machine.
+// The results, from results/<machine>/<size>/<entry>-<version>.json, as ClickBench keeps one file per system,
+// version and machine. Each version of an entry is its own row on the page, so a new version of a system can
+// be shown next to the old one. Each entry describes itself in systems/<entry>/entry.json. Entries are only
+// scored against others on the same machine.
 function readResults(tests) {
     const dir = path.join(ROOT, 'results');
     const ids = new Set(tests.map((t) => t.id));
@@ -286,13 +287,15 @@ function readResults(tests) {
                 const r = JSON.parse(read(rel));
                 if (machineId(r.machine) !== machine) fail(`${rel}: its machine is "${r.machine}", so it belongs in results/${machineId(r.machine)}/`);
                 if (r.scale !== size) fail(`${rel}: its scale is ${r.scale}, so it belongs in a folder ${r.scale}`);
+                const id = `${r.entry}-${r.system?.version}`;
+                if (file !== `${id}.json`) fail(`${rel}: it is ${r.entry} ${r.system?.version}, so its name must be ${id}.json`);
                 const metaFile = `systems/${r.entry}/entry.json`;
                 if (!fs.existsSync(path.join(ROOT, metaFile))) {
                     fail(`${rel}: there is no ${metaFile}`);
                     continue;
                 }
                 const meta = JSON.parse(read(metaFile));
-                entries.set(r.entry, { id: r.entry, name: meta.name, approach: meta.approach, open: meta.open });
+                entries.set(id, { id, name: `${meta.name} ${r.system.version}`, approach: meta.approach, open: meta.open });
                 // The page shows the memory Google Cloud lists for the machine type. A result records what the OS
                 // reports, which is a little less, as the kernel keeps some for itself.
                 const type = r.machine.split(',')[0].trim();
@@ -306,7 +309,7 @@ function readResults(tests) {
                     if (!ids.has(id)) continue;
                     kept[id] = { check: t.check, time: t.time, p95: t.p95 };
                 }
-                rows.push({ machine, entry: r.entry, scale: r.scale, tests: kept });
+                rows.push({ machine, entry: id, scale: r.scale, tests: kept });
             }
         }
     }
