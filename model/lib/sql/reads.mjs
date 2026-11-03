@@ -1,4 +1,4 @@
-// SQL for the reads of test R4, in DuckDB's or ClickHouse's dialect: measures computed at a slice from the
+// SQL for the reads of test R4, in DuckDB's, ClickHouse's or PostgreSQL's dialect: measures computed at a slice from the
 // sums they need. The other reads are written in each test.
 
 import { parseFormula } from '../rql.mjs';
@@ -9,11 +9,12 @@ const lit = (s) => `'${String(s).replace(/'/g, "''")}'`;
 /**
  * Several measures at once, by `by` where `where`: one row per measure and key, with the columns measure,
  * the `by` dimensions and v. Each variable is scanned once. A sum with a filter is a conditional sum in
- * that scan, sumIf in ClickHouse and FILTER in DuckDB, so a variable that many measures read is still read
+ * that scan, sumIf in ClickHouse and FILTER in DuckDB and PostgreSQL, so a variable that many measures read is still read
  * once. `by` must not be empty.
  */
 export function measuresSql(model, names, { by, where = {} }, dialect = 'duckdb', dict) {
     const CH = dialect === 'clickhouse';
+    const DOUBLE = dialect === 'postgres' ? 'DOUBLE PRECISION' : 'DOUBLE';
     // Members are stored as integer ids (see translate.mjs). The caller maps the ids of the result back to names.
     const mid = (dim, name) => {
         const v = dict.get(dim)?.get(name);
@@ -52,7 +53,7 @@ export function measuresSql(model, names, { by, where = {} }, dialect = 'duckdb'
             case 'paren':
                 return walk(v, e.expr);
             case 'num':
-                return `CAST(${e.value} AS DOUBLE)`;
+                return `CAST(${e.value} AS ${DOUBLE})`;
             case 'neg':
                 return `(-${walk(v, e.expr)})`;
             case 'name':
@@ -87,7 +88,7 @@ export function measuresSql(model, names, { by, where = {} }, dialect = 'duckdb'
         if (![...cols.keys()].includes('')) conds.push(`(${[...cols.keys()].join(' OR ')})`);
         const fn = x.rollupType === 'AVERAGE' ? 'avg' : 'sum';
         const own = new Map([...cols].map(([cond, c]) => [c, !cond ? `${fn}(s.v)` : CH ? `${fn}If(s.v, ${cond})` : `${fn}(s.v) FILTER (WHERE ${cond})`]));
-        const none = CH ? 'CAST(NULL AS Nullable(Float64))' : 'CAST(NULL AS DOUBLE)';
+        const none = CH ? 'CAST(NULL AS Nullable(Float64))' : `CAST(NULL AS ${DOUBLE})`;
         const sel = all.map((c) => `${own.get(c) ?? none} AS ${c}`);
         return `SELECT ${[...keys, ...sel].join(', ')} FROM ${from(x)} ${[...joins.values()].join(' ')}${conds.length ? ` WHERE ${conds.join(' AND ')}` : ''} GROUP BY ${by.map((_, i) => i + 1).join(', ')}`;
     });
@@ -98,6 +99,6 @@ export function measuresSql(model, names, { by, where = {} }, dialect = 'duckdb'
         const list = exprs.map(([name, e]) => `(${lit(name)}, ${e})`).join(', ');
         return `SELECT tupleElement(m, 1) AS measure, ${outKeys.join(', ')}, tupleElement(m, 2) AS v FROM (${k}) AS k ARRAY JOIN [${list}] AS m WHERE tupleElement(m, 2) IS NOT NULL`;
     }
-    // DuckDB keeps a MATERIALIZED CTE once, so each measure reads the sums without scanning again.
+    // DuckDB and PostgreSQL keep a MATERIALIZED CTE once, so each measure reads the sums without scanning again.
     return `WITH k AS MATERIALIZED (${k})\n${exprs.map(([name, e]) => `SELECT ${lit(name)} AS measure, ${outKeys.join(', ')}, v FROM (SELECT ${outKeys.join(', ')}, ${e} AS v FROM k) k WHERE v IS NOT NULL`).join('\nUNION ALL\n')}`;
 }

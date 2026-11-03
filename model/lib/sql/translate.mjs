@@ -1,4 +1,4 @@
-// Translates the FPABench model into SQL for DuckDB or ClickHouse: one table per input variable, and one
+// Translates the FPABench model into SQL for DuckDB, ClickHouse or PostgreSQL: one table per input variable, and one
 // table per calculated variable, built in dependency order. Running the model SQL again after a write
 // rebuilds them all.
 //
@@ -11,6 +11,8 @@
 // IGNORE NULLS syntax, table engines, and ClickHouse's FINAL on the input tables, which keep every write
 // as a new row version (ReplacingMergeTree) instead of updating in place. ClickHouse must run with
 // join_use_nulls = 1 and aggregate_functions_null_for_empty = 1, or a missing value turns into 0.
+// PostgreSQL has no CREATE OR REPLACE TABLE, no ASOF JOIN and no IGNORE NULLS, so it drops and creates each
+// calculated table, and cumsum carries the last value with a window instead.
 //
 // Semantics follow RAMA:
 //   - a missing cell is a missing row, never NULL in a table and never 0
@@ -32,21 +34,24 @@ import { parseFormula, nodesOf } from '../rql.mjs';
  */
 export function translate(model, { versions, years, dialect = 'duckdb', dict }) {
     const CH = dialect === 'clickhouse';
-    const DOUBLE = 'DOUBLE';
+    const PG = dialect === 'postgres';
+    const DOUBLE = PG ? 'DOUBLE PRECISION' : 'DOUBLE';
     // Versions, Years and Months have few members, so their ids fit in one byte. Smaller keys make the joins
     // and GROUP BYs faster.
     const SMALL = new Set(['Versions', 'Years', 'Months']);
-    const keyType = (d) => (SMALL.has(d) ? (CH ? 'UInt8' : 'UTINYINT') : CH ? 'Int32' : 'INTEGER');
+    // PostgreSQL has no one-byte integer, so they are SMALLINT there.
+    const keyType = (d) => (SMALL.has(d) ? (CH ? 'UInt8' : PG ? 'SMALLINT' : 'UTINYINT') : CH ? 'Int32' : 'INTEGER');
     const mid = (dim, name) => {
         const v = dict.get(dim)?.get(name);
         if (v === undefined) throw new Error(`no id for member ${name} of ${dim}`);
         return String(v);
     };
     const UNION = CH ? ' UNION DISTINCT ' : ' UNION ';
-    const list = (d, xs) => (CH ? `arrayJoin([${xs.map((x) => mid(d, x)).join(', ')}])` : `unnest([${xs.map((x) => mid(d, x)).join(', ')}])`);
+    const list = (d, xs) => (CH ? `arrayJoin([${xs.map((x) => mid(d, x)).join(', ')}])` : `unnest(${PG ? 'ARRAY' : ''}[${xs.map((x) => mid(d, x)).join(', ')}])`);
     // ClickHouse forces every new part to disk, so writes are durable, as DuckDB's are by default.
     const DURABLE = "SETTINGS fsync_after_insert = 1, fsync_part_directory = 1";
-    // Calculated tables live in memory: DuckDB TEMP tables, ClickHouse Memory tables. Only the inputs need
+    // Calculated tables live in memory: DuckDB TEMP tables, ClickHouse Memory tables. PostgreSQL's are
+    // UNLOGGED tables, which skip the write-ahead log, since its TEMP tables belong to one session. Only the inputs need
     // to survive a crash, since every calculated table can be built again from them. After a restart the
     // system builds them again on start, and that time counts in R8.
     // In ClickHouse the table is created first with plain column types, then filled. A table created from the
@@ -55,7 +60,14 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
     const createAs = (name, dims, value = true) =>
         CH
             ? `CREATE OR REPLACE TABLE ${name} (${[...dims.map((d) => `${id(d)} ${keyType(d)}`), ...(value ? ['v Float64'] : [])].join(', ')}) ENGINE = Memory;\nINSERT INTO ${name} SETTINGS insert_null_as_default = 0`
-            : `CREATE OR REPLACE TEMP TABLE ${name} AS`;
+            : PG
+              ? `DROP TABLE IF EXISTS ${name};
+CREATE UNLOGGED TABLE ${name} AS`
+              : `CREATE OR REPLACE TEMP TABLE ${name} AS`;
+    // PostgreSQL plans each statement from the statistics of the tables it reads, and a new table has none until
+    // autovacuum gets to it. So each calculated table is analyzed as soon as it is built. At 10m a full rebuild
+    // took 76 s without this, and 15 s with it.
+    const analyze = (name) => (PG ? `\nANALYZE ${name};` : '');
     // An input table with an alias. In ClickHouse it keeps old row versions until a merge, so it is read FINAL.
     const from = (x, alias) => (CH && !x.formula ? `${rel(x)} AS ${alias} FINAL` : `${rel(x)} ${alias}`);
     const VERSIONS = versions;
@@ -510,7 +522,15 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
             `WITH s AS (SELECT ${[...grainOf(v).filter((d) => !TIME.has(d)).map((d) => `x.${id(d)} AS ${id(d)}`), 'x."Years" AS "Years"', 'x."Months" AS "Months"', 'x.v AS v', 'p.p AS p'].join(', ')} FROM ${rel(x)} x JOIN period p ON p."Years" = x."Years" AND p."Months" = x."Months"),`,
             `f0 AS (SELECT ${[...other, 'min(p) AS p0'].join(', ')} FROM s${other.length ? ` GROUP BY ${other.join(', ')}` : ''}),`,
             `g AS (SELECT ${[...other.map((o) => `f.${o} AS ${o}`), 'p."Years" AS "Years"', 'p."Months" AS "Months"', 'p.p AS p'].join(', ')} FROM f0 f CROSS JOIN period p WHERE p.p >= f.p0)`,
-            ...(other.length
+            ...(PG
+                ? // PostgreSQL has neither ASOF JOIN nor IGNORE NULLS. A running count of X's values numbers each
+                  // run of periods that starts at a value of X, and every period of a run takes that value.
+                  [
+                      `SELECT ${grainOf(v).map((d) => `w.${id(d)} AS ${id(d)}`).join(', ')}, max(w.v) OVER (PARTITION BY ${[...other.map((o) => `w.${o}`), 'w.run'].join(', ')}) AS v`,
+                      `FROM (SELECT ${grainOf(v).map((d) => `g.${id(d)} AS ${id(d)}`).join(', ')}, s.v AS v, count(s.v) OVER (${part}ORDER BY g.p ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run`,
+                      `FROM g LEFT JOIN s ON ${[...other, '"Years"', '"Months"'].map((o) => `s.${o} = g.${o}`).join(' AND ')}) w;`,
+                  ]
+                : other.length
                 ? // Each period takes the value of the latest period of X at or before it: one ASOF JOIN, no window.
                   [`SELECT ${grainOf(v).map((d) => `g.${id(d)} AS ${id(d)}`).join(', ')}, s.v AS v`, `FROM g ASOF JOIN s ON ${other.map((o) => `s.${o} = g.${o}`).join(' AND ')} AND g.p >= s.p;`]
                 : // An ASOF JOIN needs a column to match on, so with none the last value comes from a window.
@@ -544,7 +564,7 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
         out.push(
             CH
                 ? `CREATE TABLE period ENGINE = MergeTree ORDER BY p ${DURABLE} AS SELECT * FROM values('"Years" UInt8, "Months" UInt8, p Int64', ${periods.join(', ')});`
-                : `CREATE TABLE period AS SELECT "Years"::UTINYINT AS "Years", "Months"::UTINYINT AS "Months", p FROM (VALUES ${periods.join(', ')}) t("Years", "Months", p);`
+                : `CREATE TABLE period AS SELECT "Years"::${keyType('Years')} AS "Years", "Months"::${keyType('Months')} AS "Months", p FROM (VALUES ${periods.join(', ')}) t("Years", "Months", p);`
         );
         // A dimension table holds each member's id, its name, and the ids of its parents.
         for (const d of [...userDims, 'Versions', 'Years', 'Months']) {
@@ -585,13 +605,13 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
                 cols.push(`coalesce(${alias.get(a)}.${id(a)}, ${mid(a, `NULL (${a})`)}) AS ${id(a)}`);
             }
             // A small table per dimension, built once per rebuild, instead of a view joined again in every statement.
-            out.push(`${createAs(flatView(d), [d, ...anc], false)} SELECT ${cols.join(', ')} FROM ${dimTable(d)} t0${joins.length ? ' ' + joins.join(' ') : ''};`);
+            out.push(`${createAs(flatView(d), [d, ...anc], false)} SELECT ${cols.join(', ')} FROM ${dimTable(d)} t0${joins.length ? ' ' + joins.join(' ') : ''};${analyze(flatView(d))}`);
         }
         return out.join('\n');
     }
 
     const calc = model.order.filter((v) => v.formula && !v.measure);
-    const tables = calc.map((v) => `-- ${v.name} = ${v.formula.replace(/\s+/g, ' ')}\n${translateVariable(v)}`);
+    const tables = calc.map((v) => `-- ${v.name} = ${v.formula.replace(/\s+/g, ' ')}\n${translateVariable(v)}${analyze(rel(v))}`);
     // What each calculated table reads, so a write can rebuild only the tables it reaches.
     const reads = new Map(calc.map((v) => [v.name, new Set([...nodesOf(parseFormula(v.formula))].filter((n) => n.type === 'name').map((n) => model.variable(n.name).name))]));
     const flats = flatSql();

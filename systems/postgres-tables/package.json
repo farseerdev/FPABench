@@ -1,0 +1,9 @@
+{
+    "name": "fpabench-postgres-tables",
+    "private": true,
+    "description": "FPABench entry: PostgreSQL, with every calculated variable as a table rebuilt after each write.",
+    "type": "module",
+    "dependencies": {
+        "pg": "8.23.1"
+    }
+}
