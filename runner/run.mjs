@@ -24,6 +24,7 @@ import path from 'node:path';
 import { execSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { Meter, available as hasProc, diskUsage, environment } from './proc.mjs';
 
 // --- the dataset and the folders ------------------------------------------------------------------------------
 
@@ -156,6 +157,9 @@ if (record) {
 }
 const tol = spec.defaults.tolerance;
 const system = (await import(path.join(root, 'systems', entry, 'db.mjs'))).system;
+// FPABENCH_RESOURCES=0 turns off the readings of memory, CPU, disk and IO, to time a run without them.
+const measure = hasProc && process.env.FPABENCH_RESOURCES !== '0';
+const machineEnv = environment(work);
 
 // The FPABench commit, with a + when the working tree has changes of its own.
 const commit = (() => {
@@ -256,6 +260,7 @@ function save() {
         machine: opt('machine', os.hostname()),
         date: new Date().toISOString().slice(0, 10),
         system,
+        env: machineEnv.snapshot(),
         host: { platform: `${os.type()} ${os.release()}`, arch: os.arch(), cpus: os.cpus().length, cpu: os.cpus()[0]?.model, memoryGB: Math.round(os.totalmem() / 2 ** 30), node: process.version },
         testsVersion: spec.version,
         dataset: { sha256: datasetId },
@@ -287,6 +292,9 @@ async function runTest(test, p) {
     const answers = {};
     const checks = {};
     const context = { ...base, picks: p, pick: Array.isArray(p) ? null : p };
+    const meter = measure ? new Meter() : null;
+    meter?.resetPeak();
+    const total = Array.isArray(p) ? p.length : p.warm || p.repeats;
     const once = async (run, pick) => {
         context.pick = pick;
         const t0 = performance.now();
@@ -294,6 +302,8 @@ async function runTest(test, p) {
         answers[run] = await test.run(context);
         if (test.kind === 'load') execSync('sync');
         runs.push({ ms: performance.now() - t0, warmup: pick.warmup ?? false });
+        // The timer has stopped. Before the check, so a server the teardown stops is read while it is still there.
+        meter?.afterRun(run, total);
         if (test.check) checks[run] = await test.check(context);
     };
     // Setup, the runs, then teardown, which runs even when a step throws, so no server is left running. A
@@ -305,6 +315,7 @@ async function runTest(test, p) {
             // Untimed: every write setup made, such as the restored copy of the snapshot, goes to disk now. Else
             // the first durable commit of the test pays for writing the copy, and a single run counts it (#26).
             execSync('sync');
+            meter?.mark('afterSetup');
             await runs();
         } catch (e) {
             context.failed = true;
@@ -329,7 +340,9 @@ async function runTest(test, p) {
     } else {
         for (let i = 0; i < p.repeats; i++) await guarded(() => once(i, p));
     }
-    return { runs, answers, checks };
+    // After the teardown: the CPU and the IO of the processes it stopped are counted up to their last sample.
+    const resources = meter && { ...meter.result(), diskMB: diskUsage(testWork) };
+    return { runs, answers, checks, resources };
 }
 
 log(`entry ${entry}, ${system.name} ${system.version}, scale ${manifest.size}${record ? ', recording the expected results' : ''}`);
@@ -349,6 +362,16 @@ const systemHash = (() => {
         else hash.update(`${rel}\n`).update(fs.readFileSync(full));
     };
     for (const rel of ['sql', 'model', 'db.mjs', path.join('tests', 'l1.mjs')]) walk(rel);
+    // A snapshot is the product of the system's version and of the binary that wrote it, too.
+    hash.update(`version ${system.version}\n`);
+    // The binary by its path, size and modification time, not by its contents: a rebuild changes the time, and the
+    // only miss is a different build put back with the same size and time. Hashing the contents would read the
+    // whole file at every start for no gain.
+    const binary = process.env.RAMA_NODE_ADDON_BINARY;
+    if (binary && fs.existsSync(binary)) {
+        const st = fs.statSync(binary);
+        hash.update(`binary ${path.resolve(binary)} ${st.size} ${st.mtimeMs}\n`);
+    }
     return hash.digest('hex');
 })();
 const markOk = () => fs.existsSync(snapshotMark) && fs.readFileSync(snapshotMark, 'utf8').trim() === systemHash;
@@ -421,6 +444,7 @@ for (const test of tests) {
         if (test.timed === false) summary = { check: problems.length ? 'wrong' : 'ok', timed: false, ...(problems.length ? { problems } : {}) };
         else if (test.kind === 'write' && test.runs !== 'bulk') summary = writeSummary(result.runs, problems, extra);
         else summary = onceSummary(result.runs, problems, extra);
+        if (result.resources) summary.resources = result.resources;
         results[test.id] = summary;
         for (const [run, rows] of Object.entries(result.answers)) (answers[test.id] ??= {})[run] = [...rows].sort((a, b) => (keyOf(a.key) < keyOf(b.key) ? -1 : 1));
         log(`${test.id} ${summary.check}${summary.time !== undefined ? ` ${summary.time} s` : ''}${summary.p95 !== undefined ? ` p95 ${summary.p95} s` : ''}${problems.length ? ` ${problems.slice(0, 3).join(' | ')}` : ''}`);
