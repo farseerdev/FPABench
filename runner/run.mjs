@@ -24,6 +24,7 @@ import path from 'node:path';
 import { execSync, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { installSize } from '../scripts/sizes-installed.mjs';
 
 // --- the dataset and the folders ------------------------------------------------------------------------------
 
@@ -156,6 +157,16 @@ if (record) {
 }
 const tol = spec.defaults.tolerance;
 const system = (await import(path.join(root, 'systems', entry, 'db.mjs'))).system;
+// What the system takes on disk once installed: see scripts/sizes-installed.mjs.
+// A failure to measure (a folder that cannot be read, a bad entry.json) leaves the size out and the run goes on.
+const installed = (() => {
+    try {
+        return installSize(entry);
+    } catch (e) {
+        console.warn(`no install size: ${e.message}`);
+        return null;
+    }
+})();
 
 // The FPABench commit, with a + when the working tree has changes of its own.
 const commit = (() => {
@@ -256,6 +267,7 @@ function save() {
         machine: opt('machine', os.hostname()),
         date: new Date().toISOString().slice(0, 10),
         system,
+        installSize: installed ?? undefined,
         host: { platform: `${os.type()} ${os.release()}`, arch: os.arch(), cpus: os.cpus().length, cpu: os.cpus()[0]?.model, memoryGB: Math.round(os.totalmem() / 2 ** 30), node: process.version },
         testsVersion: spec.version,
         dataset: { sha256: datasetId },

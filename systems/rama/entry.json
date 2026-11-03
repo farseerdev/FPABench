@@ -1,5 +1,16 @@
 {
     "name": "RAMA (Farseer)",
     "approach": "cells",
-    "open": false
+    "open": false,
+    "programs": [
+        {
+            "name": "RAMA_PATH package",
+            "env": "RAMA_PATH"
+        },
+        {
+            "name": "rama.node",
+            "env": "RAMA_NODE_ADDON_BINARY",
+            "path": "${RAMA_PATH}/rama.node"
+        }
+    ]
 }

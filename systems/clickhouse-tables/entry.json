@@ -1,5 +1,12 @@
 {
     "name": "ClickHouse (tables)",
     "approach": "tables",
-    "open": true
+    "open": true,
+    "programs": [
+        {
+            "name": "clickhouse",
+            "env": "CLICKHOUSE_BIN",
+            "path": "clickhouse"
+        }
+    ]
 }
