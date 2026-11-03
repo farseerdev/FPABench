@@ -2,6 +2,11 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
+## 0.9-draft, 2026-11-04
+
+- A new entry, `postgres-tables`: PostgreSQL 18 with one `UNLOGGED` table per calculated variable, built again after each change that reaches it (#42). The fixes from its review followed (#44, #45, #46, #49). Its calculated tables survive a clean stop, so its R8 starts without building them again, as `tests/method.md` allows for stored results.
+- First results for PostgreSQL 18.6, at 10m on an n2d-standard-4, from FPABench with #49. Every test passed, and the whole run took 17.3 minutes. Its loads, writes and model changes take 4 to 6 times as long as DuckDB's and ClickHouse's, and its R8 takes 0.06 s. There are no PostgreSQL results at 100m and 1b yet.
+
 ## 0.9-draft, 2026-11-03
 
 - RAMA is pinned to `2.0.0-7528851.0`, from 2026-11-03, instead of `2.0.0-0868758.0`. It is newer and has `GROUPED_READ` too. At 10m, 100m and 1b it gives the same answers on all 29 tests, so the recorded answers stay.
