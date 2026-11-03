@@ -8,11 +8,13 @@ PostgreSQL 18.6, one server on the same machine, through [`pg`](https://www.npmj
 ./install.sh
 ```
 
-It installs PostgreSQL 18 (from the PostgreSQL apt repository on Debian and Ubuntu, Homebrew on macOS) and the Node client. The tests look for the server's programs in `POSTGRES_BIN`, then in the folders those packages use, then on the `PATH`.
+It installs PostgreSQL 18 (from the PostgreSQL apt repository on Debian and Ubuntu, Homebrew on macOS) and the Node client. The tests look for the server's programs in `POSTGRES_BIN`, then in the folders those packages use, then on the `PATH`. An empty `POSTGRES_BIN` counts as unset. The tests stop with an error when the `postgres` they find is older than PostgreSQL 16, which the SQL needs.
 
 ## How it runs
 
 The tests make their own data folder with `initdb` in the work folder, and start and stop their own server on port 15432 (`FPABENCH_POSTGRES_PORT`). L1's `initdb` is in its untimed setup. Opening the model (test R8) includes starting the server.
+
+A start stops with an error when anything already listens on the port, or when the server fails or is killed while it starts. A stop that is not a clean fast shutdown in 60 s is an error too. Then the server gets an immediate shutdown, and L1 keeps no snapshot. `PGOPTIONS`, `PGSSLMODE` and `PGCLIENTENCODING` in the environment do not apply to the tests' connections.
 
 The SQL is in [`sql/`](sql/), generated from the model by [`model/lib/sql/generate.mjs`](../../model/lib/sql/generate.mjs) with the translator [`model/lib/sql/translate.mjs`](../../model/lib/sql/translate.mjs), which every SQL entry shares. [`sql/schema.sql`](sql/schema.sql) creates the tables and [`sql/calculate.sql`](sql/calculate.sql) builds every calculated table. [`sql/m1.sql`](sql/m1.sql) and [`sql/m4.sql`](sql/m4.sql) are the migrations of tests M1 and M4. Run `node model/lib/sql/generate.mjs` after changing the model or the translator. Reads come from [`model/lib/sql/reads.mjs`](../../model/lib/sql/reads.mjs).
 

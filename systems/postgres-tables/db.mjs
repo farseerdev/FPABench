@@ -12,18 +12,30 @@ import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
 // The server's programs: POSTGRES_BIN, else the folder the PostgreSQL 18 packages install them in, else the PATH.
-const BIN_DIR = process.env.POSTGRES_BIN ?? ['/usr/lib/postgresql/18/bin', '/opt/homebrew/opt/postgresql@18/bin', '/usr/local/opt/postgresql@18/bin'].find((d) => fs.existsSync(path.join(d, 'postgres'))) ?? '';
+// An empty POSTGRES_BIN counts as unset.
+const BIN_DIR = process.env.POSTGRES_BIN || ['/usr/lib/postgresql/18/bin', '/opt/homebrew/opt/postgresql@18/bin', '/usr/local/opt/postgresql@18/bin'].find((d) => fs.existsSync(path.join(d, 'postgres'))) || '';
 const bin = (name) => (BIN_DIR ? path.join(BIN_DIR, name) : name);
 const PORT = Number(process.env.FPABENCH_POSTGRES_PORT ?? 15432);
+
+// A postgres on the PATH can be any version, and the SQL needs PostgreSQL 16 or later.
+const VERSION = execFileSync(bin('postgres'), ['--version'], { encoding: 'utf8' }).trim();
+if (!(Number(VERSION.match(/PostgreSQL\) (\d+)/)?.[1]) >= 16)) {
+    throw new Error(`${bin('postgres')} is "${VERSION}", and the SQL needs PostgreSQL 16 or later. Run install.sh, or set POSTGRES_BIN to the bin folder of PostgreSQL 18.`);
+}
 
 // Only where the server listens is set, on its command line. Every other setting is the default that initdb
 // writes, so writes are durable: fsync = on and synchronous_commit = on.
 const LISTEN = ['-c', `port=${PORT}`, '-c', 'listen_addresses=127.0.0.1', '-c', 'unix_socket_directories='];
 
+// node-postgres sends PGOPTIONS from the environment with every connection, and with it settings the results
+// would not list. A config cannot turn it off, so it is removed here. The config below pins what PGSSLMODE and
+// PGCLIENTENCODING would set.
+delete process.env.PGOPTIONS;
+
 /** What goes in the results about the system. */
 export const system = {
     name: 'PostgreSQL',
-    version: execFileSync(bin('postgres'), ['--version'], { encoding: 'utf8' }).match(/(\d+\.\d+)/)?.[1] ?? 'unknown',
+    version: VERSION.match(/(\d+\.\d+)/)?.[1] ?? 'unknown',
     settings: {
         approach: 'one table per calculated variable, the tables a change reaches rebuilt after it',
         server: 'single server on the same machine, TCP',
@@ -57,27 +69,58 @@ export function init(work) {
 
 /** Starts the server on the work folder's data as it is. Returns { run, rows, close }. A run may hold several statements. */
 export async function connect(work) {
-    const config = { host: '127.0.0.1', port: PORT, user: 'postgres', database: 'postgres' };
-    // A server left running from before would answer below, with its own data. So none may answer yet.
-    const old = new pg.Client(config);
-    const running = await old.connect().then(() => true, () => false);
+    const config = { host: '127.0.0.1', port: PORT, user: 'postgres', database: 'postgres', ssl: false, client_encoding: 'UTF8' };
+    // A server left running from before would answer below, with its own data. So nothing may listen on the port
+    // yet. The probe gives up after 1 s, since a suspended process holds the port and never answers.
+    const old = new pg.Client({ ...config, connectionTimeoutMillis: 1000 });
+    const free = await old.connect().then(
+        () => false,
+        (e) => e.code === 'ECONNREFUSED'
+    );
     await old.end().catch(() => {});
-    if (running) throw new Error(`a PostgreSQL server already answers on port ${PORT}. Stop it first.`);
+    if (!free) throw new Error(`something already listens on port ${PORT}, such as a PostgreSQL server from an earlier run. Stop it first.`);
     const log = path.join(work, 'postgres.log');
-    const server = spawn(bin('postgres'), ['-D', dataOf(work), ...LISTEN], { stdio: ['ignore', 'ignore', fs.openSync(log, 'a')] });
+    // The server writes the log through its own copy of the file, so this one is closed at once.
+    const out = fs.openSync(log, 'a');
+    const server = spawn(bin('postgres'), ['-D', dataOf(work), ...LISTEN], { stdio: ['ignore', 'ignore', out] });
+    fs.closeSync(out);
+    const exited = new Promise((r) => server.once('exit', r));
+    const ended = () => server.exitCode !== null || server.signalCode !== null;
+    const how = () => (server.signalCode ? `was stopped by ${server.signalCode}` : `exited with ${server.exitCode}`);
+    // Stops the server with a fast shutdown and waits until it has exited. One that has not stopped in 60 s gets an
+    // immediate shutdown, which stops every server process at once, without a checkpoint. One that still runs at
+    // 90 s, such as a suspended one, is killed. Returns why the stop was not clean, or null when it was.
+    const stop = async () => {
+        if (!ended()) {
+            let slow = false;
+            const quit = setTimeout(() => ((slow = true), server.kill('SIGQUIT')), 60_000);
+            const kill = setTimeout(() => server.kill('SIGKILL'), 90_000);
+            server.kill('SIGINT');
+            await exited;
+            clearTimeout(quit);
+            clearTimeout(kill);
+            if (slow) return 'did not stop in 60 s, so it was stopped without a checkpoint';
+        }
+        return server.exitCode === 0 ? null : how();
+    };
     let client;
     for (let i = 0; ; i++) {
         client = new pg.Client(config);
         try {
             await client.connect();
             break;
-        } catch {
-            // not up yet
+        } catch (e) {
             await client.end().catch(() => {});
+            // Not up yet: nothing listens yet, or the server is still starting or recovering (57P03). Any other
+            // error is real, such as one from a setting in the environment.
+            if (e.code !== 'ECONNREFUSED' && e.code !== '57P03') {
+                await stop();
+                throw e;
+            }
         }
-        if (server.exitCode !== null) throw new Error(`postgres exited with ${server.exitCode}, see ${log}`);
+        if (ended()) throw new Error(`postgres ${how()} while it started, see ${log}`);
         if (i > 6000) {
-            server.kill('SIGINT');
+            await stop();
             throw new Error('postgres did not start in 60 s');
         }
         await new Promise((r) => setTimeout(r, 10));
@@ -92,15 +135,12 @@ export async function connect(work) {
         // Several statements in one call run as one transaction, unless they hold their own BEGIN and COMMIT.
         run: (sql) => query(sql),
         rows: async (sql) => (await query(sql)).rows,
-        // Stops the server with a fast shutdown and waits until it has exited. One that does not stop in 60 s is killed.
+        // Stops the server and waits until it has exited. Throws when the stop was not a clean fast shutdown,
+        // since the data folder then needs crash recovery, and L1 must not keep it as the snapshot.
         async close() {
             await client.end().catch(() => {});
-            if (server.exitCode !== null || server.signalCode !== null) return;
-            const exited = new Promise((r) => server.once('exit', r));
-            server.kill('SIGINT');
-            const timer = setTimeout(() => server.kill('SIGKILL'), 60_000);
-            await exited;
-            clearTimeout(timer);
+            const why = await stop();
+            if (why) throw new Error(`postgres ${why}, see ${log}`);
         },
     };
 }
@@ -164,7 +204,8 @@ export async function start(work) {
     try {
         if (!(await whole(db))) await db.run(CALCULATE);
     } catch (e) {
-        await db.close();
+        // The first error is the one to report, so an error of the stop does not replace it.
+        await db.close().catch(() => {});
         throw e;
     }
     return db;

@@ -20,5 +20,5 @@ export default {
         return out;
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

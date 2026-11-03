@@ -32,5 +32,5 @@ export default {
         return { Volume: volume.v === null ? [] : [{ key: {}, value: volume.v }] };
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

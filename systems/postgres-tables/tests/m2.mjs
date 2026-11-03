@@ -38,5 +38,5 @@ export default {
         return { 'EBIT OUT': ebit.v === null ? [] : [{ key: {}, value: ebit.v }] };
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

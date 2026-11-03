@@ -20,5 +20,5 @@ export default {
         return rows.filter((r) => r.v !== null).map((r) => ({ key: { 'PL Line': m.name('PL Line', r.line), Channel: m.name('Channel', r.b) }, value: r.v }));
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

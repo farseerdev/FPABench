@@ -26,5 +26,5 @@ export default {
             .slice(0, 100);
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

@@ -24,5 +24,5 @@ export default {
             .map((r) => ({ key: { Country: m.name('Country', r.country), Category: m.name('Category', r.category), 'Price Tier': m.name('Price Tier', r.tier) }, value: r.v }));
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };
