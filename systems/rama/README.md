@@ -10,7 +10,7 @@ RAMA is not open source. Its Node package is in Farseer's private npm registry, 
 ./install.sh
 ```
 
-The script installs `@farseer/rama` 1.9.0-ffad51e.0 from Farseer's registry. On Ubuntu 24.04 it also installs `libatomic1` and the `libstdc++6` of GCC 16 from the Ubuntu toolchain PPA, because the binary needs `GLIBCXX_3.4.34`. Farseer runs RAMA on the same GCC 16 runtime. On Ubuntu 26.04 the binary runs as it is, with no extra packages.
+The script installs `@farseer/rama` 2.0.0-7528851.0 from Farseer's registry. On Ubuntu 24.04 it also installs `libatomic1` and the `libstdc++6` of GCC 16 from the Ubuntu toolchain PPA, because the binary needs `GLIBCXX_3.4.34`. Farseer runs RAMA on the same GCC 16 runtime. On Ubuntu 26.04 the binary runs as it is, with no extra packages.
 
 ## How it runs
 
@@ -32,7 +32,7 @@ The JSON `modelImport` takes is made ahead from the model by [`model/lib/rama/ge
 | --- | --- | --- |
 | Binary | `rama.node`, the release build | The package loads its slower dev build unless told otherwise |
 | Commits | Durable (`commit(checksum, true)`) | The backend's default. The method turns durability on where a system has it. |
-| Abakus | On | As in the backend |
+| Abakus | Always on | RAMA 2.0 has no other engine, so it has no switch |
 | Threads | RAMA's default | |
 | Versions | The five the data uses, and RAMA's built-in `Plan` | RAMA seeds a `Plan` version. It stays, with no cells, so no answer changes. |
 
