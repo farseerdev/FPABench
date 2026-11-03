@@ -12,46 +12,47 @@ At 10m and 100m each entry ran on its own Google Cloud `n2d-standard-4` in europ
 | `rama` 1.9 | RAMA 1.9.0-c9c20e7.0, release build | 2026-10-24, FPABench with #40 | yes | in process |
 | `duckdb-tables` | DuckDB 1.5.6, `@duckdb/node-api` 1.5.6-r.1 | 2026-10-24, FPABench with #40 | inputs yes, calculated tables in memory | in process |
 | `clickhouse-tables` | ClickHouse 26.9.16.11, `@clickhouse/client` 1.23.1 | 2026-10-24, FPABench with #40 | inputs yes, calculated tables in memory | one server on the same machine |
+| `postgres-tables` | PostgreSQL 18.6, `pg` 8.23.1 | 2026-11-03, FPABench with #49, at 10m only | inputs yes, calculated tables `UNLOGGED` | one server on the same machine |
 
 RAMA 2.0 reads grouped reads with one `GROUPED_READ` command (#41). RAMA 1.9 lists the combinations with `generateCombinations` and reads them with one `query` call. Everything else in the RAMA entry is the same for both versions.
 
-The SQL entries rebuild only the calculated tables a change reaches, and use integer member ids. The method may count that dependency logic as tuning. That is not decided yet. ClickHouse runs with the two settings it needs to keep missing values missing, plus `join_algorithm = 'hash'`, and keeps the translator's join order. Settings are in each system's README.
+The SQL entries rebuild only the calculated tables a change reaches, and use integer member ids. The method may count that dependency logic as tuning. That is not decided yet. ClickHouse runs with the two settings it needs to keep missing values missing, plus `join_algorithm = 'hash'`, and keeps the translator's join order. PostgreSQL runs with every server setting at its default. Its calculated tables are `UNLOGGED` tables, which a clean stop keeps, so its R8 starts without building them again. DuckDB's and ClickHouse's calculated tables live in memory and are built again on every start. Settings are in each system's README.
 
 Seconds. A write is the median of up to 20 writes after one warm-up, each to a fresh cell, with the 95th percentile after it. Fewer cells fit some pick rules: W4 has 19 writes at 10m, W5 17 at both sizes, and W8 7 at 10m and 11 at 100m. A load, bulk write or model change is the median of 3 runs. A read is the median of 5 runs after a restore. R8 is the median of 3 runs, each from a stopped system, and its time includes the start.
 
 ## 10m
 
-Manifest SHA-256 `ea6f5dc3…`. Run times: RAMA 2.0 1.3 min, RAMA 1.9 1.5 min, DuckDB 4.3 min, ClickHouse 5.9 min. RAMA 2.0's peak memory was 0.55 GB. Every entry passed every test.
+Manifest SHA-256 `ea6f5dc3…`. Run times: RAMA 2.0 1.3 min, RAMA 1.9 1.5 min, DuckDB 4.3 min, ClickHouse 5.9 min, PostgreSQL 17.3 min. RAMA 2.0's peak memory was 0.55 GB. Every entry passed every test.
 
-| Test | RAMA 2.0 | RAMA 1.9 | DuckDB (tables) | ClickHouse (tables) |
-| --- | ---: | ---: | ---: | ---: |
-| L1 Initial load | 3.78 | 4.87 | 4.4 | 6.29 |
-| L2 Monthly close | 0.695 | 0.876 | 2.76 | 3.17 |
-| L3 Change a weight in master data | 0.116 | 0.168 | 0.333 | 0.408 |
-| W1 Type one volume | 0.0865 (0.106) | 0.0973 (0.121) | 1.27 (1.28) | 1.5 (1.56) |
-| W2 Paste 1,000 volumes at once | 0.323 | 0.542 | 1.33 | 1.89 |
-| W3 Change a rebate rate | 0.0313 (0.041) | 0.0339 (0.0443) | 0.409 (0.425) | 0.445 (0.464) |
-| W4 Raise a brand's price | 0.229 (0.308) | 0.279 (0.387) | 1.01 (1.04) | 1.24 (1.4) |
-| W5 Change a planning exchange rate | 0.0442 (0.0491) | 0.0509 (0.0576) | 0.341 (0.353) | 0.433 (0.508) |
-| W6a Change the cost of a warehouse | 0.0121 (0.0146) | 0.0138 (0.0165) | 0.263 (0.279) | 0.37 (0.464) |
-| W6b Change the cost of an office | 0.00669 (0.00828) | 0.00782 (0.01) | 0.264 (0.279) | 0.405 (0.425) |
-| W7 Set a yearly target | 0.0927 (0.13) | 0.109 (0.144) | 1.39 (1.48) | 1.52 (1.61) |
-| W8 Flip a yearly bonus | 0.0365 (0.0524) | 0.0467 (0.0587) | 0.394 (0.42) | 0.501 (0.639) |
-| R1 Company P&L | 0.000617 | 0.00375 | 0.00228 | 0.0045 |
-| R2a P&L by brand | 0.000483 | 0.00612 | 0.00259 | 0.00582 |
-| R2b P&L by channel | 0.000496 | 0.00178 | 0.00244 | 0.0047 |
-| R2c P&L by country, in its own currency | 0.000444 | 0.00211 | 0.0023 | 0.00453 |
-| R3 Plan against last year | 0.000822 | 0.00145 | 0.00496 | 0.0128 |
-| R4 Ratios | 0.0293 | 0.0415 | 0.0357 | 0.0414 |
-| R5 Drill to the detail | 0.00267 | 0.00648 | 0.0272 | 0.0587 |
-| R6 Margin by product attributes | 0.00044 | 0.00593 | 0.00361 | 0.00623 |
-| R7 Top customers | 0.000126 | 0.000245 | 0.00222 | 0.00464 |
-| R8 Open the model | 0.195 | 0.199 | 2.32 | 3.42 |
-| M1 Change a formula | 0.385 | 0.858 | 0.272 | 0.327 |
-| M2 Add a customer | 0.304 | 0.552 | 2.27 | 2.8 |
-| M3 Move a customer to another group | 0.528 | 1.01 | 2.32 | 2.74 |
-| M4 Allocate one more cost | 0.36 | 0.739 | 0.224 | 0.3 |
-| C1 to C3, the checks without a timer | ok | ok | ok | ok |
+| Test | RAMA 2.0 | RAMA 1.9 | DuckDB (tables) | ClickHouse (tables) | PostgreSQL (tables) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| L1 Initial load | 3.78 | 4.87 | 4.4 | 6.29 | 22.4 |
+| L2 Monthly close | 0.695 | 0.876 | 2.76 | 3.17 | 15 |
+| L3 Change a weight in master data | 0.116 | 0.168 | 0.333 | 0.408 | 1.84 |
+| W1 Type one volume | 0.0865 (0.106) | 0.0973 (0.121) | 1.27 (1.28) | 1.5 (1.56) | 8.08 (8.19) |
+| W2 Paste 1,000 volumes at once | 0.323 | 0.542 | 1.33 | 1.89 | 8.22 |
+| W3 Change a rebate rate | 0.0313 (0.041) | 0.0339 (0.0443) | 0.409 (0.425) | 0.445 (0.464) | 2.52 (2.57) |
+| W4 Raise a brand's price | 0.229 (0.308) | 0.279 (0.387) | 1.01 (1.04) | 1.24 (1.4) | 7.04 (7.24) |
+| W5 Change a planning exchange rate | 0.0442 (0.0491) | 0.0509 (0.0576) | 0.341 (0.353) | 0.433 (0.508) | 2.14 (2.2) |
+| W6a Change the cost of a warehouse | 0.0121 (0.0146) | 0.0138 (0.0165) | 0.263 (0.279) | 0.37 (0.464) | 1.56 (1.57) |
+| W6b Change the cost of an office | 0.00669 (0.00828) | 0.00782 (0.01) | 0.264 (0.279) | 0.405 (0.425) | 1.55 (1.57) |
+| W7 Set a yearly target | 0.0927 (0.13) | 0.109 (0.144) | 1.39 (1.48) | 1.52 (1.61) | 8.18 (8.23) |
+| W8 Flip a yearly bonus | 0.0365 (0.0524) | 0.0467 (0.0587) | 0.394 (0.42) | 0.501 (0.639) | 2.42 (2.45) |
+| R1 Company P&L | 0.000617 | 0.00375 | 0.00228 | 0.0045 | 0.0139 |
+| R2a P&L by brand | 0.000483 | 0.00612 | 0.00259 | 0.00582 | 0.0141 |
+| R2b P&L by channel | 0.000496 | 0.00178 | 0.00244 | 0.0047 | 0.0137 |
+| R2c P&L by country, in its own currency | 0.000444 | 0.00211 | 0.0023 | 0.00453 | 0.0144 |
+| R3 Plan against last year | 0.000822 | 0.00145 | 0.00496 | 0.0128 | 0.0403 |
+| R4 Ratios | 0.0293 | 0.0415 | 0.0357 | 0.0414 | 0.053 |
+| R5 Drill to the detail | 0.00267 | 0.00648 | 0.0272 | 0.0587 | 0.076 |
+| R6 Margin by product attributes | 0.00044 | 0.00593 | 0.00361 | 0.00623 | 0.0127 |
+| R7 Top customers | 0.000126 | 0.000245 | 0.00222 | 0.00464 | 0.00436 |
+| R8 Open the model | 0.195 | 0.199 | 2.32 | 3.42 | 0.0602 |
+| M1 Change a formula | 0.385 | 0.858 | 0.272 | 0.327 | 1.71 |
+| M2 Add a customer | 0.304 | 0.552 | 2.27 | 2.8 | 13.3 |
+| M3 Move a customer to another group | 0.528 | 1.01 | 2.32 | 2.74 | 13.3 |
+| M4 Allocate one more cost | 0.36 | 0.739 | 0.224 | 0.3 | 1.36 |
+| C1 to C3, the checks without a timer | ok | ok | ok | ok | ok |
 
 ## 100m
 
