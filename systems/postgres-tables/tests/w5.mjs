@@ -36,5 +36,5 @@ export default {
         return { 'COGS by country': rows.filter((r) => r.v !== null).map((r) => ({ key: { Country: m.name('Country', r.c) }, value: r.v })) };
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

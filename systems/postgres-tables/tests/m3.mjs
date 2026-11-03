@@ -38,5 +38,5 @@ export default {
         };
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

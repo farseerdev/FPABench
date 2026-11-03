@@ -21,5 +21,5 @@ export default {
         return rows.map((r) => ({ key: { Country: m.name('Country', r.Country), Versions: m.name('Versions', r.Versions), measure: r.measure }, value: r.v }));
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

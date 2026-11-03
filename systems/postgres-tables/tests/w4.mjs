@@ -37,5 +37,5 @@ export default {
         return { 'Gross Sales in closed months': rows.filter((r) => r.v !== null).map((r) => ({ key: { Country: m.name('Country', r.c), Months: m.name('Months', r.mo) }, value: r.v })) };
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

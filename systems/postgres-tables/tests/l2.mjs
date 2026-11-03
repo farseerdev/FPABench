@@ -46,5 +46,5 @@ export default {
         return { 'CHECK Import Total by country': rows.filter((r) => r.v !== null).map((r) => ({ key: { Country: r.Country }, value: r.v })) };
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };

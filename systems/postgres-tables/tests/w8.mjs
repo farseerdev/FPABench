@@ -35,5 +35,5 @@ export default {
         return { 'CHECK Growth Bonus': check.v === null ? [] : [{ key: {}, value: check.v }] };
     },
 
-    teardown: ({ db }) => db.close(),
+    teardown: ({ db }) => db?.close(),
 };
