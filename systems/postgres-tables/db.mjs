@@ -82,10 +82,16 @@ export async function connect(work) {
         }
         await new Promise((r) => setTimeout(r, 10));
     }
+    // A lost connection, such as a backend the OOM killer ends, fails the query that is running. node-postgres
+    // also emits 'error' on the client, and with no listener that ends the whole runner. So the error is kept,
+    // and every later query fails with it, which fails the test and lets its teardown stop the server.
+    let lost = null;
+    client.on('error', (e) => (lost = e));
+    const query = (sql) => (lost ? Promise.reject(lost) : client.query(sql));
     return {
         // Several statements in one call run as one transaction, unless they hold their own BEGIN and COMMIT.
-        run: (sql) => client.query(sql),
-        rows: async (sql) => (await client.query(sql)).rows,
+        run: (sql) => query(sql),
+        rows: async (sql) => (await query(sql)).rows,
         // Stops the server with a fast shutdown and waits until it has exited. One that does not stop in 60 s is killed.
         async close() {
             await client.end().catch(() => {});

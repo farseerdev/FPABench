@@ -6,7 +6,8 @@ cd "$(dirname "$0")"
 if [ "$(uname)" = Darwin ]; then
     brew list postgresql@18 > /dev/null 2>&1 || brew install postgresql@18
 elif [ ! -x /usr/lib/postgresql/18/bin/postgres ]; then
-    # The PostgreSQL project's own apt repository, for Debian and Ubuntu.
+    # The PostgreSQL project's own apt repository, for Debian and Ubuntu. A fresh VM may have no package lists yet.
+    sudo apt-get update
     sudo apt-get install -y postgresql-common
     sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
     sudo apt-get install -y postgresql-18
