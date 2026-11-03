@@ -14,11 +14,11 @@ export default {
     async run({ db, pick: { at, country, value } }) {
         db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('FX Rate IN', at), value }], [], false));
 
-        return db.rows('COGS', [], { Country: country, Versions: at.Versions, Years: at.Years, Months: at.Months });
+        return await db.rows('COGS', [], { Country: country, Versions: at.Versions, Years: at.Years, Months: at.Months });
     },
 
     // The cost of goods of every country that month, untimed. Only one may move.
-    check: ({ db, pick: { at } }) => ({ 'COGS by country': db.rows('COGS', ['Country'], { Versions: at.Versions, Years: at.Years, Months: at.Months }) }),
+    check: async ({ db, pick: { at } }) => ({ 'COGS by country': await db.rows('COGS', ['Country'], { Versions: at.Versions, Years: at.Years, Months: at.Months }) }),
 
     teardown: ({ db }) => db.close(),
 };

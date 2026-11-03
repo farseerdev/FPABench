@@ -17,7 +17,11 @@ export default {
         context.db = restore(context.work);
     },
 
-    run: ({ db }) => READS.flatMap((where, i) => db.rows('PL EUR OUT', ['PL Line'], where).map((r) => ({ key: { ...r.key, read: String(i) }, value: r.value }))),
+    run: async ({ db }) => {
+        const out = [];
+        for (const [i, where] of READS.entries()) for (const r of await db.rows('PL EUR OUT', ['PL Line'], where)) out.push({ key: { ...r.key, read: String(i) }, value: r.value });
+        return out;
+    },
 
     teardown: ({ db }) => db.close(),
 };

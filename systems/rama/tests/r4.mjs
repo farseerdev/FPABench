@@ -15,7 +15,7 @@ export default {
         context.db = restore(context.work);
     },
 
-    run({ db }) {
+    async run({ db }) {
         return db.ro((tx) => {
             // Every country and version RAMA has. data() gives a dimension's ids, gids and names.
             const countries = Array.from(tx.dimensionByName('Country').data(false, null)[2]);

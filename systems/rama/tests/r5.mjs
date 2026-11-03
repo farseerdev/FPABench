@@ -13,10 +13,13 @@ export default {
         context.db = restore(context.work);
     },
 
-    run: ({ db, pick: { group } }) =>
-        VARIABLES.flatMap((variable) =>
-            db.rows(variable, ['Customer', 'SKU'], { 'Customer Group': group, Versions: 'FC 6+6', Years: 'Y2026', Months: 'M7' }).map((r) => ({ key: { ...r.key, variable }, value: r.value }))
-        ),
+    async run({ db, pick: { group } }) {
+        const out = [];
+        for (const variable of VARIABLES) {
+            for (const r of await db.rows(variable, ['Customer', 'SKU'], { 'Customer Group': group, Versions: 'FC 6+6', Years: 'Y2026', Months: 'M7' })) out.push({ key: { ...r.key, variable }, value: r.value });
+        }
+        return out;
+    },
 
     teardown: ({ db }) => db.close(),
 };

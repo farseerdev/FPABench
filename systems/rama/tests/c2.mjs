@@ -13,7 +13,7 @@ export default {
         context.db = restore(context.work);
     },
 
-    run({ db }) {
+    async run({ db }) {
         const out = [];
         for (const v of CHECKS) {
             db.ro((tx) => {

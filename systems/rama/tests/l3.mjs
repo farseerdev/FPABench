@@ -14,11 +14,11 @@ export default {
     async run({ db, work, pick }) {
         db.rw((tx) => importCells(db, tx, work, [{ variable: 'IMPORT Unit Weight', at: { SKU: pick.sku }, value: pick.value }]));
 
-        return db.rows('Logistics Cost', ['Country'], { Brand: pick.brand, Versions: 'FC 6+6', Years: 'Y2026' });
+        return await db.rows('Logistics Cost', ['Country'], { Brand: pick.brand, Versions: 'FC 6+6', Years: 'Y2026' });
     },
 
     // EBIT by country and month, untimed. A weight moves costs between customers, never the total.
-    check: ({ db }) => ({ 'EBIT OUT by country and month': db.rows('EBIT OUT', ['Country', 'Versions', 'Years', 'Months']) }),
+    check: async ({ db }) => ({ 'EBIT OUT by country and month': await db.rows('EBIT OUT', ['Country', 'Versions', 'Years', 'Months']) }),
 
     teardown: ({ db }) => db.close(),
 };
