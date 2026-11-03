@@ -3,7 +3,7 @@
 -- @table "CHECK Import Total"
 -- CHECK Import Total = "IMPORT Control Total" - "Gross Sales Loaded by Country"
 DROP TABLE IF EXISTS "CHECK Import Total";
-CREATE UNLOGGED TABLE "CHECK Import Total" AS
+CREATE UNLOGGED TABLE "CHECK Import Total" WITH (autovacuum_enabled = false) AS
 SELECT u."Country" AS "Country", u."Years" AS "Years", u."Months" AS "Months", sum(u.v) AS v
 FROM (SELECT "Country", "Years", "Months", v AS v FROM (SELECT s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "IMPORT Control Total" s) r0 UNION ALL SELECT "Country", "Years", "Months", -v AS v FROM (SELECT s."Country" AS "Country", s."Years" AS "Years", s."Months" AS "Months", s.v AS v FROM "Gross Sales Loaded by Country" s) r1) u
 GROUP BY u."Country", u."Years", u."Months";
