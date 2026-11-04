@@ -44,6 +44,7 @@ Each test is one file per system, `systems/<entry>/tests/<id>.mjs`, written in t
 | `open(context)` | Optional, R8 only. Starts the system, inside the timer. |
 | `run(context)` | One timed run, from the first call to the end of the proving read. Returns the rows it read, `{ key, value }`. |
 | `check(context)` | Optional. Untimed checks after a run. Returns `{ name: rows }`. |
+| `recalc` | Optional. `'full'` for a test where the system recalculates everything because it has no incremental calculation. The runner copies it into the test's result as `"recalc": "full"`, and the website shows that test as "not supported - full recalc results". See [`tests/method.md`](../tests/method.md#systems-without-incremental-calculation). |
 | `teardown(context)` | Untimed. Stops the system. It runs even when setup or a run throws, with `context.failed` set. L1's teardown keeps the snapshot, unless the load failed. |
 
 `context` holds the work folder, the input cells, the test's picks, the pick of the run, and whatever `setup` puts in it. Each system's `db.mjs` also exports `system`: its name, version and settings, as they go in the results.

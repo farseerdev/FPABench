@@ -416,6 +416,7 @@ for (const test of tests) {
         const extra = {
             ...(p.cells ? { cells: p.cells.length } : {}),
             ...(p.notChecked ? { notChecked: p.notChecked } : {}),
+            ...(test.recalc ? { recalc: test.recalc } : {}),
         };
         let summary;
         if (test.timed === false) summary = { check: problems.length ? 'wrong' : 'ok', timed: false, ...(problems.length ? { problems } : {}) };
