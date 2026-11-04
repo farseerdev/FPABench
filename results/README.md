@@ -10,94 +10,94 @@ At 10m and 100m each entry ran on its own Google Cloud `n2d-standard-4` in europ
 | --- | --- | --- | --- | --- |
 | `rama` 2.0 | RAMA 2.0.0-7528851.0, release build | 2026-11-03, FPABench with #41 | yes | in process |
 | `rama` 1.9 | RAMA 1.9.0-c9c20e7.0, release build | 2026-10-24, FPABench with #40 | yes | in process |
-| `duckdb-tables` | DuckDB 1.5.6, `@duckdb/node-api` 1.5.6-r.1 | 2026-10-24, FPABench with #40 | inputs yes, calculated tables in memory | in process |
+| `duckdb-tables` | DuckDB 1.5.6, `@duckdb/node-api` 1.5.6-r.1 | 2026-11-05, FPABench with #53, at 10m and 100m. The 1b times are from 2026-10-24, with the earlier setup | yes, inputs and calculated tables; a marker makes an open after a crash calculate the tables again, so no stale reads | in process |
 | `clickhouse-tables` | ClickHouse 26.9.16.11, `@clickhouse/client` 1.23.1 | 2026-10-24, FPABench with #40 | inputs yes, calculated tables in memory | one server on the same machine |
 | `postgres-tables` | PostgreSQL 18.6, `pg` 8.23.1 | 2026-11-03, FPABench with #49, at 10m only | inputs yes, calculated tables `UNLOGGED` | one server on the same machine |
 
 RAMA 2.0 reads grouped reads with one `GROUPED_READ` command (#41). RAMA 1.9 lists the combinations with `generateCombinations` and reads them with one `query` call. Everything else in the RAMA entry is the same for both versions.
 
-The SQL entries rebuild only the calculated tables a change reaches, and use integer member ids. The method may count that dependency logic as tuning. That is not decided yet. ClickHouse runs with the two settings it needs to keep missing values missing, plus `join_algorithm = 'hash'`, and keeps the translator's join order. PostgreSQL runs with every server setting at its default. Its calculated tables are `UNLOGGED` tables, which a clean stop keeps, so its R8 starts without building them again. DuckDB's and ClickHouse's calculated tables live in memory and are built again on every start. Settings are in each system's README.
+DuckDB has no incremental calculation, so its entry recalculates every calculated table after a write, a load of new data or a model change, and keeps the calculated tables in the database file like the inputs. Its tests that do this are marked `recalc: 'full'` and the website shows them grey and striped, as "not supported - full recalc results". The numbers stay in the scores. The DuckDB times at 10m and 100m were measured on 2026-11-05 with this setup. The DuckDB times at 1b were measured on 2026-10-24 with the earlier setup, calculated tables in memory and only the tables a change reaches rebuilt: they are not full recalculation results, they carry no mark, and 1b has not been measured again. A write on DuckDB takes about as long as one full recalculation, 3.6 s at 10m and 17.5 s at 100m, whichever cell it changes. The ClickHouse and PostgreSQL entries rebuild only the calculated tables a change reaches, and use integer member ids, as DuckDB does. The method may count that dependency logic as tuning. That is not decided yet, and it is not marked as a full recalculation. ClickHouse runs with the two settings it needs to keep missing values missing, plus `join_algorithm = 'hash'`, and keeps the translator's join order. PostgreSQL runs with every server setting at its default. Its calculated tables are `UNLOGGED` tables, which a clean stop keeps, so its R8 starts without building them again. ClickHouse's calculated tables live in memory and are built again on every start. DuckDB's are in its database file, so its R8 builds nothing. Settings are in each system's README.
 
 Seconds. A write is the median of up to 20 writes after one warm-up, each to a fresh cell, with the 95th percentile after it. Fewer cells fit some pick rules: W4 has 19 writes at 10m, W5 17 at both sizes, and W8 7 at 10m and 11 at 100m. A load, bulk write or model change is the median of 3 runs. A read is the median of 5 runs after a restore. R8 is the median of 3 runs, each from a stopped system, and its time includes the start.
 
 ## 10m
 
-Manifest SHA-256 `ea6f5dc3…`. Run times: RAMA 2.0 1.3 min, RAMA 1.9 1.5 min, DuckDB 4.3 min, ClickHouse 5.9 min, PostgreSQL 17.3 min. RAMA 2.0's peak memory was 0.55 GB. Every entry passed every test.
+Manifest SHA-256 `ea6f5dc3…`. Run times: RAMA 2.0 1.3 min, RAMA 1.9 1.5 min, DuckDB 11.4 min, ClickHouse 5.9 min, PostgreSQL 17.3 min. RAMA 2.0's peak memory was 0.55 GB, and DuckDB's, for the system and the runner, 0.69 GB. Every entry passed every test.
 
 | Test | RAMA 2.0 | RAMA 1.9 | DuckDB (tables) | ClickHouse (tables) | PostgreSQL (tables) |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| L1 Initial load | 3.78 | 4.87 | 4.4 | 6.29 | 22.4 |
-| L2 Monthly close | 0.695 | 0.876 | 2.76 | 3.17 | 15 |
-| L3 Change a weight in master data | 0.116 | 0.168 | 0.333 | 0.408 | 1.84 |
-| W1 Type one volume | 0.0865 (0.106) | 0.0973 (0.121) | 1.27 (1.28) | 1.5 (1.56) | 8.08 (8.19) |
-| W2 Paste 1,000 volumes at once | 0.323 | 0.542 | 1.33 | 1.89 | 8.22 |
-| W3 Change a rebate rate | 0.0313 (0.041) | 0.0339 (0.0443) | 0.409 (0.425) | 0.445 (0.464) | 2.52 (2.57) |
-| W4 Raise a brand's price | 0.229 (0.308) | 0.279 (0.387) | 1.01 (1.04) | 1.24 (1.4) | 7.04 (7.24) |
-| W5 Change a planning exchange rate | 0.0442 (0.0491) | 0.0509 (0.0576) | 0.341 (0.353) | 0.433 (0.508) | 2.14 (2.2) |
-| W6a Change the cost of a warehouse | 0.0121 (0.0146) | 0.0138 (0.0165) | 0.263 (0.279) | 0.37 (0.464) | 1.56 (1.57) |
-| W6b Change the cost of an office | 0.00669 (0.00828) | 0.00782 (0.01) | 0.264 (0.279) | 0.405 (0.425) | 1.55 (1.57) |
-| W7 Set a yearly target | 0.0927 (0.13) | 0.109 (0.144) | 1.39 (1.48) | 1.52 (1.61) | 8.18 (8.23) |
-| W8 Flip a yearly bonus | 0.0365 (0.0524) | 0.0467 (0.0587) | 0.394 (0.42) | 0.501 (0.639) | 2.42 (2.45) |
-| R1 Company P&L | 0.000617 | 0.00375 | 0.00228 | 0.0045 | 0.0139 |
-| R2a P&L by brand | 0.000483 | 0.00612 | 0.00259 | 0.00582 | 0.0141 |
-| R2b P&L by channel | 0.000496 | 0.00178 | 0.00244 | 0.0047 | 0.0137 |
-| R2c P&L by country, in its own currency | 0.000444 | 0.00211 | 0.0023 | 0.00453 | 0.0144 |
-| R3 Plan against last year | 0.000822 | 0.00145 | 0.00496 | 0.0128 | 0.0403 |
-| R4 Ratios | 0.0293 | 0.0415 | 0.0357 | 0.0414 | 0.053 |
-| R5 Drill to the detail | 0.00267 | 0.00648 | 0.0272 | 0.0587 | 0.076 |
-| R6 Margin by product attributes | 0.00044 | 0.00593 | 0.00361 | 0.00623 | 0.0127 |
-| R7 Top customers | 0.000126 | 0.000245 | 0.00222 | 0.00464 | 0.00436 |
-| R8 Open the model | 0.195 | 0.199 | 2.32 | 3.42 | 0.0602 |
-| M1 Change a formula | 0.385 | 0.858 | 0.272 | 0.327 | 1.71 |
-| M2 Add a customer | 0.304 | 0.552 | 2.27 | 2.8 | 13.3 |
-| M3 Move a customer to another group | 0.528 | 1.01 | 2.32 | 2.74 | 13.3 |
-| M4 Allocate one more cost | 0.36 | 0.739 | 0.224 | 0.3 | 1.36 |
+| L1 Initial load | 3.78 | 4.87 | 5.72 | 6.29 | 22.4 |
+| L2 Monthly close | 0.695 | 0.876 | 4.04 | 3.17 | 15 |
+| L3 Change a weight in master data | 0.116 | 0.168 | 3.66 | 0.408 | 1.84 |
+| W1 Type one volume | 0.0865 (0.106) | 0.0973 (0.121) | 3.65 (3.79) | 1.5 (1.56) | 8.08 (8.19) |
+| W2 Paste 1,000 volumes at once | 0.323 | 0.542 | 3.69 | 1.89 | 8.22 |
+| W3 Change a rebate rate | 0.0313 (0.041) | 0.0339 (0.0443) | 3.67 (3.75) | 0.445 (0.464) | 2.52 (2.57) |
+| W4 Raise a brand's price | 0.229 (0.308) | 0.279 (0.387) | 3.63 (3.81) | 1.24 (1.4) | 7.04 (7.24) |
+| W5 Change a planning exchange rate | 0.0442 (0.0491) | 0.0509 (0.0576) | 3.63 (3.88) | 0.433 (0.508) | 2.14 (2.2) |
+| W6a Change the cost of a warehouse | 0.0121 (0.0146) | 0.0138 (0.0165) | 3.66 (3.8) | 0.37 (0.464) | 1.56 (1.57) |
+| W6b Change the cost of an office | 0.00669 (0.00828) | 0.00782 (0.01) | 3.66 (3.82) | 0.405 (0.425) | 1.55 (1.57) |
+| W7 Set a yearly target | 0.0927 (0.13) | 0.109 (0.144) | 3.65 (3.8) | 1.52 (1.61) | 8.18 (8.23) |
+| W8 Flip a yearly bonus | 0.0365 (0.0524) | 0.0467 (0.0587) | 3.65 (3.77) | 0.501 (0.639) | 2.42 (2.45) |
+| R1 Company P&L | 0.000617 | 0.00375 | 0.00283 | 0.0045 | 0.0139 |
+| R2a P&L by brand | 0.000483 | 0.00612 | 0.00309 | 0.00582 | 0.0141 |
+| R2b P&L by channel | 0.000496 | 0.00178 | 0.00252 | 0.0047 | 0.0137 |
+| R2c P&L by country, in its own currency | 0.000444 | 0.00211 | 0.00311 | 0.00453 | 0.0144 |
+| R3 Plan against last year | 0.000822 | 0.00145 | 0.00762 | 0.0128 | 0.0403 |
+| R4 Ratios | 0.0293 | 0.0415 | 0.0334 | 0.0414 | 0.053 |
+| R5 Drill to the detail | 0.00267 | 0.00648 | 0.03 | 0.0587 | 0.076 |
+| R6 Margin by product attributes | 0.00044 | 0.00593 | 0.0051 | 0.00623 | 0.0127 |
+| R7 Top customers | 0.000126 | 0.000245 | 0.00261 | 0.00464 | 0.00436 |
+| R8 Open the model | 0.195 | 0.199 | 0.0706 | 3.42 | 0.0602 |
+| M1 Change a formula | 0.385 | 0.858 | 3.59 | 0.327 | 1.71 |
+| M2 Add a customer | 0.304 | 0.552 | 3.62 | 2.8 | 13.3 |
+| M3 Move a customer to another group | 0.528 | 1.01 | 3.62 | 2.74 | 13.3 |
+| M4 Allocate one more cost | 0.36 | 0.739 | 3.75 | 0.3 | 1.36 |
 | C1 to C3, the checks without a timer | ok | ok | ok | ok | ok |
 
 ## 100m
 
-Manifest SHA-256 `35ca0575…`. Run times: RAMA 2.0 8.5 min, RAMA 1.9 10.9 min, DuckDB 21.0 min, ClickHouse 14.2 min. RAMA 2.0's peak memory was 3.4 GB of the 16 GB. Every entry passed every test.
+Manifest SHA-256 `35ca0575…`. Run times: RAMA 2.0 8.5 min, RAMA 1.9 10.9 min, DuckDB 56.7 min, ClickHouse 14.2 min. RAMA 2.0's peak memory was 3.4 GB of the 16 GB, and DuckDB's, for the system and the runner, 2.2 GB. Every entry passed every test.
 
 | Test | RAMA 2.0 | RAMA 1.9 | DuckDB (tables) | ClickHouse (tables) |
 | --- | ---: | ---: | ---: | ---: |
-| L1 Initial load | 33.5 | 46.2 | 21 | 12.5 |
-| L2 Monthly close | 6.21 | 8.07 | 12.1 | 7.17 |
-| L3 Change a weight in master data | 1.3 | 2.05 | 1.81 | 0.917 |
-| W1 Type one volume | 0.167 (0.414) | 0.4 (0.657) | 7.03 (8.99) | 4.44 (4.49) |
-| W2 Paste 1,000 volumes at once | 2.39 | 4.41 | 7.27 | 4.83 |
-| W3 Change a rebate rate | 0.107 (0.369) | 0.138 (0.424) | 2.17 (2.2) | 1.31 (1.34) |
-| W4 Raise a brand's price | 2.04 (2.49) | 2.66 (3.13) | 5.3 (5.45) | 3.71 (3.81) |
-| W5 Change a planning exchange rate | 0.415 (0.626) | 0.533 (0.759) | 1.84 (1.86) | 1.12 (1.2) |
-| W6a Change the cost of a warehouse | 0.0588 (0.0721) | 0.174 (0.191) | 1.14 (1.16) | 0.783 (0.838) |
-| W6b Change the cost of an office | 0.00595 (0.00803) | 0.00661 (0.0086) | 1.15 (1.17) | 0.788 (0.797) |
-| W7 Set a yearly target | 0.343 (0.856) | 0.707 (1.37) | 7.03 (7.08) | 4.51 (4.63) |
-| W8 Flip a yearly bonus | 0.215 (0.299) | 0.261 (0.355) | 2.04 (2.23) | 1.32 (1.5) |
-| R1 Company P&L | 0.000974 | 0.00471 | 0.00324 | 0.00547 |
-| R2a P&L by brand | 0.00113 | 0.00999 | 0.00378 | 0.00608 |
-| R2b P&L by channel | 0.000801 | 0.00208 | 0.00311 | 0.00586 |
-| R2c P&L by country, in its own currency | 0.000743 | 0.00334 | 0.00314 | 0.00499 |
-| R3 Plan against last year | 0.00159 | 0.0046 | 0.00754 | 0.0166 |
-| R4 Ratios | 0.0622 | 0.078 | 0.0533 | 0.0464 |
-| R5 Drill to the detail | 0.00788 | 0.0099 | 0.0441 | 0.0783 |
-| R6 Margin by product attributes | 0.00373 | 0.102 | 0.0114 | 0.0148 |
-| R7 Top customers | 0.000919 | 0.00324 | 0.00547 | 0.00704 |
-| R8 Open the model | 1.34 | 1.28 | 10.1 | 7.5 |
-| M1 Change a formula | 3.07 | 8.03 | 1.46 | 0.814 |
-| M2 Add a customer | 1.9 | 4.25 | 10.1 | 6.73 |
-| M3 Move a customer to another group | 2.83 | 8.97 | 10.3 | 6.63 |
-| M4 Allocate one more cost | 1.86 | 6.16 | 0.916 | 0.64 |
+| L1 Initial load | 33.5 | 46.2 | 27.4 | 12.5 |
+| L2 Monthly close | 6.21 | 8.07 | 19 | 7.17 |
+| L3 Change a weight in master data | 1.3 | 2.05 | 17.3 | 0.917 |
+| W1 Type one volume | 0.167 (0.414) | 0.4 (0.657) | 17.4 (18.1) | 4.44 (4.49) |
+| W2 Paste 1,000 volumes at once | 2.39 | 4.41 | 17.5 | 4.83 |
+| W3 Change a rebate rate | 0.107 (0.369) | 0.138 (0.424) | 17.5 (17.9) | 1.31 (1.34) |
+| W4 Raise a brand's price | 2.04 (2.49) | 2.66 (3.13) | 17.3 (17.9) | 3.71 (3.81) |
+| W5 Change a planning exchange rate | 0.415 (0.626) | 0.533 (0.759) | 17.5 (17.9) | 1.12 (1.2) |
+| W6a Change the cost of a warehouse | 0.0588 (0.0721) | 0.174 (0.191) | 17.6 (17.8) | 0.783 (0.838) |
+| W6b Change the cost of an office | 0.00595 (0.00803) | 0.00661 (0.0086) | 17.5 (17.9) | 0.788 (0.797) |
+| W7 Set a yearly target | 0.343 (0.856) | 0.707 (1.37) | 17.4 (17.9) | 4.51 (4.63) |
+| W8 Flip a yearly bonus | 0.215 (0.299) | 0.261 (0.355) | 17.4 (17.7) | 1.32 (1.5) |
+| R1 Company P&L | 0.000974 | 0.00471 | 0.00481 | 0.00547 |
+| R2a P&L by brand | 0.00113 | 0.00999 | 0.00515 | 0.00608 |
+| R2b P&L by channel | 0.000801 | 0.00208 | 0.00453 | 0.00586 |
+| R2c P&L by country, in its own currency | 0.000743 | 0.00334 | 0.00465 | 0.00499 |
+| R3 Plan against last year | 0.00159 | 0.0046 | 0.0112 | 0.0166 |
+| R4 Ratios | 0.0622 | 0.078 | 0.0448 | 0.0464 |
+| R5 Drill to the detail | 0.00788 | 0.0099 | 0.0546 | 0.0783 |
+| R6 Margin by product attributes | 0.00373 | 0.102 | 0.0158 | 0.0148 |
+| R7 Top customers | 0.000919 | 0.00324 | 0.00858 | 0.00704 |
+| R8 Open the model | 1.34 | 1.28 | 0.0805 | 7.5 |
+| M1 Change a formula | 3.07 | 8.03 | 17.5 | 0.814 |
+| M2 Add a customer | 1.9 | 4.25 | 17.5 | 6.73 |
+| M3 Move a customer to another group | 2.83 | 8.97 | 17.5 | 6.63 |
+| M4 Allocate one more cost | 1.86 | 6.16 | 18.2 | 0.64 |
 | C1 to C3, the checks without a timer | ok | ok | ok | ok |
 
-- RAMA 2.0 is fastest on every write. A one-cell write takes 0.006 to 2.0 s on RAMA 2.0, 0.78 to 4.5 s on ClickHouse and 1.1 to 7.0 s on DuckDB. The paste of 1,000 volumes (W2) takes 2.4 s on RAMA 2.0, 4.8 s on ClickHouse and 7.3 s on DuckDB.
-- ClickHouse loads fastest. L1 takes 12.5 s on ClickHouse, 21 s on DuckDB, 34 s on RAMA 2.0 and 46 s on RAMA 1.9. RAMA 2.0 is fastest on the monthly close (L2).
-- The SQL entries are faster on model changes that touch formulas. M1 and M4 take 1.9 to 3.1 s on RAMA 2.0 and 0.64 to 1.5 s on the SQL entries, which rebuild only the tables the change reaches. Member changes (M2, M3) rebuild every SQL table, because the dimension lookups change. There RAMA 2.0 is 2.3 to 5.3 times faster than the SQL entries.
-- RAMA 2.0 is fastest on every read but R4, the ratios, where ClickHouse takes 0.046 s and RAMA 2.0 0.062 s.
-- Opening the model (R8) takes 1.3 s on RAMA, 7.5 s on ClickHouse and 10 s on DuckDB. DuckDB and ClickHouse build their calculated tables in memory on every start.
+- RAMA 2.0 is fastest on every write. A one-cell write takes 0.006 to 2.0 s on RAMA 2.0, 0.78 to 4.5 s on ClickHouse and 17.3 to 17.6 s on DuckDB, which calculates every table again after each write. The paste of 1,000 volumes (W2) takes 2.4 s on RAMA 2.0, 4.8 s on ClickHouse and 17.5 s on DuckDB.
+- ClickHouse loads fastest. L1 takes 12.5 s on ClickHouse, 27.4 s on DuckDB, 34 s on RAMA 2.0 and 46 s on RAMA 1.9. RAMA 2.0 is fastest on the monthly close (L2).
+- The SQL entries are faster on model changes that touch formulas. M1 and M4 take 1.9 to 3.1 s on RAMA 2.0 and 0.64 to 1.5 s on the SQL entries, which rebuild only the tables the change reaches. DuckDB takes 17.5 and 18.2 s because it builds every table again. Member changes (M2, M3) rebuild every SQL table, because the dimension lookups change. There RAMA 2.0 is 2.3 to 5.3 times faster than the SQL entries.
+- RAMA 2.0 is fastest on every read but R4, the ratios, where DuckDB takes 0.045 s, ClickHouse 0.046 s and RAMA 2.0 0.062 s.
+- Opening the model (R8) takes 1.3 s on RAMA, 7.5 s on ClickHouse and 0.08 s on DuckDB. ClickHouse builds its calculated tables in memory on every start. DuckDB keeps them in its file and builds nothing, and its marker says they are current.
 - RAMA 2.0 against RAMA 1.9: loads take 23 to 37% less time, writes up to 66% less, and model changes 55 to 70% less. Most reads are 2.6 to 27 times as fast, from `GROUPED_READ`. R8 is the same.
 
 ## 1b
 
-On an `n2d-highmem-8` (AMD EPYC 7B13, 8 vCPU, 64 GB) with a 375 GB local NVMe SSD, one new VM per entry, deleted after its run. No predefined N2D has 4 vCPUs and 64 GB, so 1b has twice the cores of 10m and 100m. Manifest SHA-256 `bb28482e…`. RAMA 1.9 recorded the 1b answers, and the other entries ran against them. Run times: RAMA 2.0 88.0 min, RAMA 1.9 123.6 min, DuckDB 104.7 min, ClickHouse 58.5 min. Peak memory, for the system and the runner: RAMA 2.0 30.0 GB, RAMA 1.9 37.3 GB, DuckDB 35.9 GB, ClickHouse 17.6 GB. Every entry passed every test. The files are in [`n2d-highmem-8-local-nvme-ssd/1b/`](n2d-highmem-8-local-nvme-ssd/1b/), and the website shows them when that machine is ticked.
+On an `n2d-highmem-8` (AMD EPYC 7B13, 8 vCPU, 64 GB) with a 375 GB local NVMe SSD, one new VM per entry, deleted after its run. No predefined N2D has 4 vCPUs and 64 GB, so 1b has twice the cores of 10m and 100m. Manifest SHA-256 `bb28482e…`. RAMA 1.9 recorded the 1b answers, and the other entries ran against them. Run times: RAMA 2.0 88.0 min, RAMA 1.9 123.6 min, DuckDB 104.7 min, ClickHouse 58.5 min. Peak memory, for the system and the runner: RAMA 2.0 30.0 GB, RAMA 1.9 37.3 GB, DuckDB 35.9 GB, ClickHouse 17.6 GB. Every entry passed every test. The DuckDB results at 1b are from the earlier setup, with calculated tables in memory and only the affected tables rebuilt. They are not full recalculation results, they carry no mark, and they are not comparable with DuckDB at 10m and 100m. The files are in [`n2d-highmem-8-local-nvme-ssd/1b/`](n2d-highmem-8-local-nvme-ssd/1b/), and the website shows them when that machine is ticked.
 
 | Test | RAMA 2.0 | RAMA 1.9 | DuckDB (tables) | ClickHouse (tables) |
 | --- | ---: | ---: | ---: | ---: |
@@ -141,6 +141,10 @@ On an `n2d-highmem-8` (AMD EPYC 7B13, 8 vCPU, 64 GB) with a 375 GB local NVMe SS
 - Invariant I3 is not checked.
 - The test edits of M4 are the runner's own reading of `tests.json`.
 - RAMA cannot be installed outside Farseer yet. Its package is in Farseer's private registry.
+- DuckDB, the full recalculation:
+  - Recalculating the derived tables inside one transaction costs far more than outside it. On the 4 vCPU run machine, one recalculation took about 271 s inside `BEGIN ... COMMIT` (463 s with `threads = 1`) against about 4 s with each statement committing by itself, on a copy of the 10m snapshot. On a 24-core machine it took 17 to 28 s inside a transaction. The time is CPU, not I/O wait. The cause is not established.
+  - DuckDB commits each statement by itself and has no materialized views or triggers. There is no way to refresh the derived tables atomically with the input write without paying that cost. The choice is atomic and slow, or fast and not atomic: a crash between the input commit and the end of the recalculation leaves stale derived tables.
+  - The entry therefore keeps a `calc_state` table with a calculated flag. A write commits its inputs together with `calculated = false`, recalculates, and commits `calculated = true`. An open that finds the flag false after a crash calculates every table again before the first read. See the entry's README.
 - One run of each entry. ClickBench-style repeats on fresh machines are still to do. Two runs of RAMA 2.0 at 100m on two new VMs differed by about 5%.
 - The RAMA 2.0 runs are ten days after the others, on new VMs of the same type.
 - Durable means a write survives a crash of the system or the operating system. The local SSD does not survive a host failure or a stop of the VM. See the method.

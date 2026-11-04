@@ -88,6 +88,13 @@ Planning engines keep results up to date, so stored results are allowed. This co
 
 OS caches, buffer pools, compiled plans and prepared statements are also allowed.
 
+## Systems without incremental calculation
+
+Some systems cannot recalculate only what a change reaches. DuckDB is one. Such a system is run the way its users would have to run it: after a write, a load or a model change that touches calculated data, it recalculates everything, and that time counts as it is. Nothing compensates for the gap. The entry does not keep its calculated tables in memory, does not rebuild only the tables a change reaches, and does not do anything else that stands in for incremental calculation. Its calculated tables are durable too. A change commits its inputs together with a marker that says the calculated tables are stale, the recalculation runs after that, and a second commit clears the marker. A crash in between is repaired by the next open, which calculates every table again before the first read, so a read never sees stale calculated tables as current. Tuning that has nothing to do with incrementality, such as integer member ids, stays.
+
+- A test where the system recalculated everything instead of updating what changed is marked `recalc: 'full'`. The test file of the entry exports it, and the runner copies it into that test's result, as `"recalc": "full"`. A test without the field did what the system does natively. Loads that build every table for every system (L1) and reads do not carry it.
+- The time stays in the score, as measured. Only the presentation changes: the website draws the bars and cells of such tests grey with diagonal stripes, labelled "not supported - full recalc results", in the legend and in a tooltip. The label says that the system has no incremental calculation, so these times are not a like-for-like match with a system that updates only what changed.
+
 A cache of answers keyed on a read's text or parameters is not allowed. Neither is anything built for one test's read. The runner also makes unpublished reads to catch this.
 
 ## Fair comparison
@@ -116,7 +123,7 @@ Amounts must match within 0.01 or a relative 1e-9, whichever is larger. Ratios m
 All benchmarks are wrong in some way, and this one is too. [ClickBench](https://github.com/ClickHouse/ClickBench#limitations) says the same about itself. Read the results with that in mind.
 
 - **One model, one kind of work.** FPABench runs one P&L model with a set list of tasks. Your own model and your own way of working may give a different order.
-- **The databases are not planning engines.** DuckDB and ClickHouse have no way to recalculate only the cells a write reaches. Their entries keep each calculated variable as a table. After a write they rebuild every table that depends on it. So their write and model change times show the cost of that rebuild. A planning engine updates only what changed. These times are not a like-for-like match.
+- **The databases are not planning engines.** DuckDB, ClickHouse and PostgreSQL have no way to recalculate only the cells a write reaches. Their entries keep each calculated variable as a table. DuckDB has no incremental calculation at all, so its entry recalculates every calculated table after a change and its results are marked `recalc: 'full'`, shown as "not supported - full recalc results". The ClickHouse and PostgreSQL entries rebuild every table that depends on the write. So their write and model change times show the cost of that rebuild. A planning engine updates only what changed. None of these times is a like-for-like match.
 - **The SQL entries are a baseline.** They show what a plain database does with this model. Each was set up by Farseer, and a better setup may exist. Each system's makers are welcome to send one.
 - **Farseer makes RAMA.** We follow the same rules for RAMA as for every other entry. Even so, we know RAMA best, and that can help it.
 - **A small reference machine.** The rankings use one small cloud machine. A bigger machine or a different disk can change the order.
