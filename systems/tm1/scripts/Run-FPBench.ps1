@@ -180,12 +180,13 @@ function Restore-State([string[]]$List) {
 }
 
 # ---- checks of a run: read after the timer stops (tests/method.md: the timer stops when the proving read
-#      returns) and before the run is undone. z.FPB.Test.Check writes <answers>\<test>_<run>.csv.check
-$checkTests = 'W1','W2','W8','M2','M4','L2'
+#      returns) and before the run is undone. z.FPB.Test.Check writes <answers>\<test>_<run>.csv.check,
+#      .check2 and so on: every check FPABench's expected.json has for the test
+$checkTests = 'W1','W2','W4','W5','W8','L2','L3','M1','M2','M3','M4','C1'
 function Run-Check([string]$T, [hashtable]$P, [string]$Out) {
   if ($checkTests -notcontains $T) { return }
   $h = @{ pTest = $T; pOut = $Out }
-  foreach ($k in 'pVersion','pYear','pMonth','pCustomer','pSKU','pGroup','pCountry') { if ($P -and $P.ContainsKey($k)) { $h[$k] = $P[$k] } }
+  foreach ($k in 'pVersion','pYear','pMonth','pCustomer','pSKU','pGroup','pCountry','pBrand') { if ($P -and $P.ContainsKey($k)) { $h[$k] = $P[$k] } }
   Invoke-Untimed 'z.FPB.Test.Check' $h "check $T"
 }
 
@@ -250,7 +251,10 @@ foreach ($t in $order) {
     switch -Regex ($t) {
       '^L1$' {
         for ($i = 0; $i -lt $n; $i++) {
-          $r = Invoke-TI 'z.FPB.Run.L1' @{ pPkgDir = $C.PackageDirectory; pDataDir = $C.StageDirectory; pClear = 1; pBulk = 1; pSave = 1; pOut = (Join-Path $answers "L1_$i.csv") }
+          # From an empty model, as FPABench's L1: the run destroys the four cubes and every FPB dimension,
+          # then builds, sets up and loads them, all inside the timer.
+          $r = Invoke-TI 'z.FPB.Run.L1' @{ pPkgDir = $C.PackageDirectory; pDataDir = $C.StageDirectory; pBuild = 1; pStructDir = $C.StructureDirectory
+            pMasterDir = (Join-FPBenchPath $C.DatasetDirectory 'master'); pClear = 1; pBulk = 1; pSave = 1; pOut = (Join-Path $answers "L1_$i.csv") }
           if ($r.exit -ne 0) { throw "L1 exit $($r.exit)" }
           $times += $r.ms
         }
@@ -342,6 +346,7 @@ foreach ($t in $order) {
         try {
           $r = Invoke-TI $spec.process $p
           if ($r.exit -ne 0) { throw "$t exit $($r.exit)" }
+          Run-Check $t $p ($p.pOut + '.check')
         } finally { if ($j) { Restore-State @($j) } }
         break
       }

@@ -2,6 +2,11 @@
 
 ## Current issue
 
+**L1 from empty, L3 to disk, and every check**
+- The harness's L1 runs `z.FPB.Run.L1` with the new `pBuild = 1`: it destroys the four cubes and every FPB dimension, then runs `z.FPB.Build.All`, `z.FPB.Setup.Model`, `z.FPB.Setup.GroupAttr` and `z.FPB.Setup.HandlingFactor` before the load, all inside the timer, as FPABench's L1 loads master data from an empty system. The installer still builds in its own stages.
+- L3 ends with `SaveDataAll`, as L1 and L2 do, and its undo saves again.
+- `z.FPB.Test.Check` reads every check `expected.json` has: also W4, W5, L3, M1, M3 and C1, EBIT by country for W1, and the marketing staff cost, overheads and EBIT for M4. Each read goes to its own file, `.check`, `.check2` and so on, and `compare.mjs` reads them all. The marketing staff cost has no measure of its own, so its check is the pool of each month the country has positive net sales, which is what the allocation sums to.
+
 **Answers checked against RAMA's**
 - The installer's Reference stage downloads `expected.json`, the answers and checks RAMA recorded for the published dataset, with `scripts/fetch-expected.mjs`. It checks the file against its SHA-256 and that it belongs to the dataset. Every FPABench entry is held to these answers. The installer no longer records DuckDB's answers, and `scripts/windows-import-hook.mjs`, which only that needed, is removed.
 - The harness plan comes from `expected.json`, so W8 writes the thresholds RAMA wrote. `z.FPB.Test.W8Setup` runs only without them.

@@ -72,6 +72,7 @@ ELSE;
   ELSEIF( sT @= 'L3' );
     n = ATTRN( 'FPB_Product', pSKU, 'UnitWeightKg' );
     AsciiOutput( sJ, 'ATTR', 'FPB_Product', pSKU, 'UnitWeightKg', '', '', '', '', '', '', '', '', '', '', TRIM( STR( n, 40, 15 ) ) );
+    AsciiOutput( sJ, 'SAVE', '', '', '', '', '', '', '', '', '', '', '', '', '', '' );
   ELSEIF( sT @= 'L2' );
     n = CellGetN( 'FPB_Control', 'Actual', 'Default', 'Y2026', 'M7', 'FC Closed IN' );
     AsciiOutput( sJ, 'CELL', 'FPB_Control', 'Actual', 'Default', 'Y2026', 'M7', 'FC Closed IN', '', '', '', '', '', '', '', TRIM( STR( n, 40, 15 ) ) );

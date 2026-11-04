@@ -12,27 +12,47 @@ pCustomer  String   ''
 pSKU       String   ''
 pGroup     String   ''
 pCountry   String   ''
+pBrand     String   ''
 #### DATASOURCE
 None
 #### VARIABLES
 #### PROLOG
+# The checks of a run, as FPABench's tests return them. Each read writes its own file, pOut, pOut2, pOut3
+# and so on, because a second AsciiOutput to one file from another process starts the file again.
+# scripts/compare.mjs reads them all.
 sV = pVersion;  IF( sV @= '' ); sV = 'FC 6+6'; ENDIF;
 sY = pYear;     IF( sY @= '' ); sY = 'Y2026';  ENDIF;
 sT = pTest;
-IF( sT @= 'W1' );
+nRet = ProcessExitNormal();
+IF( sT @= 'W1' % sT @= 'C1' );
   nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'VOLUME_CELL', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pMonth', pMonth, 'pCustomer', pCustomer, 'pSKU', pSKU );
+  IF( nRet = ProcessExitNormal() & sT @= 'W1' );
+    nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_BY_COUNTRY', 'pOut', pOut | '2', 'pVersion', sV, 'pYear', sY, 'pMonth', '' );
+  ENDIF;
 ELSEIF( sT @= 'W8' );
   nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'CHECK_GB_GROUP', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pGroup', pGroup );
 ELSEIF( sT @= 'W2' );
   nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_OUT', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pCountry', pCountry );
+ELSEIF( sT @= 'W4' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'GROSS_SALES_BRAND_CLOSED', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pBrand', pBrand );
+ELSEIF( sT @= 'W5' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'COGS_BY_COUNTRY', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pMonth', pMonth );
 ELSEIF( sT @= 'M2' );
   nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_OUT', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pCountry', ATTRS('FPB_InputCustomer', pGroup, 'Country') );
 ELSEIF( sT @= 'L2' );
   nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'CHECK_IMPORT_TOTAL', 'pOut', pOut, 'pYear', 'Y2026', 'pMonth', 'M7' );
+ELSEIF( sT @= 'L3' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_ALL', 'pOut', pOut );
+ELSEIF( sT @= 'M1' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'LOGISTICS_ALL', 'pOut', pOut );
+  IF( nRet = ProcessExitNormal() ); nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_ALL', 'pOut', pOut | '2' ); ENDIF;
+ELSEIF( sT @= 'M3' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_ACTUAL_ALL', 'pOut', pOut );
 ELSEIF( sT @= 'M4' );
   nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'CHECK_OPEX_IN_EBIT', 'pOut', pOut, 'pVariant', 'M4' );
-ELSE;
-  nRet = ProcessExitNormal();
+  IF( nRet = ProcessExitNormal() ); nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'MKT_STAFF_COUNTRY', 'pOut', pOut | '2', 'pVersion', sV, 'pYear', sY ); ENDIF;
+  IF( nRet = ProcessExitNormal() ); nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'OVERHEADS_COUNTRY', 'pOut', pOut | '3', 'pVersion', sV, 'pYear', sY ); ENDIF;
+  IF( nRet = ProcessExitNormal() ); nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_ALL', 'pOut', pOut | '4' ); ENDIF;
 ENDIF;
 IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
 #### METADATA

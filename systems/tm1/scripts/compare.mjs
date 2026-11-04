@@ -1,7 +1,8 @@
 // Compares the TM1 answers and checks with RAMA's recorded ones, the expected.json FPABench publishes with
 // each dataset, as the FPABench runner compares every entry's.
 //   node scripts/compare.mjs <expected.json> <answers dir> [L1,R1,...] [--quick]
-// <answers dir> holds <test>_<run>.csv files, and <test>_<run>.csv.check for the checks, from the harness.
+// <answers dir> holds <test>_<run>.csv files, and <test>_<run>.csv.check, .check2 and so on for the checks,
+// from the harness.
 // Each line is "<tag>","<key>","<value>" with key "Dim=member;Dim=member".
 // - Every run of every test needs its answer file. With --quick, as after Run-FPBench.ps1 -Quick, only the
 //   runs that have one are compared, and each test needs at least one.
@@ -23,12 +24,27 @@ const expected = JSON.parse(fs.readFileSync(expectedFile, 'utf8'));
 
 // Which check each tag of a TM1 check file answers, per test.
 const CHECKS = {
-  W1: { VOLUME_CELL: 'Volume' },
+  W1: { VOLUME_CELL: 'Volume', EBIT_BY_COUNTRY: 'EBIT OUT by country' },
   W2: { EBIT_OUT: 'EBIT OUT' },
+  W4: { GROSS_SALES_BRAND_CLOSED: 'Gross Sales in closed months' },
+  W5: { COGS_BY_COUNTRY: 'COGS by country' },
   W8: { CHECK_GB_GROUP: 'CHECK Growth Bonus' },
-  M2: { EBIT_OUT: 'EBIT OUT' },
   L2: { CHECK_IMPORT_TOTAL: 'CHECK Import Total by country' },
-  M4: { CHECK_OPEX_IN_EBIT: 'CHECK OPEX in EBIT' },
+  L3: { EBIT_ALL: 'EBIT OUT by country and month' },
+  M1: { LOGISTICS_ALL: 'Logistics Cost by country and month', EBIT_ALL: 'EBIT OUT by country and month' },
+  M2: { EBIT_OUT: 'EBIT OUT' },
+  M3: { EBIT_ACTUAL_ALL: 'Actual EBIT OUT by country and month' },
+  M4: { CHECK_OPEX_IN_EBIT: 'CHECK OPEX in EBIT', MKT_STAFF_COUNTRY: 'Marketing Staff Cost by country', OVERHEADS_COUNTRY: 'Overheads by country', EBIT_ALL: 'EBIT OUT by country and month' },
+  C1: { VOLUME_CELL: 'Volume' },
+};
+/** Every check file of a run: <answer file>.check, .check2, .check3 and so on. */
+const checkRows = (file) => {
+  const rows = [];
+  for (let i = 1; ; i++) {
+    const part = readTm1(`${file}.check${i === 1 ? '' : i}`);
+    if (part === null) return rows;
+    rows.push(...part);
+  }
 };
 
 function splitCsv(line) {
@@ -120,7 +136,7 @@ for (const test of tests) {
     else for (const x of compare(want.expect ?? [], got, test === 'R4')) problems.push(`run ${run}: ${x}`);
 
     // The checks: every one the expected file has or names as 0 must come back.
-    const rows = readTm1(file + '.check') ?? [];
+    const rows = checkRows(file);
     const byName = {};
     for (const r of rows) {
       const name = CHECKS[test]?.[r.tag];

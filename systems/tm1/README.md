@@ -80,7 +80,7 @@ You need your own licensed TM1 v11 server with the REST API on, used for nothing
    node scripts\compare.mjs <WorkDir>\tm1_reference\expected.json <WorkDir>\tm1_results\answers
    ```
 
-The harness signs in once and runs each test as one timed `tm1.ExecuteWithReturn` call: the action, then its proving read. It undoes each run inside the running server with `z.FPB.State.Save` and `z.FPB.State.Restore`. R8 stops and starts the TM1 service. [`BENCHMARK_METHODOLOGY.md`](docs/BENCHMARK_METHODOLOGY.md) has the details.
+The harness signs in once and runs each test as one timed `tm1.ExecuteWithReturn` call: the action, then its proving read. Its L1 starts from an empty model: `z.FPB.Run.L1` with `pBuild = 1` destroys the four cubes and every FPB dimension, then builds, sets up and loads them. The loads end with `SaveDataAll`. It undoes each run inside the running server with `z.FPB.State.Save` and `z.FPB.State.Restore`. R8 stops and starts the TM1 service. [`BENCHMARK_METHODOLOGY.md`](docs/BENCHMARK_METHODOLOGY.md) has the details.
 
 ## Known gaps
 
@@ -88,9 +88,6 @@ These make the harness's numbers differ from how FPABench times and checks its o
 
 | Gap | FPABench's method |
 | --- | --- |
-| The harness returns only some of the checks: W1, W2, W8, M2, L2 and part of M4. `compare.mjs` reports the others as not returned, so W1, W4, W5, L3, M1, M3, M4 and C1 fail until they are added. | Every check in `expected.json` comes back and matches |
-| L1 times only the cube load. The dimensions and attributes are built untimed, in Build and Setup. | L1 loads master data too, from an empty system |
-| L3 does not save to disk | A load's timer covers writing to disk |
 | L2 adds the increment to Actual Y2026 M7 instead of replacing it. That is right only because the base has no M7 actuals. | A load replaces the cells it names |
 | Reads get an untimed warm-up before the timed runs | Reads run 5 times after a restore, with no warm-up |
 | Tests are undone inside the running server | Loads, bulk writes and model changes start from the snapshot |

@@ -16,7 +16,7 @@ Farseer makes FPABench and RAMA, one of its systems. Say so when you compare res
 ## What is timed
 
 - **One call per run.** Each run is one REST call, `POST /Processes('<name>')/tm1.ExecuteWithReturn`, to a TI process that performs the test's action and then its proving read. The timer starts just before the call and stops when the response arrives. Signing in is not timed.
-- **Checks, undo and warm-up are not timed.** `z.FPB.Test.Check` reads the checks of W1, W2, W8, M2, M4 and L2 after the run. `z.FPB.State.Save` and `z.FPB.State.Restore` undo each run inside the running server. Before the reads, R1 to R7 and C2, an untimed warm-up runs whenever TM1's calculation cache was emptied. `-NoWarmup` turns it off.
+- **Checks, undo and warm-up are not timed.** `z.FPB.Test.Check` reads, after the run, every check `expected.json` has for the test. `z.FPB.State.Save` and `z.FPB.State.Restore` undo each run inside the running server. Before the reads, R1 to R7 and C2, an untimed warm-up runs whenever TM1's calculation cache was emptied. `-NoWarmup` turns it off.
 - **R8** stops the TM1 Windows service, starts it, and times until the first read succeeds. It needs the server on the same machine.
 - **Repeats** come from the harness plan, `<WorkDir>\tm1_plan\plan.json`. `-Quick` runs each test once, and single-cell writes 4 times: 1 warm-up and 3 timed.
 

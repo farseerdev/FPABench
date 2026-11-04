@@ -520,6 +520,133 @@ IF( sT @= 'CHECK_OPEX_IN_EBIT' );
   nDone = 1;
 ENDIF;
 
+#==================================================================== checks ======
+# The checks FPABench's tests return after the timer, read by z.FPB.Test.Check.
+
+# W4: gross sales of a brand by country, in the months the version does not plan
+IF( sT @= 'GROSS_SALES_BRAND_CLOSED' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      nM = 1;
+      WHILE( nM <= 12 );
+        sM = 'M' | NumberToString( nM );
+        IF( CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Plan' ) <> 1 );
+          n = CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'By Currency', pBrand, 'All_Hierarchies', 'P100', sC, sY, sM, 'Amount' );
+          IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+        ENDIF;
+        nM = nM + 1;
+      END;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# W5: cost of goods by country, for a version and month
+IF( sT @= 'COGS_BY_COUNTRY' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      n = - CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P150', sC, sY, sMth, 'Amount' );
+      IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC, NumberToString( n ) ); ENDIF;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# L3, M1, M4: EBIT by country, version, year and month. M3: the same for Actual, by country, year and month.
+# M1: logistics cost of the customers, by country, version, year and month.
+IF( sT @= 'EBIT_ALL' % sT @= 'EBIT_ACTUAL_ALL' % sT @= 'LOGISTICS_ALL' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      nVv = 1;
+      WHILE( nVv <= DIMSIZ('FPB_Version') );
+        sVv = DIMNM('FPB_Version', nVv);
+        IF( DTYPE('FPB_Version', sVv) @= 'N' & ( sT @<> 'EBIT_ACTUAL_ALL' % sVv @= 'Actual' ) );
+          nYy = 1;
+          WHILE( nYy <= DIMSIZ('FPB_Years') );
+            sYy = DIMNM('FPB_Years', nYy);
+            IF( DTYPE('FPB_Years', sYy) @= 'N' );
+              nM = 1;
+              WHILE( nM <= 12 );
+                sM = 'M' | NumberToString( nM );
+                IF( sT @= 'LOGISTICS_ALL' );
+                  n = - CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'By Currency', 'All_Hierarchies', 'All_Hierarchies', 'P170', sC, sYy, sM, 'Amount' );
+                ELSE;
+                  n = CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'EBIT', sC, sYy, sM, 'Amount' );
+                ENDIF;
+                IF( n <> 0 );
+                  IF( sT @= 'EBIT_ACTUAL_ALL' );
+                    sKey = 'Country=' | sC | ';Years=' | sYy | ';Months=' | sM;
+                  ELSE;
+                    sKey = 'Country=' | sC | ';Versions=' | sVv | ';Years=' | sYy | ';Months=' | sM;
+                  ENDIF;
+                  AsciiOutput( pOut, sT, sKey, NumberToString( n ) );
+                ENDIF;
+                nM = nM + 1;
+              END;
+            ENDIF;
+            nYy = nYy + 1;
+          END;
+        ENDIF;
+        nVv = nVv + 1;
+      END;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# M4: overheads by country, for a version and year
+IF( sT @= 'OVERHEADS_COUNTRY' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      n = - CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'NoCustomer', 'NoProduct', 'All_Hierarchies', 'P210', sC, sY, 'All_Hierarchies', 'Amount' );
+      IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC, NumberToString( n ) ); ENDIF;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# M4: the marketing staff cost allocated to customers, by country, for a version and year. It has no measure
+# of its own, since it posts into P190. The keys of a country and month add up to 1 when the country has
+# positive net sales, so the allocated cost is the month's pool there, and 0 elsewhere. The pool is the OPEX
+# of the Marketing cost centers: the actual in the version's closed months, OPEX IN in its plan months.
+IF( sT @= 'MKT_STAFF_COUNTRY' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      nSum = 0;  nM = 1;
+      WHILE( nM <= 12 );
+        sM = 'M' | NumberToString( nM );
+        nP = 0;
+        IF( CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Actual' ) = 1 );
+          nP = CellGetN( 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'Marketing', 'GL Accounts', sC, sY, sM, 'IMPORT OPEX' );
+        ELSEIF( CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Plan' ) = 1 );
+          nP = CellGetN( 'FPB_Drivers', sV, 'NoChannel', 'NoCustomer', 'NoProduct', 'Marketing', 'GL Accounts', sC, sY, sM, 'OPEX IN' );
+        ENDIF;
+        IF( CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'Brand Level', 'NoCostCenter', 'NoAccount', sC, sY, sM, 'NS Positive CB' ) > 0 );
+          nSum = nSum + nP;
+        ENDIF;
+        nM = nM + 1;
+      END;
+      IF( nSum <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC, NumberToString( nSum ) ); ENDIF;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
 IF( nDone = 0 ); AsciiOutput( pOut, sT, 'ERROR', 'unknown pTest' ); ProcessError; ENDIF;
 #### METADATA
 #### DATA

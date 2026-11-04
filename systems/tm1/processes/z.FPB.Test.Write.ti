@@ -76,5 +76,7 @@ ENDIF;
 nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', sRead, 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pMonth', sReadMonth,
                        'pCountry', sReadCountry, 'pGroup', pGroup, 'pBrand', pBrand, 'pCategory', pCategory );
 IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+# L3 is a load: like L1 and L2, it ends with the cubes on disk.
+IF( sT @= 'L3' ); SaveDataAll; ENDIF;
 # The FPABench timer stops at the proving read. The checks of the run (W1, W8) are read afterwards,
 # untimed, by z.FPB.Test.Check.
