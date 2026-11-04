@@ -1,24 +1,25 @@
 // W8 Flip a yearly bonus, on DuckDB.
 //
 // A planner moves one customer group's growth threshold just across the group's growth, so its yearly bonus
-// switches on or off. The threshold replaces its row in the input table, and every calculated table it
-// reaches is built again. Timed until the group's growth bonus for the year can be read.
+// switches on or off. The threshold replaces its row in the input table, and every calculated table is
+// built again. Timed until the group's growth bonus for the year can be read.
 
-import { restore, members, rebuild } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const REBUILD = rebuild('Growth Bonus Threshold IN');
+import { restore, members } from '../db.mjs';
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
     },
 
     async run({ db, m, pick: { group, value } }) {
-        await db.run(`INSERT OR REPLACE INTO "Growth Bonus Threshold IN" ("Customer Group", "Versions", "Years", v)
-                      VALUES (${m.id('Customer Group', group)}, ${m.id('Versions', 'FC 6+6')}, ${m.id('Years', 'Y2026')}, ${value})`);
-        await db.run(REBUILD);
+        await db.write(async () => {
+            await db.run(`INSERT OR REPLACE INTO "Growth Bonus Threshold IN" ("Customer Group", "Versions", "Years", v)
+                          VALUES (${m.id('Customer Group', group)}, ${m.id('Versions', 'FC 6+6')}, ${m.id('Years', 'Y2026')}, ${value})`);
+        });
 
         const [bonus] = await db.rows(`
             SELECT sum(s.v) AS v FROM "Growth Bonus" s JOIN "flat Customer" c ON c."Customer" = s."Customer"

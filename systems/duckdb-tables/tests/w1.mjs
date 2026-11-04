@@ -1,24 +1,25 @@
 // W1 Type one volume, on DuckDB.
 //
 // A planner types one customer's volume for one SKU and plan month, in the biggest customer group of its
-// country. The typed volume replaces its row in the table of overrides, and every calculated table it reaches
-// is built again. Timed until the country's EBIT for the year can be read.
+// country. The typed volume replaces its row in the table of overrides, and every calculated table is
+// built again. Timed until the country's EBIT for the year can be read.
 
-import { restore, members, rebuild } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const REBUILD = rebuild('Volume Override IN');
+import { restore, members } from '../db.mjs';
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
     },
 
     async run({ db, m, pick: { at, country, value } }) {
-        await db.run(`INSERT OR REPLACE INTO "Volume Override IN" ("Customer", "SKU", "Versions", "Years", "Months", v)
-                      VALUES (${m.id('Customer', at.Customer)}, ${m.id('SKU', at.SKU)}, ${m.id('Versions', at.Versions)}, ${m.id('Years', at.Years)}, ${m.id('Months', at.Months)}, ${value})`);
-        await db.run(REBUILD);
+        await db.write(async () => {
+            await db.run(`INSERT OR REPLACE INTO "Volume Override IN" ("Customer", "SKU", "Versions", "Years", "Months", v)
+                          VALUES (${m.id('Customer', at.Customer)}, ${m.id('SKU', at.SKU)}, ${m.id('Versions', at.Versions)}, ${m.id('Years', at.Years)}, ${m.id('Months', at.Months)}, ${value})`);
+        });
 
         const [ebit] = await db.rows(`
             SELECT sum(v) AS v FROM "EBIT OUT"

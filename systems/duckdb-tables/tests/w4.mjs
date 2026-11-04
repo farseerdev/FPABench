@@ -1,13 +1,10 @@
 // W4 Raise a brand's price, on DuckDB.
 //
 // A planner raises one brand's price increase for the plan year. The new value replaces its row in the input
-// table, and every calculated table it reaches is built again. Timed until the brand's gross sales can be
+// table, and every calculated table is built again. Timed until the brand's gross sales can be
 // read by country and plan month.
 
-import { restore, members, rebuild } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const REBUILD = rebuild('Price Increase IN');
+import { restore, members } from '../db.mjs';
 
 const salesOfBrand = (m, brand, months, sign) => `
     SELECT c."Country" AS c, s."Months" AS mo, sum(s.v) AS v FROM "Gross Sales" s
@@ -17,14 +14,18 @@ const salesOfBrand = (m, brand, months, sign) => `
     GROUP BY c."Country", s."Months"`;
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
     },
 
     async run({ db, m, pick: { brand, value, months } }) {
-        await db.run(`INSERT OR REPLACE INTO "Price Increase IN" ("Brand", "Versions", "Years", v) VALUES (${m.id('Brand', brand)}, ${m.id('Versions', 'FC 6+6')}, ${m.id('Years', 'Y2026')}, ${value})`);
-        await db.run(REBUILD);
+        await db.write(async () => {
+            await db.run(`INSERT OR REPLACE INTO "Price Increase IN" ("Brand", "Versions", "Years", v) VALUES (${m.id('Brand', brand)}, ${m.id('Versions', 'FC 6+6')}, ${m.id('Years', 'Y2026')}, ${value})`);
+        });
 
         const rows = await db.rows(salesOfBrand(m, brand, months, 'IN'));
         return rows.filter((r) => r.v !== null).map((r) => ({ key: { Country: m.name('Country', r.c), Months: m.name('Months', r.mo) }, value: r.v }));

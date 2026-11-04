@@ -6,13 +6,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { sqlFile, connect, fileOf, snapshotOf, sqlFolder } from '../db.mjs';
+import { sqlFile, connect, createState, calculate, fileOf, snapshotOf, sqlFolder } from '../db.mjs';
 
 // The SQL this test runs, read once when the file loads, so no file read is timed.
 const SCHEMA = sqlFile('schema.sql');
 const MEMBERS = sqlFile('members.sql');
 const DIMENSIONS = sqlFile('dimensions.sql');
-const CALCULATE = sqlFile('calculate.sql');
 const IMPORTS = sqlFolder('import');
 
 export default {
@@ -32,6 +31,7 @@ export default {
 
         // 2. Create the model: the tables, and the members the model itself brings.
         await db.run(SCHEMA);
+        await createState(db);
         await db.run(MEMBERS);
 
         // 3. Import the CSVs: the data's own members of each dimension, then each input variable's cells.
@@ -39,8 +39,8 @@ export default {
         await db.run('BEGIN');
         for (const file of fs.readdirSync(path.join(cells.base, 'cells'))) await db.run(IMPORTS.get(file.replace(/\.csv$/, '')));
         await db.run('COMMIT');
-        // Every calculated table, in dependency order, and the file to disk.
-        await db.run(CALCULATE);
+        // Every calculated table, in dependency order, then calculated = true, and the file to disk.
+        await calculate(db);
         await db.run('CHECKPOINT');
 
         // 4. Read EBIT in euros for every country, version, year and month.

@@ -1,14 +1,14 @@
 // R8 Open the model, on DuckDB.
 //
-// Each run starts DuckDB on the snapshot file, which builds every calculated table,
-// then reads EBIT in euros for the plan year. Timed from the start until the read returns.
+// Each run starts DuckDB on the snapshot file, whose calculated tables are in it already, then reads EBIT in
+// euros for the plan year. Timed from the start until the read returns.
 
 import { reset, start, members } from '../db.mjs';
 
 export default {
     setup: ({ work }) => reset(work),
 
-    // Timed: the start, and the member ids the read needs.
+    // Timed: opening the file, and the member ids the read needs.
     async open(context) {
         context.db = await start(context.work);
         context.m = await members(context.db);

@@ -2,10 +2,7 @@
 //
 // After W1's first write, a typed volume in one country, the EBIT of another country must not move.
 
-import { restore, members, rebuild } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const REBUILD = rebuild('Volume Override IN');
+import { restore, members } from '../db.mjs';
 
 export default {
     async setup(context) {
@@ -14,9 +11,10 @@ export default {
     },
 
     async run({ db, m, pick: { at, country, value } }) {
-        await db.run(`INSERT OR REPLACE INTO "Volume Override IN" ("Customer", "SKU", "Versions", "Years", "Months", v)
-                      VALUES (${m.id('Customer', at.Customer)}, ${m.id('SKU', at.SKU)}, ${m.id('Versions', at.Versions)}, ${m.id('Years', at.Years)}, ${m.id('Months', at.Months)}, ${value})`);
-        await db.run(REBUILD);
+        await db.write(async () => {
+            await db.run(`INSERT OR REPLACE INTO "Volume Override IN" ("Customer", "SKU", "Versions", "Years", "Months", v)
+                          VALUES (${m.id('Customer', at.Customer)}, ${m.id('SKU', at.SKU)}, ${m.id('Versions', at.Versions)}, ${m.id('Years', at.Years)}, ${m.id('Months', at.Months)}, ${value})`);
+        });
 
         const [ebit] = await db.rows(`
             SELECT sum(v) AS v FROM "EBIT OUT" WHERE "Country" = ${m.id('Country', country)} AND "Versions" = ${m.id('Versions', at.Versions)} AND "Years" = ${m.id('Years', at.Years)}`);

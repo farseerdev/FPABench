@@ -1,15 +1,15 @@
 // W2 Paste 1,000 volumes at once, on DuckDB.
 //
 // A planner pastes 1,000 volumes into the plan months of one country. All 1,000 rows go into the table of
-// overrides in one statement, and every calculated table they reach is built again. Timed until the
+// overrides in one statement, and every calculated table is built again. Timed until the
 // country's volume over the plan months can be read.
 
-import { restore, members, rebuild } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const REBUILD = rebuild('Volume Override IN');
+import { restore, members } from '../db.mjs';
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
@@ -17,8 +17,9 @@ export default {
 
     async run({ db, m, pick: { cells, country, months } }) {
         const values = cells.map(({ at, value }) => `(${m.id('Customer', at.Customer)}, ${m.id('SKU', at.SKU)}, ${m.id('Versions', at.Versions)}, ${m.id('Years', at.Years)}, ${m.id('Months', at.Months)}, ${value})`);
-        await db.run(`INSERT OR REPLACE INTO "Volume Override IN" ("Customer", "SKU", "Versions", "Years", "Months", v) VALUES ${values.join(', ')}`);
-        await db.run(REBUILD);
+        await db.write(async () => {
+            await db.run(`INSERT OR REPLACE INTO "Volume Override IN" ("Customer", "SKU", "Versions", "Years", "Months", v) VALUES ${values.join(', ')}`);
+        });
 
         const [volume] = await db.rows(`
             SELECT sum(s.v) AS v FROM "Volume" s JOIN "flat Customer" f ON f."Customer" = s."Customer"
