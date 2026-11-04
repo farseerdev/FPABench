@@ -1,0 +1,303 @@
+#==============================================================================
+# FPB_Reporting - sales grain, allocations and the management P&L
+# Variant: test M1 (Handling KG = Volume KG)
+# Dims: FPB_Version, FPB_Currency, FPB_CurrencyScenario, FPB_Channel, FPB_Customer,
+#       FPB_Product, FPB_CostCenter, FPB_Account, FPB_Country, FPB_Years, FPB_Months,
+#       FPB_Reporting_m
+#
+# Where the FPABench variables live (all local currency on 'LCY', 'Periodic'):
+#   Customer x SKU  : Units@NoAccount, P100..P150@Amount (signed postings),
+#                     helpers Invoice Sales Positive / Invoice Sales Plan / Handling KG @NoAccount
+#   Customer x Brand: Product = '<brand> (Brand Level)': P170, P180, P190@Amount,
+#                     helpers Handling KG Positive / IS Positive CB / NS Positive CB @NoAccount
+#   No customer     : Customer = NoCustomer: unallocated P130/P135/P140/P170/P180/P190,
+#                     overheads P210 per cost center
+# Account consolidations give Invoice Sales, Net Sales, Gross Margin, CM II, CM III, EBIT.
+# Version 'Actual' is the actuals store: imported lines are data (STET); every other
+# version shows it in its FC Actual months (rule 3) and plans its FC Plan months.
+# 'FPB_Currency':'EUR' is LCY / Effective rate (PL EUR OUT, EBIT EUR OUT). USD/GBP: no rates.
+# STATUS : generated with the help of Claude Opus 5.5; requires validation.
+#==============================================================================
+SKIPCHECK;
+
+#--- 0. EUR copy of every amount -------------------------------------------------
+['FPB_Currency':'EUR', 'Amount'] = N:
+   IF( DB('FPB_FX', !FPB_Version, 'Effective', 'EUR', ATTRS('FPB_Country', !FPB_Country, 'Currency'), !FPB_Years, !FPB_Months) > 0,
+       ['FPB_Currency':'LCY']
+       \ DB('FPB_FX', !FPB_Version, 'Effective', 'EUR', ATTRS('FPB_Country', !FPB_Country, 'Currency'), !FPB_Years, !FPB_Months),
+       0 );
+
+#--- 1. KPI measures: ratios of totals at whatever level is read (read them in EUR) --
+#    Not fed on purpose: zero suppression hides them; CellGetN / DBRW return them.
+['Net Price per Unit']                   = ['Net Sales','Amount'] \ ['FPB_Currency':'LCY','NoAccount','Units'];
+['Gross-to-Net %']                       = ( ['P100','Amount'] - ['Net Sales','Amount'] ) \ ['P100','Amount'];
+['Gross Margin %']                       = ['Gross Margin','Amount'] \ ['Net Sales','Amount'];
+['Contribution Margin II %']             = ['Contribution Margin II','Amount'] \ ['Net Sales','Amount'];
+['Contribution Margin III %']            = ['Contribution Margin III','Amount'] \ ['Net Sales','Amount'];
+['EBIT %']                               = ['EBIT','Amount'] \ ['Net Sales','Amount'];
+['Standard Discounts % of Gross Sales']  = - ['P110','Amount'] \ ['P100','Amount'];
+['Promo Discounts % of Gross Sales']     = - ['P120','Amount'] \ ['P100','Amount'];
+['Logistics Discounts % of Gross Sales'] = - ['P125','Amount'] \ ['P100','Amount'];
+['Rebates % of Gross Sales']             = - ['P130','Amount'] \ ['P100','Amount'];
+['Growth Bonus % of Gross Sales']        = - ['P135','Amount'] \ ['P100','Amount'];
+['Trade Fees % of Gross Sales']          = - ['P140','Amount'] \ ['P100','Amount'];
+['Promo Funding % of Gross Sales']       = - ['P145','Amount'] \ ['P100','Amount'];
+['COGS % of Gross Sales']                = - ['P150','Amount'] \ ['P100','Amount'];
+['Logistics % of Gross Sales']           = - ['P170','Amount'] \ ['P100','Amount'];
+['Sales Force % of Gross Sales']         = - ['P180','Amount'] \ ['P100','Amount'];
+['Marketing % of Gross Sales']           = - ['P190','Amount'] \ ['P100','Amount'];
+['Overheads % of Gross Sales']           = - ['P210','Amount'] \ ['P100','Amount'];
+
+#--- 2. Actuals store: imported lines are data ------------------------------------
+['Actual', 'FPB_Currency':'LCY', {'P100','P110','P120','P125','P145'}, 'Amount'] = N: STET;
+['Actual', 'FPB_Currency':'LCY', 'NoAccount', 'Units'] = N: STET;
+
+#--- 3+4. Which months a version shows: actual months copy the Actual version, plan months go on to
+#         the plan rules below, all other months are empty. The Actual version shows its own data in its
+#         FC Actual months (one Control lookup); other versions need at most two.
+['FPB_Currency':'LCY'] = N:
+   IF( !FPB_Version @= 'Actual',
+       IF( DB('FPB_Control', 'Actual', 'Default', !FPB_Years, !FPB_Months, 'FC Actual') = 1, CONTINUE, 0 ),
+   IF( DB('FPB_Control', !FPB_Version, 'Default', !FPB_Years, !FPB_Months, 'FC Actual') = 1,
+       DB('FPB_Reporting', 'Actual', !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, !FPB_Product,
+          !FPB_CostCenter, !FPB_Account, !FPB_Country, !FPB_Years, !FPB_Months, !FPB_Reporting_m),
+   IF( DB('FPB_Control', !FPB_Version, 'Default', !FPB_Years, !FPB_Months, 'FC Plan') = 1, CONTINUE, 0 )));
+
+#=== 5. Amounts no customer could carry (Customer = NoCustomer) ======================
+# rebates / growth bonus of groups with no positive sales (group's channel and country)
+['FPB_Currency':'LCY', 'NoCustomer', 'NoProduct', 'NoCostCenter', 'P130', 'Amount'] = N:
+   - DB('FPB_Drivers', !FPB_Version, !FPB_Channel, 'Customer Groups', 'NoProduct', 'NoCostCenter', 'NoAccount',
+        !FPB_Country, !FPB_Years, !FPB_Months, 'Rebates Unallocated');
+['FPB_Currency':'LCY', 'NoCustomer', 'NoProduct', 'NoCostCenter', 'P135', 'Amount'] = N:
+   - DB('FPB_Drivers', !FPB_Version, !FPB_Channel, 'Customer Groups', 'NoProduct', 'NoCostCenter', 'NoAccount',
+        !FPB_Country, !FPB_Years, !FPB_Months, 'GB Unallocated');
+# trade fees of a group and brand with no positive sales (brand level)
+['FPB_Currency':'LCY', 'NoCustomer', 'NoCostCenter', 'P140', 'Amount'] = N:
+   IF( ATTRS('FPB_Product', !FPB_Product, 'Source Level') @<> 'Brand Level', 0,
+       - DB('FPB_Drivers', !FPB_Version, !FPB_Channel, 'Customer Groups', ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+            'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Trade Fees Unallocated') );
+# logistics of a country and month with nothing shipped
+['FPB_Currency':'LCY', 'NoCustomer', 'NoProduct', 'NoCostCenter', 'FPB_Channel':'NULL (Channel)', 'P170', 'Amount'] = N:
+   IF( DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, 'All_Hierarchies', 'All_Hierarchies', 'Brand Level',
+          'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Handling KG Positive') > 0, 0,
+       - IF( !FPB_Version @= 'Actual',
+             DB('FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'Logistics', 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT OPEX'),
+             DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', 'NoProduct', 'Logistics', 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'OPEX IN') ) );
+# sales team of a channel with no positive sales (cost-center channel rollup = the sales teams)
+['FPB_Currency':'LCY', 'NoCustomer', 'NoProduct', 'NoCostCenter', 'P180', 'Amount'] = N:
+   IF( !FPB_Channel @= 'NULL (Channel)' % !FPB_Channel @= 'NoChannel', 0,
+   IF( DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, !FPB_Channel, 'All_Hierarchies', 'Brand Level',
+          'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'IS Positive CB') > 0, 0,
+       - IF( !FPB_Version @= 'Actual',
+             DB('FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', !FPB_Channel, 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT OPEX'),
+             DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', 'NoProduct', !FPB_Channel, 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'OPEX IN') ) ));
+# brand spend in a country with no positive net sales of the brand
+['FPB_Currency':'LCY', 'NoCustomer', 'NoCostCenter', 'FPB_Channel':'NULL (Channel)', 'P190', 'Amount'] = N:
+   IF( ATTRS('FPB_Product', !FPB_Product, 'Source Level') @= 'Brand Level',
+       IF( DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, 'All_Hierarchies', 'All_Hierarchies', !FPB_Product,
+              'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'NS Positive CB') > 0, 0,
+           - DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+                'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Marketing Pool') ),
+       0 );
+# overheads: every cost center that is not allocated
+['FPB_Currency':'LCY', 'NoCustomer', 'NoProduct', 'FPB_Channel':'NULL (Channel)', 'P210', 'Amount'] = N:
+   IF( !FPB_CostCenter @= 'NoCostCenter'
+     % ATTRS('FPB_CostCenter', !FPB_CostCenter, 'Function') @= 'Logistics'
+     % ATTRS('FPB_CostCenter', !FPB_CostCenter, 'Function') @= 'Sales',
+       0,
+       - IF( !FPB_Version @= 'Actual',
+             DB('FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', !FPB_CostCenter, 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT OPEX'),
+             DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', 'NoProduct', !FPB_CostCenter, 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'OPEX IN') ) );
+['FPB_Currency':'LCY', 'NoCustomer'] = N: 0;
+
+#=== 6. Customer x brand: cost pools allocated by computed keys =====================
+# (keys count only positive values: MAX( x, 0 ) evaluates the consolidated read once)
+['FPB_Currency':'LCY', 'NoAccount', 'Handling KG Positive'] = N:
+   IF( ATTRS('FPB_Product', !FPB_Product, 'Source Level') @<> 'Brand Level', 0,
+   MAX( DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+          'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Handling KG'), 0 ));
+['FPB_Currency':'LCY', 'NoAccount', 'IS Positive CB'] = N:
+   IF( ATTRS('FPB_Product', !FPB_Product, 'Source Level') @<> 'Brand Level', 0,
+   MAX( DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+          'NoCostCenter', 'Invoice Sales', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount'), 0 ));
+['FPB_Currency':'LCY', 'NoAccount', 'NS Positive CB'] = N:
+   IF( ATTRS('FPB_Product', !FPB_Product, 'Source Level') @<> 'Brand Level', 0,
+   MAX( DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+          'NoCostCenter', 'Net Sales', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount'), 0 ));
+# logistics: country pool x handling kg share of the country
+['FPB_Currency':'LCY', 'P170', 'Amount'] = N:
+   IF( ATTRS('FPB_Product', !FPB_Product, 'Source Level') @<> 'Brand Level', 0,
+       - IF( !FPB_Version @= 'Actual',
+             DB('FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'Logistics', 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT OPEX'),
+             DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', 'NoProduct', 'Logistics', 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'OPEX IN') )
+       * ['NoAccount','Handling KG Positive']
+       \ DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, 'All_Hierarchies', 'All_Hierarchies', 'Brand Level',
+            'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Handling KG Positive') );
+# sales force: channel x country pool x invoice sales share
+['FPB_Currency':'LCY', 'P180', 'Amount'] = N:
+   IF( ATTRS('FPB_Product', !FPB_Product, 'Source Level') @<> 'Brand Level', 0,
+       - IF( !FPB_Version @= 'Actual',
+             DB('FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', !FPB_Channel, 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT OPEX'),
+             DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', 'NoProduct', !FPB_Channel, 'GL Accounts', !FPB_Country, !FPB_Years, !FPB_Months, 'OPEX IN') )
+       * ['NoAccount','IS Positive CB']
+       \ DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, !FPB_Channel, 'All_Hierarchies', 'Brand Level',
+            'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'IS Positive CB') );
+# marketing: brand x country pool x net sales share
+['FPB_Currency':'LCY', 'P190', 'Amount'] = N:
+   IF( ATTRS('FPB_Product', !FPB_Product, 'Source Level') @<> 'Brand Level', 0,
+       - DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+            'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Marketing Pool')
+       * ['NoAccount','NS Positive CB']
+       \ DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, 'All_Hierarchies', 'All_Hierarchies', !FPB_Product,
+            'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'NS Positive CB') );
+
+#=== 7. Customer x SKU: volume and gross-to-net ======================================
+# Volume: typed override wins; else the yearly target phased by last year's mix; else LY x (1 + growth)
+['FPB_Currency':'LCY', 'NoAccount', 'Units'] = N:
+   IF( DB('FPB_Drivers', !FPB_Version, !FPB_Channel, !FPB_Customer, !FPB_Product, 'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Volume Override IN Entered') = 1,
+       DB('FPB_Drivers', !FPB_Version, !FPB_Channel, !FPB_Customer, !FPB_Product, 'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Volume Override IN'),
+   IF( ATTRS('FPB_Years', !FPB_Years, 'Prev') @= '', 0,
+   IF( DB('FPB_Drivers', !FPB_Version, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Category'),
+          'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, 'Annual', 'Volume Target IN Entered') = 1
+       & DB('FPB_Reporting', 'Actual', 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Category'),
+            'NoCostCenter', 'NoAccount', !FPB_Country, ATTRS('FPB_Years', !FPB_Years, 'Prev'), 'All_Hierarchies', 'Units') > 0,
+       DB('FPB_Drivers', !FPB_Version, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Category'),
+          'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, 'Annual', 'Volume Target IN')
+       * DB('FPB_Reporting', 'Actual', 'LCY', !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, !FPB_Product,
+            'NoCostCenter', 'NoAccount', !FPB_Country, ATTRS('FPB_Years', !FPB_Years, 'Prev'), !FPB_Months, 'Units')
+       \ DB('FPB_Reporting', 'Actual', 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Category'),
+            'NoCostCenter', 'NoAccount', !FPB_Country, ATTRS('FPB_Years', !FPB_Years, 'Prev'), 'All_Hierarchies', 'Units'),
+       DB('FPB_Reporting', 'Actual', 'LCY', !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, !FPB_Product,
+          'NoCostCenter', 'NoAccount', !FPB_Country, ATTRS('FPB_Years', !FPB_Years, 'Prev'), !FPB_Months, 'Units')
+       * ( 1 + DB('FPB_Drivers', !FPB_Version, !FPB_Channel, 'NoCustomer', ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+                  'NoCostCenter', 'NoAccount', 'Global', !FPB_Years, 'Annual', 'Volume Growth IN') ) )));
+
+# Gross sales = units x carried list price x (1 + increase)
+['FPB_Currency':'LCY', 'P100', 'Amount'] = N:
+   ['NoAccount','Units']
+   * DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', !FPB_Product, 'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'List Price Plan');
+
+['FPB_Currency':'LCY', 'P110', 'Amount'] = N:
+   - ['P100','Amount']
+   * DB('FPB_Drivers', !FPB_Version, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+        'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Std Disc Rate');
+
+['FPB_Currency':'LCY', 'P120', 'Amount'] = N:
+   - ['P100','Amount']
+   * DB('FPB_Drivers', !FPB_Version, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+        'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Promo Discount IN');
+
+['FPB_Currency':'LCY', 'P125', 'Amount'] = N:
+   - ['P100','Amount']
+   * DB('FPB_Drivers', !FPB_Version, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'NoProduct',
+        'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Log Disc Rate');
+
+# Rebates: actual = group expense spread by invoice sales; plan = invoice sales x rate
+['FPB_Currency':'LCY', 'P130', 'Amount'] = N:
+   IF( !FPB_Version @= 'Actual',
+       IF( DB('FPB_Reporting', 'Actual', 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'By Division',
+              'NoCostCenter', 'Invoice Sales', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount') > 0,
+           - ( DB('FPB_Drivers', 'Actual', !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'NoProduct', 'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT Rebates')
+             + DB('FPB_Drivers', 'Actual', !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'NoProduct', 'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT Rebate True-ups') )
+           * ( ['P100','Amount'] + ['P110','Amount'] + ['P120','Amount'] + ['P125','Amount'] )
+           \ DB('FPB_Reporting', 'Actual', 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'By Division',
+                'NoCostCenter', 'Invoice Sales', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount'),
+           0 ),
+       - ( ['P100','Amount'] + ['P110','Amount'] + ['P120','Amount'] + ['P125','Amount'] )
+       * DB('FPB_Drivers', !FPB_Version, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'NoProduct',
+            'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Rebate Rate') );
+
+# Growth bonus: actual = group expense spread by invoice sales; plan = the year's remainder
+#               spread over the plan months by planned invoice sales
+['FPB_Currency':'LCY', 'P135', 'Amount'] = N:
+   IF( !FPB_Version @= 'Actual',
+       IF( DB('FPB_Reporting', 'Actual', 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'By Division',
+              'NoCostCenter', 'Invoice Sales', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount') > 0,
+           - DB('FPB_Drivers', 'Actual', !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'NoProduct', 'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT Growth Bonus')
+           * ( ['P100','Amount'] + ['P110','Amount'] + ['P120','Amount'] + ['P125','Amount'] )
+           \ DB('FPB_Reporting', 'Actual', 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'By Division',
+                'NoCostCenter', 'Invoice Sales', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount'),
+           0 ),
+       IF( DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'By Division',
+              'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, 'All_Hierarchies', 'Invoice Sales Plan') > 0,
+           - DB('FPB_Drivers', !FPB_Version, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'NoProduct', 'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, 'Annual', 'GB Remaining')
+           * ['NoAccount','Invoice Sales Plan']
+           \ DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), 'By Division',
+                'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, 'All_Hierarchies', 'Invoice Sales Plan'),
+           0 ) );
+
+# Trade fees: group x brand pool x positive invoice sales share
+['FPB_Currency':'LCY', 'P140', 'Amount'] = N:
+   - IF( !FPB_Version @= 'Actual',
+         DB('FPB_Drivers', 'Actual', !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+            'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'IMPORT Trade Fees'),
+         DB('FPB_Drivers', !FPB_Version, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+            'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Trade Fees IN') )
+   * ['NoAccount','Invoice Sales Positive']
+   \ DB('FPB_Reporting', !FPB_Version, 'LCY', !FPB_CurrencyScenario, !FPB_Channel, ATTRS('FPB_Customer', !FPB_Customer, 'CustomerGroup'), ATTRS('FPB_Product', !FPB_Product, 'Brand'),
+        'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Invoice Sales Positive');
+
+['FPB_Currency':'LCY', 'P145', 'Amount'] = N:
+   - DB('FPB_Drivers', !FPB_Version, !FPB_Channel, !FPB_Customer, !FPB_Product, 'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Promo Funding IN');
+
+# COGS = units x standard cost (EUR) x rate
+['FPB_Currency':'LCY', 'P150', 'Amount'] = N:
+   - ['NoAccount','Units']
+   * IF( !FPB_Version @= 'Actual',
+         DB('FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', !FPB_Product, 'NoCostCenter', 'NoAccount', 'Global', !FPB_Years, 'Annual', 'IMPORT Standard Cost'),
+         DB('FPB_Drivers', !FPB_Version, 'NoChannel', 'NoCustomer', !FPB_Product, 'NoCostCenter', 'NoAccount', 'Global', !FPB_Years, 'Annual', 'Standard Cost Plan') )
+   * DB('FPB_FX', !FPB_Version, 'Effective', 'EUR', ATTRS('FPB_Country', !FPB_Country, 'Currency'), !FPB_Years, !FPB_Months);
+
+['FPB_Currency':'LCY', 'NoAccount', 'Invoice Sales Positive'] = N:
+   MAX( ( ['P100','Amount'] + ['P110','Amount'] + ['P120','Amount'] + ['P125','Amount'] ), 0 );
+
+['FPB_Currency':'LCY', 'NoAccount', 'Invoice Sales Plan'] = N:
+   IF( !FPB_Version @= 'Actual', 0, ( ['P100','Amount'] + ['P110','Amount'] + ['P120','Amount'] + ['P125','Amount'] ) );
+
+['FPB_Currency':'LCY', 'NoAccount', 'Handling KG'] = N:
+   ['NoAccount','Units']
+   * ATTRN('FPB_Product', !FPB_Product, 'UnitWeightKg');
+
+FEEDERS;
+
+#--- actuals store -> the versions that show the month (flag kept by z.FPB.Control.FeedFlags)
+['Actual', 'FPB_Currency':'LCY', 'NoAccount', 'Units'] =>
+   DB('FPB_Reporting', IF( DB('FPB_Control', 'Actual', 'Default', !FPB_Years, !FPB_Months, 'Feed Actual Copy') = 1, 'All_Hierarchies', 'Actual' ),
+      !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, !FPB_Product, !FPB_CostCenter, !FPB_Account,
+      !FPB_Country, !FPB_Years, !FPB_Months, !FPB_Reporting_m);
+['Actual', 'FPB_Currency':'LCY', {'P100','P145'}, 'Amount'] =>
+   DB('FPB_Reporting', IF( DB('FPB_Control', 'Actual', 'Default', !FPB_Years, !FPB_Months, 'Feed Actual Copy') = 1, 'All_Hierarchies', 'Actual' ),
+      !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, !FPB_Product, !FPB_CostCenter, !FPB_Account,
+      !FPB_Country, !FPB_Years, !FPB_Months, !FPB_Reporting_m);
+
+#--- last year's units -> next year's plan cells in versions that plan that month
+['Actual', 'FPB_Currency':'LCY', 'NoAccount', 'Units'] =>
+   DB('FPB_Reporting',
+      IF( ATTRS('FPB_Years', !FPB_Years, 'Next') @= '', 'Actual',
+          IF( DB('FPB_Control', 'Actual', 'Default', ATTRS('FPB_Years', !FPB_Years, 'Next'), !FPB_Months, 'Feed Plan') = 1, 'All_Hierarchies', 'Actual' ) ),
+      !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, !FPB_Product, !FPB_CostCenter, 'NoAccount', !FPB_Country,
+      IF( ATTRS('FPB_Years', !FPB_Years, 'Next') @= '', !FPB_Years, ATTRS('FPB_Years', !FPB_Years, 'Next') ),
+      !FPB_Months, 'Units');
+
+#--- within a version: a sale feeds its lines, helpers and its customer x brand cells
+['FPB_Currency':'LCY', 'NoAccount', 'Units'] =>
+   ['P100','Amount'], ['P110','Amount'], ['P120','Amount'], ['P125','Amount'], ['P130','Amount'],
+   ['P135','Amount'], ['P140','Amount'], ['P145','Amount'], ['P150','Amount'],
+   ['NoAccount','Invoice Sales Positive'], ['NoAccount','Invoice Sales Plan'], ['NoAccount','Handling KG'],
+   DB('FPB_Reporting', !FPB_Version, !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand') | ' (Brand Level)',
+      'NoCostCenter', 'P170', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount'),
+   DB('FPB_Reporting', !FPB_Version, !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand') | ' (Brand Level)',
+      'NoCostCenter', 'P180', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount'),
+   DB('FPB_Reporting', !FPB_Version, !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand') | ' (Brand Level)',
+      'NoCostCenter', 'P190', !FPB_Country, !FPB_Years, !FPB_Months, 'Amount'),
+   DB('FPB_Reporting', !FPB_Version, !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand') | ' (Brand Level)',
+      'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'Handling KG Positive'),
+   DB('FPB_Reporting', !FPB_Version, !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand') | ' (Brand Level)',
+      'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'IS Positive CB'),
+   DB('FPB_Reporting', !FPB_Version, !FPB_Currency, !FPB_CurrencyScenario, !FPB_Channel, !FPB_Customer, ATTRS('FPB_Product', !FPB_Product, 'Brand') | ' (Brand Level)',
+      'NoCostCenter', 'NoAccount', !FPB_Country, !FPB_Years, !FPB_Months, 'NS Positive CB');
+['FPB_Currency':'LCY', 'P100', 'Amount'] =>
+   ['NoAccount','Units'];
+
+#--- every local amount has an EUR copy
+['FPB_Currency':'LCY', 'Amount'] => ['FPB_Currency':'EUR'];

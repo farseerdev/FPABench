@@ -1,0 +1,3 @@
+# Detached rules (bulk load). Reattach with z.FPB.Rules.Load.
+SKIPCHECK;
+FEEDERS;

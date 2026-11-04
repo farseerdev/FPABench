@@ -1,0 +1,56 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Build.All
+#### PARAMETERS
+pDir      String   'C:\FPABench-10m\tm1_structure'
+pLogDir   String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+# Builds the base model in one run: the nine structure-file dimensions (z.FPB.Build.Dimension),
+# the design dimensions and special members (z.FPB.Build.Fixed), then the four cubes (z.FPB.Build.Cubes,
+# never destroying anything). pDir is the folder holding FPB_<dimension>.csv from scripts/stage-structure.mjs.
+# Next steps (see README): z.FPB.Setup.Model, z.FPB.Setup.GroupAttr, z.FPB.Setup.HandlingFactor, z.FPB.Run.L1.
+
+sLog = pLogDir;
+IF( sLog @= '' );
+  sLog = GetProcessErrorFileDirectory;
+ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_Build_All.log';
+
+sDir = pDir;
+IF( sDir @<> '' & SUBST( sDir, LONG( sDir ), 1 ) @<> '\' & SUBST( sDir, LONG( sDir ), 1 ) @<> '/' );
+  IF( SCAN( '/', sDir ) > 0 ); sDir = sDir | '/'; ELSE; sDir = sDir | '\'; ENDIF;
+ENDIF;
+
+# parents before the dimensions that read them: FPB_Customer and FPB_Product before z.FPB.Build.Fixed
+sList = 'FPB_Version|FPB_Years|FPB_Months|FPB_Channel|FPB_Country|FPB_Account|FPB_CostCenter|FPB_Customer|FPB_Product|';
+WHILE( sList @<> '' );
+  nP = SCAN( '|', sList );  sDim = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+  nRet = ExecuteProcess( 'z.FPB.Build.Dimension', 'pDim', sDim, 'pFile', sDir | sDim | '.csv', 'pLogDir', pLogDir );
+  IF( nRet <> ProcessExitNormal() );
+    AsciiOutput( sLog, 'ERROR', 'z.FPB.Build.Dimension failed', sDim, NumberToString( nRet ) );
+    ProcessError;
+  ENDIF;
+END;
+
+nRet = ExecuteProcess( 'z.FPB.Build.Fixed', 'pLogDir', pLogDir );
+IF( nRet <> ProcessExitNormal() );
+  AsciiOutput( sLog, 'ERROR', 'z.FPB.Build.Fixed failed', NumberToString( nRet ) );
+  ProcessError;
+ENDIF;
+
+nRet = ExecuteProcess( 'z.FPB.Build.Cubes', 'pDestroy', 0, 'pLogDir', pLogDir );
+IF( nRet <> ProcessExitNormal() );
+  AsciiOutput( sLog, 'ERROR', 'z.FPB.Build.Cubes failed', NumberToString( nRet ) );
+  ProcessError;
+ENDIF;
+AsciiOutput( sLog, 'DONE', 'next: z.FPB.Setup.Model (pApply 0, then 1)' );
+#### METADATA
+#### DATA
+#### EPILOG

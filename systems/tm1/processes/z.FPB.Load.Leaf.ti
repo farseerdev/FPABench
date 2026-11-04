@@ -1,0 +1,198 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Load.Leaf
+#### PARAMETERS
+pFile     String   'C:\FPABench-10m\tm1_load\FPB_Leaf.csv'
+pVersion  String   'ALL'
+pYear     String   'ALL'
+pMonth    String   'ALL'
+pZeroOut  Numeric  0
+pLogDir   String   ''
+#### DATASOURCE
+ASCII 'C:\FPABench-10m\tm1_load\FPB_Leaf.csv'
+#### VARIABLES
+vSource           String
+vVersion          String
+vYear             String
+vMonth            String
+vCustomer         String
+vCustomerGroup    String
+vSKU              String
+vMaterial         String
+vBrand            String
+vChannel          String
+vCostCenter       String
+vAccount          String
+vCountry          String
+vCurrency         String
+vMeasure          String
+vValue            String
+#### PROLOG
+sLog = pLogDir;
+IF( sLog @= '' ); sLog = GetProcessErrorFileDirectory; ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_Load_Leaf.log';
+IF( FileExists( pFile ) = 0 ); AsciiOutput( sLog, 'ERROR', 'file not found', pFile ); ProcessError; ENDIF;
+sVersion = pVersion;  IF( UPPER( sVersion ) @= 'ALL' ); sVersion = ''; ENDIF;
+sYear    = pYear;     IF( UPPER( sYear )    @= 'ALL' ); sYear    = ''; ENDIF;
+sMonth   = pMonth;    IF( UPPER( sMonth )   @= 'ALL' ); sMonth   = ''; ENDIF;
+IF( sVersion @<> '' ); IF( DIMIX('FPB_Version', sVersion) = 0 ); ProcessError; ENDIF; sVersion = DIMNM('FPB_Version', DIMIX('FPB_Version', sVersion)); ENDIF;
+IF( sYear    @<> '' ); IF( DIMIX('FPB_Years',   sYear)    = 0 ); ProcessError; ENDIF; sYear    = DIMNM('FPB_Years',   DIMIX('FPB_Years',   sYear));    ENDIF;
+IF( sMonth   @<> '' ); IF( DIMIX('FPB_Months',  sMonth)   = 0 ); ProcessError; ENDIF; sMonth   = DIMNM('FPB_Months',  DIMIX('FPB_Months',  sMonth));   ENDIF;
+IF( DIMIX('FPB_Drivers_m', 'zFPB_Leaf_ClearScope') = 0 ); AsciiOutput( sLog, 'ERROR', 'run z.FPB.Setup.Model first' ); ProcessError; ENDIF;
+
+DatasourceNameForServer = pFile;
+DatasourceASCIIDelimiter = ',';
+DatasourceASCIIQuoteCharacter = Char(34);
+DatasourceASCIIHeaderRecords = 1;
+
+IF( pZeroOut = 1 );
+  # Drivers: everything this file loads there
+  nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_Drivers', 'pView', 'zFPB_Drivers_LeafClear',
+    'pDim1', sVersion, 'pDim2', '', 'pDim3', '', 'pDim4', '', 'pDim5', '', 'pDim6', '', 'pDim7', '',
+    'pDim8', sYear, 'pDim9', sMonth, 'pDim10', 'zFPB_Leaf_ClearScope', 'pDim11', '', 'pDim12', '',
+    'pZeroOut', 1, 'pKeepView', 0 );
+  IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+  # Reporting: the stored sales lines of the actuals store (only when Actual is in the selection)
+  IF( sVersion @= '' % sVersion @= 'Actual' );
+    nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_Reporting', 'pView', 'zFPB_Reporting_LeafClear',
+      'pDim1', 'Actual', 'pDim2', 'LCY', 'pDim3', '', 'pDim4', '', 'pDim5', '', 'pDim6', '', 'pDim7', '',
+      'pDim8', 'Invoice Sales', 'pDim9', '', 'pDim10', sYear, 'pDim11', sMonth, 'pDim12', 'Amount',
+      'pZeroOut', 1, 'pKeepView', 0 );
+    IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+    nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_Reporting', 'pView', 'zFPB_Reporting_LeafClear',
+      'pDim1', 'Actual', 'pDim2', 'LCY', 'pDim3', '', 'pDim4', '', 'pDim5', '', 'pDim6', '', 'pDim7', '',
+      'pDim8', 'P145', 'pDim9', '', 'pDim10', sYear, 'pDim11', sMonth, 'pDim12', 'Amount',
+      'pZeroOut', 1, 'pKeepView', 0 );
+    IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+    nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_Reporting', 'pView', 'zFPB_Reporting_LeafClear',
+      'pDim1', 'Actual', 'pDim2', 'LCY', 'pDim3', '', 'pDim4', '', 'pDim5', '', 'pDim6', '', 'pDim7', '',
+      'pDim8', 'NoAccount', 'pDim9', '', 'pDim10', sYear, 'pDim11', sMonth, 'pDim12', 'Units',
+      'pZeroOut', 1, 'pKeepView', 0 );
+    IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+  ENDIF;
+ENDIF;
+
+nSales = 0;  nOther = 0;  nRej = 0;
+#### METADATA
+#### DATA
+sY = 'Y' | vYear;
+sM = 'Annual';
+IF( vMonth @<> '' & UPPER( vMonth ) @<> 'ANNUAL' ); sM = 'M' | NumberToString( NUMBR( vMonth ) ); ENDIF;
+IF( sVersion @<> '' & vVersion @<> sVersion ); ItemSkip; ENDIF;
+IF( sYear    @<> '' & sY       @<> sYear    ); ItemSkip; ENDIF;
+IF( sMonth   @<> '' & sM       @<> sMonth   ); ItemSkip; ENDIF;
+IF( vValue @= '' ); nRej = nRej + 1; ItemReject( 'empty value: ' | vSource ); ENDIF;
+nVal = NUMBR( vValue );
+IF( DIMIX('FPB_Version', vVersion) = 0 % DIMIX('FPB_Years', sY) = 0 % DIMIX('FPB_Months', sM) = 0 );
+  nRej = nRej + 1; ItemReject( 'bad version/year/month' );
+ENDIF;
+IF( vMeasure @= 'IMPORT Unit Weight' % vMeasure @= 'IMPORT Handling Factor' );
+  # attributes, loaded with the dimensions
+  ItemSkip;
+ENDIF;
+
+#=== 1. ERP sales lines -> FPB_Reporting actuals store =====================================
+sLine = '';
+IF(     vMeasure @= 'IMPORT Volume' );               sLine = 'NoAccount'; sMeas = 'Units';  nSign =  1;
+ELSEIF( vMeasure @= 'IMPORT Gross Sales' );          sLine = 'P100';      sMeas = 'Amount'; nSign =  1;
+ELSEIF( vMeasure @= 'IMPORT Standard Discounts' );   sLine = 'P110';      sMeas = 'Amount'; nSign = -1;
+ELSEIF( vMeasure @= 'IMPORT Promo Discounts' );      sLine = 'P120';      sMeas = 'Amount'; nSign = -1;
+ELSEIF( vMeasure @= 'IMPORT Logistics Discounts' );  sLine = 'P125';      sMeas = 'Amount'; nSign = -1;
+ELSEIF( vMeasure @= 'IMPORT Promo Funding' );        sLine = 'P145';      sMeas = 'Amount'; nSign = -1;
+ENDIF;
+IF( sLine @<> '' );
+  IF( vVersion @<> 'Actual' ); nRej = nRej + 1; ItemReject( 'sales import must be version Actual' ); ENDIF;
+  IF( DIMIX('FPB_Customer', vCustomer) = 0 % vCustomer @= 'NoCustomer' ); nRej = nRej + 1; ItemReject( 'unknown customer: ' | vCustomer ); ENDIF;
+  IF( DIMIX('FPB_Product', vSKU) = 0 % vSKU @= 'NoProduct' );            nRej = nRej + 1; ItemReject( 'unmapped material/SKU: ' | vMaterial | ' ' | vSKU ); ENDIF;
+  IF( DTYPE('FPB_Customer', vCustomer) @<> 'N' % DTYPE('FPB_Product', vSKU) @<> 'N' ); nRej = nRej + 1; ItemReject( 'customer/SKU not a leaf' ); ENDIF;
+  sCh   = ATTRS( 'FPB_Customer', vCustomer, 'Channel' );
+  sCtry = ATTRS( 'FPB_Customer', vCustomer, 'Country' );
+  IF( sCh @<> vChannel % sCtry @<> vCountry ); nRej = nRej + 1; ItemReject( 'channel/country differ from master data: ' | vCustomer ); ENDIF;
+  CellIncrementN( nSign * nVal, 'FPB_Reporting', 'Actual', 'LCY', 'Periodic', sCh, vCustomer, vSKU,
+                  'NoCostCenter', sLine, sCtry, sY, sM, sMeas );
+  nSales = nSales + 1;
+  ItemSkip;
+ENDIF;
+
+#=== 2. other actuals -> FPB_Drivers, version Actual =========================================
+IF( vMeasure @= 'IMPORT Rebates' % vMeasure @= 'IMPORT Rebate True-ups' % vMeasure @= 'IMPORT Growth Bonus' % vMeasure @= 'IMPORT Trade Fees' );
+  IF( DIMIX('FPB_InputCustomer', vCustomerGroup) = 0 % vCustomerGroup @= 'NoCustomer' ); nRej = nRej + 1; ItemReject( 'unknown customer group: ' | vCustomerGroup ); ENDIF;
+  sCh   = ATTRS( 'FPB_InputCustomer', vCustomerGroup, 'Channel' );
+  sCtry = ATTRS( 'FPB_InputCustomer', vCustomerGroup, 'Country' );
+  sProd = 'NoProduct';
+  IF( vMeasure @= 'IMPORT Trade Fees' );
+    sProd = vBrand;
+    IF( DIMIX('FPB_InputProduct', sProd) = 0 % sProd @= 'NoProduct' ); nRej = nRej + 1; ItemReject( 'unknown brand: ' | vBrand ); ENDIF;
+  ENDIF;
+  CellIncrementN( nVal, 'FPB_Drivers', 'Actual', sCh, vCustomerGroup, sProd, 'NoCostCenter', 'NoAccount', sCtry, sY, sM, vMeasure );
+  nOther = nOther + 1;
+  ItemSkip;
+ENDIF;
+
+IF( vMeasure @= 'IMPORT OPEX' % vMeasure @= 'OPEX IN' );
+  IF( DIMIX('FPB_CostCenter', vCostCenter) = 0 % DIMIX('FPB_Account', vAccount) = 0 ); nRej = nRej + 1; ItemReject( 'unknown cost center/account: ' | vCostCenter | ' ' | vAccount ); ENDIF;
+  sCtry = ATTRS( 'FPB_CostCenter', vCostCenter, 'Country' );
+  IF( vMeasure @= 'IMPORT OPEX' );
+    CellIncrementN( nVal, 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', vCostCenter, vAccount, sCtry, sY, sM, 'IMPORT OPEX' );
+  ELSE;
+    CellPutN( nVal, 'FPB_Drivers', vVersion, 'NoChannel', 'NoCustomer', 'NoProduct', vCostCenter, vAccount, sCtry, sY, sM, 'OPEX IN' );
+    CellPutN( 1,    'FPB_Drivers', vVersion, 'NoChannel', 'NoCustomer', 'NoProduct', vCostCenter, vAccount, sCtry, sY, sM, 'OPEX IN Entered' );
+  ENDIF;
+  nOther = nOther + 1;
+  ItemSkip;
+ENDIF;
+
+IF( vMeasure @= 'IMPORT Marketing' );
+  IF( DIMIX('FPB_InputProduct', vBrand) = 0 % DIMIX('FPB_Country', vCountry) = 0 ); nRej = nRej + 1; ItemReject( 'unknown brand/country' ); ENDIF;
+  CellIncrementN( nVal, 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', vBrand, 'NoCostCenter', 'NoAccount', vCountry, sY, sM, vMeasure );
+  nOther = nOther + 1;
+  ItemSkip;
+ENDIF;
+
+IF( vMeasure @= 'IMPORT List Price' );
+  IF( DIMIX('FPB_InputProduct', vSKU) = 0 % DIMIX('FPB_Country', vCountry) = 0 ); nRej = nRej + 1; ItemReject( 'unknown SKU/country' ); ENDIF;
+  CellPutN( nVal, 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', vSKU, 'NoCostCenter', 'NoAccount', vCountry, sY, sM, vMeasure );
+  nOther = nOther + 1;
+  ItemSkip;
+ENDIF;
+
+IF( vMeasure @= 'IMPORT Standard Cost' % vMeasure @= 'Standard Cost IN' );
+  IF( DIMIX('FPB_InputProduct', vSKU) = 0 ); nRej = nRej + 1; ItemReject( 'unknown SKU: ' | vSKU ); ENDIF;
+  sV = vVersion;
+  IF( vMeasure @= 'IMPORT Standard Cost' ); sV = 'Actual'; ENDIF;
+  CellPutN( nVal, 'FPB_Drivers', sV, 'NoChannel', 'NoCustomer', vSKU, 'NoCostCenter', 'NoAccount', 'Global', sY, 'Annual', vMeasure );
+  IF( vMeasure @= 'Standard Cost IN' );
+    CellPutN( 1, 'FPB_Drivers', sV, 'NoChannel', 'NoCustomer', vSKU, 'NoCostCenter', 'NoAccount', 'Global', sY, 'Annual', 'Standard Cost IN Entered' );
+  ENDIF;
+  nOther = nOther + 1;
+  ItemSkip;
+ENDIF;
+
+IF( vMeasure @= 'IMPORT Control Total' );
+  IF( DIMIX('FPB_Country', vCountry) = 0 ); nRej = nRej + 1; ItemReject( 'unknown country' ); ENDIF;
+  CellPutN( nVal, 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'NoCostCenter', 'NoAccount', vCountry, sY, sM, vMeasure );
+  nOther = nOther + 1;
+  ItemSkip;
+ENDIF;
+
+IF( vMeasure @= 'Volume Override IN' % vMeasure @= 'Promo Funding IN' );
+  IF( DIMIX('FPB_InputCustomer', vCustomer) = 0 % DIMIX('FPB_InputProduct', vSKU) = 0 % DIMIX('FPB_Customer', vCustomer) = 0 );
+    nRej = nRej + 1; ItemReject( 'unknown customer/SKU: ' | vCustomer | ' ' | vSKU );
+  ENDIF;
+  sCh   = ATTRS( 'FPB_Customer', vCustomer, 'Channel' );
+  sCtry = ATTRS( 'FPB_Customer', vCustomer, 'Country' );
+  CellPutN( nVal, 'FPB_Drivers', vVersion, sCh, vCustomer, vSKU, 'NoCostCenter', 'NoAccount', sCtry, sY, sM, vMeasure );
+  CellPutN( 1,    'FPB_Drivers', vVersion, sCh, vCustomer, vSKU, 'NoCostCenter', 'NoAccount', sCtry, sY, sM, vMeasure | ' Entered' );
+  nOther = nOther + 1;
+  ItemSkip;
+ENDIF;
+
+nRej = nRej + 1;
+ItemReject( 'unexpected measure: ' | vMeasure );
+#### EPILOG
+# TM1 reopens (truncates) an AsciiOutput file when another tab writes to it, so the Epilog logs to its own file.
+AsciiOutput( SUBST( sLog, 1, LONG( sLog ) - 4 ) | '_epilog.log', 'sales', NumberToString( nSales ), 'other', NumberToString( nOther ), 'rejected', NumberToString( nRej ) );

@@ -1,0 +1,30 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Test.W8Setup
+#### PARAMETERS
+pGroup    String   ''
+pVersion  String   'FC 6+6'
+pYear     String   'Y2026'
+pOut      String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sV = pVersion;  IF( sV @= '' ); sV = 'FC 6+6'; ENDIF;
+sY = pYear;     IF( sY @= '' ); sY = 'Y2026';  ENDIF;
+sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+nIS = CellGetN( 'FPB_Reporting', sV, 'LCY', 'Periodic', sCh, pGroup, 'By Division', 'NoCostCenter', 'Invoice Sales', sC, sY, 'All_Hierarchies', 'Amount' );
+nLY = CellGetN( 'FPB_Reporting', 'Actual', 'LCY', 'Periodic', sCh, pGroup, 'By Division', 'NoCostCenter', 'Invoice Sales', sC, ATTRS('FPB_Years', sY, 'Prev'), 'All_Hierarchies', 'Amount' );
+nThr = CellGetN( 'FPB_Drivers', sV, sCh, pGroup, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, 'Annual', 'Growth Bonus Threshold IN' );
+IF( nLY <= 0 ); ProcessError; ENDIF;
+nGrowth = nIS / nLY - 1;
+IF( nIS > nLY * ( 1 + nThr ) );
+  nNew = nGrowth + 0.001;
+ELSE;
+  nNew = nGrowth - 0.001;
+ENDIF;
+AsciiOutput( pOut, NumberToString( nNew ) );
+#### METADATA
+#### DATA
+#### EPILOG

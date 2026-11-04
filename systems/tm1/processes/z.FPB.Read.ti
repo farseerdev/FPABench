@@ -1,0 +1,526 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Read
+#### PARAMETERS
+pTest      String   ''
+pOut       String   ''
+pVersion   String   'FC 6+6'
+pYear      String   'Y2026'
+pMonth     String   ''
+pCountry   String   ''
+pGroup     String   ''
+pGroup2    String   ''
+pBrand     String   ''
+pCategory  String   ''
+pCustomer  String   ''
+pSKU       String   ''
+pVariant   String   'BASE'
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sT = pTest;
+sV = pVersion;  IF( sV @= '' ); sV = 'FC 6+6'; ENDIF;
+sY = pYear;     IF( sY @= '' ); sY = 'Y2026';  ENDIF;
+sMth = pMonth;  IF( sMth @= '' ); sMth = 'All_Hierarchies'; ENDIF;
+sR = 'FPB_Reporting';
+sLines = 'P100|P110|P120|P125|P130|P135|P140|P145|P150|P170|P180|P190|P210|';
+nDone = 0;
+
+#==================================================================== L1 =======
+IF( sT @= 'L1' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      nVv = 1;
+      WHILE( nVv <= DIMSIZ('FPB_Version') );
+        sVv = DIMNM('FPB_Version', nVv);
+        IF( DTYPE('FPB_Version', sVv) @= 'N' );
+          nYy = 1;
+          WHILE( nYy <= DIMSIZ('FPB_Years') );
+            sYy = DIMNM('FPB_Years', nYy);
+            IF( DTYPE('FPB_Years', sYy) @= 'N' );
+              nM = 1;
+              WHILE( nM <= 12 );
+                sM = 'M' | NumberToString( nM );
+                n = CellGetN( sR, sVv, 'EUR', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'EBIT', sC, sYy, sM, 'Amount' );
+                IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC | ';Versions=' | sVv | ';Years=' | sYy | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+                nM = nM + 1;
+              END;
+            ENDIF;
+            nYy = nYy + 1;
+          END;
+        ENDIF;
+        nVv = nVv + 1;
+      END;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R1 =======
+IF( sT @= 'R1' );
+  sL = sLines;
+  WHILE( sL @<> '' );
+    nP = SCAN( '|', sL );  sLine = SUBST( sL, 1, nP - 1 );  sL = SUBST( sL, nP + 1, LONG( sL ) - nP );
+    nM = 1;
+    WHILE( nM <= 12 );
+      sM = 'M' | NumberToString( nM );
+      n = CellGetN( sR, sV, 'EUR', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', sLine, 'All_Hierarchies', sY, sM, 'Amount' );
+      IF( n <> 0 ); AsciiOutput( pOut, sT, 'PL Line=' | sLine | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+      nM = nM + 1;
+    END;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R2a ======
+IF( sT @= 'R2a' );
+  sL = sLines;
+  WHILE( sL @<> '' );
+    nP = SCAN( '|', sL );  sLine = SUBST( sL, 1, nP - 1 );  sL = SUBST( sL, nP + 1, LONG( sL ) - nP );
+    nB = 1;
+    WHILE( nB <= DIMSIZ('FPB_Product') );
+      sB = DIMNM('FPB_Product', nB);
+      IF( ( DTYPE('FPB_Product', sB) @= 'C' & ATTRS('FPB_Product', sB, 'Source Level') @= 'Brand' ) % sB @= 'NoProduct' );
+        sKey = sB;  IF( sB @= 'NoProduct' ); sKey = 'NULL (Brand)'; ENDIF;
+        n = CellGetN( sR, sV, 'EUR', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', sB, 'All_Hierarchies', sLine, 'All_Hierarchies', sY, 'All_Hierarchies', 'Amount' );
+        IF( n <> 0 ); AsciiOutput( pOut, sT, 'PL Line=' | sLine | ';Brand=' | sKey, NumberToString( n ) ); ENDIF;
+      ENDIF;
+      nB = nB + 1;
+    END;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R2b ======
+IF( sT @= 'R2b' );
+  sL = sLines;
+  WHILE( sL @<> '' );
+    nP = SCAN( '|', sL );  sLine = SUBST( sL, 1, nP - 1 );  sL = SUBST( sL, nP + 1, LONG( sL ) - nP );
+    nCh = 1;
+    WHILE( nCh <= DIMSIZ('FPB_Channel') );
+      sCh = DIMNM('FPB_Channel', nCh);
+      IF( ELISPAR('FPB_Channel', 'All_Hierarchies', sCh) = 1 );
+        n = CellGetN( sR, sV, 'EUR', 'Periodic', sCh, 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', sLine, 'All_Hierarchies', sY, 'All_Hierarchies', 'Amount' );
+        IF( n <> 0 ); AsciiOutput( pOut, sT, 'PL Line=' | sLine | ';Channel=' | sCh, NumberToString( n ) ); ENDIF;
+      ENDIF;
+      nCh = nCh + 1;
+    END;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R2c ======
+IF( sT @= 'R2c' );
+  sL = sLines;
+  WHILE( sL @<> '' );
+    nP = SCAN( '|', sL );  sLine = SUBST( sL, 1, nP - 1 );  sL = SUBST( sL, nP + 1, LONG( sL ) - nP );
+    nC = 1;
+    WHILE( nC <= DIMSIZ('FPB_Country') );
+      sC = DIMNM('FPB_Country', nC);
+      IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+        n = CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', sLine, sC, sY, 'All_Hierarchies', 'Amount' );
+        IF( n <> 0 ); AsciiOutput( pOut, sT, 'PL Line=' | sLine | ';Country=' | sC, NumberToString( n ) ); ENDIF;
+      ENDIF;
+      nC = nC + 1;
+    END;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R3 =======
+IF( sT @= 'R3' );
+  nRead = 0;
+  WHILE( nRead <= 2 );
+    IF( nRead = 0 ); sVv = 'Budget'; sYy = 'Y2026'; ELSEIF( nRead = 1 ); sVv = 'FC 6+6'; sYy = 'Y2026'; ELSE; sVv = 'Actual'; sYy = 'Y2025'; ENDIF;
+    sL = sLines;
+    WHILE( sL @<> '' );
+      nP = SCAN( '|', sL );  sLine = SUBST( sL, 1, nP - 1 );  sL = SUBST( sL, nP + 1, LONG( sL ) - nP );
+      n = CellGetN( sR, sVv, 'EUR', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', sLine, 'All_Hierarchies', sYy, 'All_Hierarchies', 'Amount' );
+      IF( n <> 0 ); AsciiOutput( pOut, sT, 'PL Line=' | sLine | ';read=' | NumberToString( nRead ), NumberToString( n ) ); ENDIF;
+    END;
+    nRead = nRead + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R4 =======
+IF( sT @= 'R4' );
+  sK = 'Net Price per Unit|Gross-to-Net %|Gross Margin %|Contribution Margin II %|Contribution Margin III %|EBIT %|Standard Discounts % of Gross Sales|Promo Discounts % of Gross Sales|Logistics Discounts % of Gross Sales|Rebates % of Gross Sales|Growth Bonus % of Gross Sales|Trade Fees % of Gross Sales|Promo Funding % of Gross Sales|COGS % of Gross Sales|Logistics % of Gross Sales|Sales Force % of Gross Sales|Marketing % of Gross Sales|Overheads % of Gross Sales|';
+  WHILE( sK @<> '' );
+    nP = SCAN( '|', sK );  sKpi = SUBST( sK, 1, nP - 1 );  sK = SUBST( sK, nP + 1, LONG( sK ) - nP );
+    nC = 1;
+    WHILE( nC <= DIMSIZ('FPB_Country') );
+      sC = DIMNM('FPB_Country', nC);
+      IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+        nVv = 1;
+        WHILE( nVv <= DIMSIZ('FPB_Version') );
+          sVv = DIMNM('FPB_Version', nVv);
+          IF( DTYPE('FPB_Version', sVv) @= 'N' );
+            n = CellGetN( sR, sVv, 'EUR', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'Management P&L', sC, sY, 'All_Hierarchies', sKpi );
+            IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC | ';Versions=' | sVv | ';measure=' | sKpi, NumberToString( n ) ); ENDIF;
+          ENDIF;
+          nVv = nVv + 1;
+        END;
+      ENDIF;
+      nC = nC + 1;
+    END;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R5 =======
+IF( sT @= 'R5' );
+  sM = 'M7';  IF( pMonth @<> '' ); sM = pMonth; ENDIF;
+  nCu = 1;
+  WHILE( nCu <= DIMSIZ('FPB_Customer') );
+    sCu = DIMNM('FPB_Customer', nCu);
+    IF( DTYPE('FPB_Customer', sCu) @= 'N' & ATTRS('FPB_Customer', sCu, 'CustomerGroup') @= pGroup );
+      sCh = ATTRS('FPB_Customer', sCu, 'Channel');  sC = ATTRS('FPB_Customer', sCu, 'Country');
+      nS = 1;
+      WHILE( nS <= DIMSIZ('FPB_Product') );
+        sS = DIMNM('FPB_Product', nS);
+        IF( DTYPE('FPB_Product', sS) @= 'N' & ATTRS('FPB_Product', sS, 'Source Level') @= 'SKU' );
+          nGS = CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P100', sC, sY, sM, 'Amount' );
+          nPF = CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P145', sC, sY, sM, 'Amount' );
+          IF( nGS <> 0 % nPF <> 0 );
+            sKey = 'Customer=' | sCu | ';SKU=' | sS | ';variable=';
+            n = nGS;                                                                                                   IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Gross Sales', NumberToString( n ) ); ENDIF;
+            n = - CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P110', sC, sY, sM, 'Amount' );          IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Standard Discounts', NumberToString( n ) ); ENDIF;
+            n = - CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P120', sC, sY, sM, 'Amount' );          IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Promo Discounts', NumberToString( n ) ); ENDIF;
+            n = - CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P125', sC, sY, sM, 'Amount' );          IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Logistics Discounts', NumberToString( n ) ); ENDIF;
+            n =   CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'Invoice Sales', sC, sY, sM, 'Amount' ); IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Invoice Sales', NumberToString( n ) ); ENDIF;
+            n = - CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P130', sC, sY, sM, 'Amount' );          IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Rebates', NumberToString( n ) ); ENDIF;
+            n = - CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P135', sC, sY, sM, 'Amount' );          IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Growth Bonus', NumberToString( n ) ); ENDIF;
+            n = - CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P140', sC, sY, sM, 'Amount' );          IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Trade Fees', NumberToString( n ) ); ENDIF;
+            n = - nPF;                                                                                                 IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Promo Funding', NumberToString( n ) ); ENDIF;
+            n =   CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'Net Sales', sC, sY, sM, 'Amount' );     IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Net Sales', NumberToString( n ) ); ENDIF;
+            n = - CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'P150', sC, sY, sM, 'Amount' );          IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'COGS', NumberToString( n ) ); ENDIF;
+            n =   CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sCu, sS, 'NoCostCenter', 'Gross Margin', sC, sY, sM, 'Amount' );  IF( n <> 0 ); AsciiOutput( pOut, sT, sKey | 'Gross Margin', NumberToString( n ) ); ENDIF;
+          ENDIF;
+        ENDIF;
+        nS = nS + 1;
+      END;
+    ENDIF;
+    nCu = nCu + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R6 =======
+# Gross margin by country x category x price tier: categories and price tiers are separate rollups,
+# so each SKU is read once per country and summed into its category/tier bucket.
+IF( sT @= 'R6' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      nCat = 1;
+      WHILE( nCat <= DIMSIZ('FPB_Product') );
+        sCat = DIMNM('FPB_Product', nCat);
+        IF( DTYPE('FPB_Product', sCat) @= 'C' & ATTRS('FPB_Product', sCat, 'Source Level') @= 'Category' );
+          nTi = 1;
+          WHILE( nTi <= DIMSIZ('FPB_Product') );
+            sTi = DIMNM('FPB_Product', nTi);
+            IF( DTYPE('FPB_Product', sTi) @= 'C' & ATTRS('FPB_Product', sTi, 'Source Level') @= 'Price Tier' );
+              nSum = 0;  nHit = 0;
+              nS = 1;
+              WHILE( nS <= DIMSIZ('FPB_Product') );
+                sS = DIMNM('FPB_Product', nS);
+                IF( DTYPE('FPB_Product', sS) @= 'N' );
+                  IF( ATTRS('FPB_Product', sS, 'Category') @= sCat & ATTRS('FPB_Product', sS, 'PriceTier') @= sTi );
+                    n = CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'By Currency', sS, 'All_Hierarchies', 'Gross Margin', sC, sY, 'All_Hierarchies', 'Amount' );
+                    IF( n <> 0 ); nSum = nSum + n; nHit = 1; ENDIF;
+                  ENDIF;
+                ENDIF;
+                nS = nS + 1;
+              END;
+              IF( nHit = 1 ); AsciiOutput( pOut, sT, 'Country=' | sC | ';Category=' | sCat | ';Price Tier=' | sTi, NumberToString( nSum ) ); ENDIF;
+            ENDIF;
+            nTi = nTi + 1;
+          END;
+        ENDIF;
+        nCat = nCat + 1;
+      END;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R7 =======
+# Contribution margin III by customer of one country (the harness sorts and keeps the top 100)
+IF( sT @= 'R7' );
+  nCu = 1;
+  WHILE( nCu <= DIMSIZ('FPB_Customer') );
+    sCu = DIMNM('FPB_Customer', nCu);
+    IF( DTYPE('FPB_Customer', sCu) @= 'N' & ATTRS('FPB_Customer', sCu, 'Country') @= pCountry );
+      n = CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', sCu, 'All_Hierarchies', 'All_Hierarchies', 'Contribution Margin III', pCountry, sY, 'All_Hierarchies', 'Amount' );
+      IF( n <> 0 ); AsciiOutput( pOut, sT, 'Customer=' | sCu, NumberToString( n ) ); ENDIF;
+    ENDIF;
+    nCu = nCu + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+#==================================================================== R8 =======
+IF( sT @= 'R8' );
+  n = CellGetN( sR, sV, 'EUR', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'EBIT', 'All_Hierarchies', sY, 'All_Hierarchies', 'Amount' );
+  AsciiOutput( pOut, sT, '', NumberToString( n ) );
+  nDone = 1;
+ENDIF;
+
+#==================================================================== proving reads =====
+# one country, one version, year or month
+IF( sT @= 'EBIT_OUT' );
+  n = CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'EBIT', pCountry, sY, sMth, 'Amount' );
+  AsciiOutput( pOut, sT, 'Country=' | pCountry, NumberToString( n ) );
+  nDone = 1;
+ENDIF;
+
+# L2: by country for a version and month
+IF( sT @= 'EBIT_BY_COUNTRY' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      n = CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'EBIT', sC, sY, sMth, 'Amount' );
+      IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC, NumberToString( n ) ); ENDIF;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+IF( sT @= 'VOLUME_CELL' );
+  n = CellGetN( sR, sV, 'LCY', 'Periodic', ATTRS('FPB_Customer', pCustomer, 'Channel'), pCustomer, pSKU, 'NoCostCenter', 'NoAccount', ATTRS('FPB_Customer', pCustomer, 'Country'), sY, sMth, 'Units' );
+  AsciiOutput( pOut, sT, 'Customer=' | pCustomer | ';SKU=' | pSKU | ';Months=' | sMth, NumberToString( n ) );
+  nDone = 1;
+ENDIF;
+
+# W2: units of a country over the version's plan months
+IF( sT @= 'VOLUME_COUNTRY_PLAN' );
+  nSum = 0;  nM = 1;
+  WHILE( nM <= 12 );
+    sM = 'M' | NumberToString( nM );
+    IF( CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Plan' ) = 1 );
+      nSum = nSum + CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'NoAccount', pCountry, sY, sM, 'Units' );
+    ENDIF;
+    nM = nM + 1;
+  END;
+  AsciiOutput( pOut, sT, '', NumberToString( nSum ) );
+  nDone = 1;
+ENDIF;
+
+# W4: gross sales of a brand by country and plan month
+IF( sT @= 'GROSS_SALES_BRAND_PLAN' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      nM = 1;
+      WHILE( nM <= 12 );
+        sM = 'M' | NumberToString( nM );
+        IF( CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Plan' ) = 1 );
+          n = CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'By Currency', pBrand, 'All_Hierarchies', 'P100', sC, sY, sM, 'Amount' );
+          IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+        ENDIF;
+        nM = nM + 1;
+      END;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# W5
+IF( sT @= 'COGS_COUNTRY' );
+  n = - CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P150', pCountry, sY, sMth, 'Amount' );
+  AsciiOutput( pOut, sT, '', NumberToString( n ) );
+  nDone = 1;
+ENDIF;
+
+# W7
+IF( sT @= 'VOLUME_GROUP_CAT_PLAN' );
+  sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+  nSum = 0;  nM = 1;
+  WHILE( nM <= 12 );
+    sM = 'M' | NumberToString( nM );
+    IF( CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Plan' ) = 1 );
+      nSum = nSum + CellGetN( sR, sV, 'LCY', 'Periodic', sCh, pGroup, pCategory, 'NoCostCenter', 'NoAccount', sC, sY, sM, 'Units' );
+    ENDIF;
+    nM = nM + 1;
+  END;
+  AsciiOutput( pOut, sT, '', NumberToString( nSum ) );
+  nDone = 1;
+ENDIF;
+
+# W8: allocated growth bonus of the group for the year
+IF( sT @= 'GB_GROUP' );
+  sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+  n = - CellGetN( sR, sV, 'LCY', 'Periodic', sCh, pGroup, 'By Division', 'NoCostCenter', 'P135', sC, sY, 'All_Hierarchies', 'Amount' );
+  AsciiOutput( pOut, sT, '', NumberToString( n ) );
+  nDone = 1;
+ENDIF;
+
+# CHECK Growth Bonus of one group (0 when healthy)
+IF( sT @= 'CHECK_GB_GROUP' );
+  sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+  n = 0;
+  IF( CellGetN( 'FPB_Control', sV, 'Default', sY, 'Annual', 'FC Plan Months' ) > 0 );
+    n = CellGetN( 'FPB_Drivers', sV, sCh, pGroup, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, 'Annual', 'GB Entitlement' )
+      - CellGetN( 'FPB_Drivers', sV, sCh, pGroup, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, 'Annual', 'GB Booked' );
+    nM = 1;
+    WHILE( nM <= 12 );
+      sM = 'M' | NumberToString( nM );
+      IF( CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Plan' ) = 1 );
+        n = n + CellGetN( sR, sV, 'LCY', 'Periodic', sCh, pGroup, 'By Division', 'NoCostCenter', 'P135', sC, sY, sM, 'Amount' )
+              - CellGetN( 'FPB_Drivers', sV, sCh, pGroup, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, sM, 'GB Plan Unallocated' );
+      ENDIF;
+      nM = nM + 1;
+    END;
+  ENDIF;
+  AsciiOutput( pOut, sT, 'Customer Group=' | pGroup, NumberToString( n ) );
+  nDone = 1;
+ENDIF;
+
+# L3: logistics cost of a brand by country
+IF( sT @= 'LOGISTICS_BRAND' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      n = - CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'By Currency', pBrand, 'All_Hierarchies', 'P170', sC, sY, 'All_Hierarchies', 'Amount' );
+      IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC, NumberToString( n ) ); ENDIF;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# M1
+IF( sT @= 'LOGISTICS_BRAND_COUNTRY' );
+  nB = 1;
+  WHILE( nB <= DIMSIZ('FPB_Product') );
+    sB = DIMNM('FPB_Product', nB);
+    IF( DTYPE('FPB_Product', sB) @= 'C' & ATTRS('FPB_Product', sB, 'Source Level') @= 'Brand' );
+      nC = 1;
+      WHILE( nC <= DIMSIZ('FPB_Country') );
+        sC = DIMNM('FPB_Country', nC);
+        IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+          n = - CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'By Currency', sB, 'All_Hierarchies', 'P170', sC, sY, 'All_Hierarchies', 'Amount' );
+          IF( n <> 0 ); AsciiOutput( pOut, sT, 'Brand=' | sB | ';Country=' | sC, NumberToString( n ) ); ENDIF;
+        ENDIF;
+        nC = nC + 1;
+      END;
+    ENDIF;
+    nB = nB + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# M3
+IF( sT @= 'GROSS_SALES_GROUPS' );
+  nG = 1;
+  WHILE( nG <= 2 );
+    IF( nG = 1 ); sG = pGroup; ELSE; sG = pGroup2; ENDIF;
+    sCh = ATTRS('FPB_InputCustomer', sG, 'Channel');  sC = ATTRS('FPB_InputCustomer', sG, 'Country');
+    n = CellGetN( sR, sV, 'LCY', 'Periodic', sCh, sG, 'All_Hierarchies', 'All_Hierarchies', 'P100', sC, sY, 'All_Hierarchies', 'Amount' );
+    AsciiOutput( pOut, sT, 'Customer Group=' | sG, NumberToString( n ) );
+    nG = nG + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# M2
+IF( sT @= 'VOLUME_GROUP_MONTH' );
+  sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+  n = CellGetN( sR, sV, 'LCY', 'Periodic', sCh, pGroup, 'All_Hierarchies', 'All_Hierarchies', 'NoAccount', sC, sY, sMth, 'Units' );
+  AsciiOutput( pOut, sT, '', NumberToString( n ) );
+  nDone = 1;
+ENDIF;
+
+# M4: Contribution Margin III by Country (customers only)
+IF( sT @= 'CM3_COUNTRY' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      n = CellGetN( sR, sV, 'LCY', 'Periodic', 'All_Hierarchies', 'By Currency', 'All_Hierarchies', 'All_Hierarchies', 'Contribution Margin III', sC, sY, 'All_Hierarchies', 'Amount' );
+      IF( n <> 0 ); AsciiOutput( pOut, sT, 'Country=' | sC, NumberToString( n ) ); ENDIF;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# control total - loaded gross sales, by country (pYear, pMonth)
+IF( sT @= 'CHECK_IMPORT_TOTAL' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      n = CellGetN( 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, sMth, 'IMPORT Control Total' )
+        - CellGetN( sR, 'Actual', 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P100', sC, sY, sMth, 'Amount' );
+      AsciiOutput( pOut, sT, 'Country=' | sC, NumberToString( n ) );
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+# OPEX that never reaches EBIT, by country x version x year x month
+IF( sT @= 'CHECK_OPEX_IN_EBIT' );
+  nC = 1;
+  WHILE( nC <= DIMSIZ('FPB_Country') );
+    sC = DIMNM('FPB_Country', nC);
+    IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+      nVv = 1;
+      WHILE( nVv <= DIMSIZ('FPB_Version') );
+        sVv = DIMNM('FPB_Version', nVv);
+        IF( DTYPE('FPB_Version', sVv) @= 'N' );
+          nYy = 1;
+          WHILE( nYy <= DIMSIZ('FPB_Years') );
+            sYy = DIMNM('FPB_Years', nYy);
+            IF( DTYPE('FPB_Years', sYy) @= 'N' );
+              nM = 1;
+              WHILE( nM <= 12 );
+                sM = 'M' | NumberToString( nM );
+                nOpex = 0;
+                IF( CellGetN( 'FPB_Control', sVv, 'Default', sYy, sM, 'FC Actual' ) = 1 );
+                  nOpex = CellGetN( 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'All_Hierarchies', 'GL Accounts', sC, sYy, sM, 'IMPORT OPEX' );
+                  nStaff = CellGetN( 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'Marketing', 'GL Accounts', sC, sYy, sM, 'IMPORT OPEX' );
+                ELSEIF( CellGetN( 'FPB_Control', sVv, 'Default', sYy, sM, 'FC Plan' ) = 1 );
+                  nOpex = CellGetN( 'FPB_Drivers', sVv, 'NoChannel', 'NoCustomer', 'NoProduct', 'All_Hierarchies', 'GL Accounts', sC, sYy, sM, 'OPEX IN' );
+                  nStaff = CellGetN( 'FPB_Drivers', sVv, 'NoChannel', 'NoCustomer', 'NoProduct', 'Marketing', 'GL Accounts', sC, sYy, sM, 'OPEX IN' );
+                ENDIF;
+                IF( nOpex <> 0 );
+                  n = nOpex
+                    + CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P170', sC, sYy, sM, 'Amount' )
+                    + CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P180', sC, sYy, sM, 'Amount' )
+                    + CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P210', sC, sYy, sM, 'Amount' );
+                  IF( UPPER( pVariant ) @= 'M4' ); n = n - nStaff; ENDIF;
+                  AsciiOutput( pOut, sT, 'Country=' | sC | ';Versions=' | sVv | ';Years=' | sYy | ';Months=' | sM, NumberToString( n ) );
+                ENDIF;
+                nM = nM + 1;
+              END;
+            ENDIF;
+            nYy = nYy + 1;
+          END;
+        ENDIF;
+        nVv = nVv + 1;
+      END;
+    ENDIF;
+    nC = nC + 1;
+  END;
+  nDone = 1;
+ENDIF;
+
+IF( nDone = 0 ); AsciiOutput( pOut, sT, 'ERROR', 'unknown pTest' ); ProcessError; ENDIF;
+#### METADATA
+#### DATA
+#### EPILOG

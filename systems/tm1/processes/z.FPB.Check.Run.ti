@@ -1,0 +1,173 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Check.Run
+#### PARAMETERS
+pOut      String   ''
+pVariant  String   'BASE'
+pTol      Numeric  0.01
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sR = 'FPB_Reporting';
+nTol = pTol;  IF( nTol <= 0 ); nTol = 0.01; ENDIF;
+nBrandCountry = 0;
+
+#--- CHECK Import Total {Country, Years, Months}
+nCnt = 0;  nAbs = 0;
+nC = 1;
+WHILE( nC <= DIMSIZ('FPB_Country') );
+  sC = DIMNM('FPB_Country', nC);
+  IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+    nYy = 1;
+    WHILE( nYy <= DIMSIZ('FPB_Years') );
+      sYy = DIMNM('FPB_Years', nYy);
+      IF( DTYPE('FPB_Years', sYy) @= 'N' );
+        nM = 1;
+        WHILE( nM <= 12 );
+          sM = 'M' | NumberToString( nM );
+          n = CellGetN( 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sYy, sM, 'IMPORT Control Total' )
+            - CellGetN( sR, 'Actual', 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P100', sC, sYy, sM, 'Amount' );
+          IF( ABS( n ) > nTol ); nCnt = nCnt + 1; nAbs = nAbs + ABS( n ); AsciiOutput( pOut, 'CHECK Import Total', 'Country=' | sC | ';Years=' | sYy | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+          nM = nM + 1;
+        END;
+      ENDIF;
+      nYy = nYy + 1;
+    END;
+  ENDIF;
+  nC = nC + 1;
+END;
+AsciiOutput( pOut, 'SUMMARY', 'CHECK Import Total', NumberToString( nCnt ), NumberToString( nAbs ) );
+
+#--- version x year x month loops for the remaining checks
+nCntMS = 0; nAbsMS = 0; nCntGB = 0; nAbsGB = 0; nCntOP = 0; nAbsOP = 0; nCntEUR = 0; nAbsEUR = 0; nCntMFX = 0; nAbsMFX = 0; nCntPFX = 0; nAbsPFX = 0;
+nVv = 1;
+WHILE( nVv <= DIMSIZ('FPB_Version') );
+  sVv = DIMNM('FPB_Version', nVv);
+  IF( DTYPE('FPB_Version', sVv) @= 'N' );
+    nYy = 1;
+    WHILE( nYy <= DIMSIZ('FPB_Years') );
+      sYy = DIMNM('FPB_Years', nYy);
+      IF( DTYPE('FPB_Years', sYy) @= 'N' );
+
+        #--- CHECK Growth Bonus {Customer Group, Versions, Years}
+        IF( CellGetN( 'FPB_Control', sVv, 'Default', sYy, 'Annual', 'FC Plan Months' ) > 0 );
+          nG = 1;
+          WHILE( nG <= DIMSIZ('FPB_InputCustomer') );
+            sG = DIMNM('FPB_InputCustomer', nG);
+            IF( DTYPE('FPB_InputCustomer', sG) @= 'N' & ELISPAR('FPB_InputCustomer', 'Customer Groups', sG) = 1 );
+              sCh = ATTRS('FPB_InputCustomer', sG, 'Channel');  sC = ATTRS('FPB_InputCustomer', sG, 'Country');
+              n = CellGetN( 'FPB_Drivers', sVv, sCh, sG, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sYy, 'Annual', 'GB Entitlement' )
+                - CellGetN( 'FPB_Drivers', sVv, sCh, sG, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sYy, 'Annual', 'GB Booked' );
+              nM = 1;
+              WHILE( nM <= 12 );
+                sM = 'M' | NumberToString( nM );
+                IF( CellGetN( 'FPB_Control', sVv, 'Default', sYy, sM, 'FC Plan' ) = 1 );
+                  n = n + CellGetN( sR, sVv, 'LCY', 'Periodic', sCh, sG, 'By Division', 'NoCostCenter', 'P135', sC, sYy, sM, 'Amount' )
+                        - CellGetN( 'FPB_Drivers', sVv, sCh, sG, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sYy, sM, 'GB Plan Unallocated' );
+                ENDIF;
+                nM = nM + 1;
+              END;
+              IF( ABS( n ) > nTol ); nCntGB = nCntGB + 1; nAbsGB = nAbsGB + ABS( n ); AsciiOutput( pOut, 'CHECK Growth Bonus', 'Customer Group=' | sG | ';Versions=' | sVv | ';Years=' | sYy, NumberToString( n ) ); ENDIF;
+            ENDIF;
+            nG = nG + 1;
+          END;
+        ENDIF;
+
+        nM = 1;
+        WHILE( nM <= 12 );
+          sM = 'M' | NumberToString( nM );
+          nAct  = CellGetN( 'FPB_Control', sVv, 'Default', sYy, sM, 'FC Actual' );
+          nPlan = CellGetN( 'FPB_Control', sVv, 'Default', sYy, sM, 'FC Plan' );
+          IF( nAct = 1 % nPlan = 1 );
+
+            #--- CHECK EUR Rate {Currency, Versions, Years, Months}
+            n = CellGetN( 'FPB_FX', sVv, 'Effective', 'EUR', 'EUR', sYy, sM ) - 1;
+            IF( ABS( n ) > 0.000000001 ); nCntEUR = nCntEUR + 1; nAbsEUR = nAbsEUR + ABS( n ); AsciiOutput( pOut, 'CHECK EUR Rate', 'Currency=EUR;Versions=' | sVv | ';Years=' | sYy | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+
+            nC = 1;
+            WHILE( nC <= DIMSIZ('FPB_Country') );
+              sC = DIMNM('FPB_Country', nC);
+              IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 );
+                # Global has no Currency: it has no FX rate, so the FX checks skip it
+                sCur = ATTRS('FPB_Country', sC, 'Currency');
+                nFX = 1;
+                IF( sCur @<> '' ); nFX = CellGetN( 'FPB_FX', sVv, 'Effective', 'EUR', sCur, sYy, sM ); ENDIF;
+
+                #--- CHECK OPEX in EBIT {Country, Versions, Years, Months}
+                IF( nAct = 1 );
+                  nOpex  = CellGetN( 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'All_Hierarchies', 'GL Accounts', sC, sYy, sM, 'IMPORT OPEX' );
+                  nStaff = CellGetN( 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', 'NoProduct', 'Marketing', 'GL Accounts', sC, sYy, sM, 'IMPORT OPEX' );
+                ELSE;
+                  nOpex  = CellGetN( 'FPB_Drivers', sVv, 'NoChannel', 'NoCustomer', 'NoProduct', 'All_Hierarchies', 'GL Accounts', sC, sYy, sM, 'OPEX IN' );
+                  nStaff = CellGetN( 'FPB_Drivers', sVv, 'NoChannel', 'NoCustomer', 'NoProduct', 'Marketing', 'GL Accounts', sC, sYy, sM, 'OPEX IN' );
+                ENDIF;
+                n = nOpex
+                  + CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P170', sC, sYy, sM, 'Amount' )
+                  + CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P180', sC, sYy, sM, 'Amount' )
+                  + CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'P210', sC, sYy, sM, 'Amount' );
+                IF( UPPER( pVariant ) @= 'M4' ); n = n - nStaff; ENDIF;
+                IF( ABS( n ) > nTol ); nCntOP = nCntOP + 1; nAbsOP = nAbsOP + ABS( n ); AsciiOutput( pOut, 'CHECK OPEX in EBIT', 'Country=' | sC | ';Versions=' | sVv | ';Years=' | sYy | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+
+                #--- CHECK PL without FX Rate {..., Country, Versions, Years, Months} (summed over the P&L)
+                IF( nFX <= 0 );
+                  n = 0;
+                  sL = 'P100|P110|P120|P125|P130|P135|P140|P145|P150|P170|P180|P190|P210|';
+                  WHILE( sL @<> '' );
+                    nP = SCAN( '|', sL );  sLine = SUBST( sL, 1, nP - 1 );  sL = SUBST( sL, nP + 1, LONG( sL ) - nP );
+                    n = n + ABS( CellGetN( sR, sVv, 'LCY', 'Periodic', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', 'All_Hierarchies', sLine, sC, sYy, sM, 'Amount' ) );
+                  END;
+                  IF( n > nTol ); nCntPFX = nCntPFX + 1; nAbsPFX = nAbsPFX + n; AsciiOutput( pOut, 'CHECK PL without FX Rate', 'Country=' | sC | ';Versions=' | sVv | ';Years=' | sYy | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+                ENDIF;
+              ENDIF;
+              nC = nC + 1;
+            END;
+
+            #--- plan months: CHECK Marketing Split {Brand, ...} and CHECK Marketing without FX Rate {Brand, Country, ...}
+            IF( nPlan = 1 & sVv @<> 'Actual' );
+              nB = 1;
+              WHILE( nB <= DIMSIZ('FPB_InputProduct') );
+                sB = DIMNM('FPB_InputProduct', nB);
+                IF( ELISPAR('FPB_InputProduct', 'Brands', sB) = 1 );
+                  nSpend = CellGetN( 'FPB_Drivers', sVv, 'NoChannel', 'NoCustomer', sB, 'NoCostCenter', 'NoAccount', 'Global', sYy, sM, 'Marketing Spend IN' );
+                  IF( nSpend <> 0 );
+                    nSplit = CellGetN( 'FPB_Drivers', sVv, 'NoChannel', 'NoCustomer', sB, 'NoCostCenter', 'NoAccount', 'All_Hierarchies', sYy, 'Annual', 'Marketing Split IN' );
+                    n = nSpend * ( 1 - nSplit );
+                    IF( ABS( n ) > nTol ); nCntMS = nCntMS + 1; nAbsMS = nAbsMS + ABS( n ); AsciiOutput( pOut, 'CHECK Marketing Split', 'Brand=' | sB | ';Versions=' | sVv | ';Years=' | sYy | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+                    nC = 1;
+                    WHILE( nC <= DIMSIZ('FPB_Country') );
+                      sC = DIMNM('FPB_Country', nC);
+                      IF( ELISPAR('FPB_Country', 'All_Hierarchies', sC) = 1 & ATTRS('FPB_Country', sC, 'Currency') @<> '' );
+                        IF( CellGetN( 'FPB_FX', sVv, 'Effective', 'EUR', ATTRS('FPB_Country', sC, 'Currency'), sYy, sM ) <= 0 );
+                          n = nSpend * CellGetN( 'FPB_Drivers', sVv, 'NoChannel', 'NoCustomer', sB, 'NoCostCenter', 'NoAccount', sC, sYy, 'Annual', 'Marketing Split IN' );
+                          IF( ABS( n ) > nTol ); nCntMFX = nCntMFX + 1; nAbsMFX = nAbsMFX + ABS( n ); AsciiOutput( pOut, 'CHECK Marketing without FX Rate', 'Brand=' | sB | ';Country=' | sC | ';Versions=' | sVv | ';Years=' | sYy | ';Months=' | sM, NumberToString( n ) ); ENDIF;
+                        ENDIF;
+                      ENDIF;
+                      nC = nC + 1;
+                    END;
+                  ENDIF;
+                ENDIF;
+                nB = nB + 1;
+              END;
+            ENDIF;
+          ENDIF;
+          nM = nM + 1;
+        END;
+      ENDIF;
+      nYy = nYy + 1;
+    END;
+  ENDIF;
+  nVv = nVv + 1;
+END;
+AsciiOutput( pOut, 'SUMMARY', 'CHECK OPEX in EBIT', NumberToString( nCntOP ), NumberToString( nAbsOP ) );
+AsciiOutput( pOut, 'SUMMARY', 'CHECK EUR Rate', NumberToString( nCntEUR ), NumberToString( nAbsEUR ) );
+AsciiOutput( pOut, 'SUMMARY', 'CHECK PL without FX Rate', NumberToString( nCntPFX ), NumberToString( nAbsPFX ) );
+AsciiOutput( pOut, 'SUMMARY', 'CHECK Marketing Split', NumberToString( nCntMS ), NumberToString( nAbsMS ) );
+AsciiOutput( pOut, 'SUMMARY', 'CHECK Marketing without FX Rate', NumberToString( nCntMFX ), NumberToString( nAbsMFX ) );
+AsciiOutput( pOut, 'SUMMARY', 'CHECK Growth Bonus', NumberToString( nCntGB ), NumberToString( nAbsGB ) );
+#### METADATA
+#### DATA
+#### EPILOG
+nRet = ExecuteProcess( 'z.FPB.Check.Cells', 'pOut', pOut | '.cells', 'pTol', nTol );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;

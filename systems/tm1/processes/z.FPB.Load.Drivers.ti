@@ -1,0 +1,135 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Load.Drivers
+#### PARAMETERS
+pFile     String   'C:\FPABench-10m\tm1_load\FPB_Drivers.csv'
+pVersion  String   'ALL'
+pYear     String   'ALL'
+pMonth    String   'ALL'
+pZeroOut  Numeric  0
+pPart     String   'ALL'
+pLogDir   String   ''
+#### DATASOURCE
+ASCII 'C:\FPABench-10m\tm1_load\FPB_Drivers.csv'
+#### VARIABLES
+vSource           String
+vVersion          String
+vYear             String
+vMonth            String
+vInputCustomer    String
+vInputProduct     String
+vChannel          String
+vCostCenter       String
+vAccount          String
+vCountry          String
+vMeasure          String
+vValue            String
+#### PROLOG
+sLog = pLogDir;
+IF( sLog @= '' ); sLog = GetProcessErrorFileDirectory; ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_Load_Drivers.log';
+IF( FileExists( pFile ) = 0 ); AsciiOutput( sLog, 'ERROR', 'file not found', pFile ); ProcessError; ENDIF;
+sPart = UPPER( pPart );
+IF( sPart @<> 'ALL' & sPart @<> 'CONTROL' & sPart @<> 'INPUTS' ); ProcessError; ENDIF;
+
+sVersion = pVersion;  IF( UPPER( sVersion ) @= 'ALL' ); sVersion = ''; ENDIF;
+sYear    = pYear;     IF( UPPER( sYear )    @= 'ALL' ); sYear    = ''; ENDIF;
+sMonth   = pMonth;    IF( UPPER( sMonth )   @= 'ALL' ); sMonth   = ''; ENDIF;
+IF( sVersion @<> '' ); IF( DIMIX('FPB_Version', sVersion) = 0 ); ProcessError; ENDIF; sVersion = DIMNM('FPB_Version', DIMIX('FPB_Version', sVersion)); ENDIF;
+IF( sYear    @<> '' ); IF( DIMIX('FPB_Years',   sYear)    = 0 ); ProcessError; ENDIF; sYear    = DIMNM('FPB_Years',   DIMIX('FPB_Years',   sYear));    ENDIF;
+IF( sMonth   @<> '' ); IF( DIMIX('FPB_Months',  sMonth)   = 0 ); ProcessError; ENDIF; sMonth   = DIMNM('FPB_Months',  DIMIX('FPB_Months',  sMonth));   ENDIF;
+IF( DIMIX('FPB_Drivers_m', 'zFPB_KPI_ClearScope') = 0 ); AsciiOutput( sLog, 'ERROR', 'run z.FPB.Setup.Model first' ); ProcessError; ENDIF;
+
+DatasourceNameForServer = pFile;
+DatasourceASCIIDelimiter = ',';
+DatasourceASCIIQuoteCharacter = Char(34);
+DatasourceASCIIHeaderRecords = 1;
+
+IF( pZeroOut = 1 );
+  IF( sPart @= 'ALL' % sPart @= 'INPUTS' );
+    nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_Drivers', 'pView', 'zFPB_Drivers_KPIClear',
+      'pDim1', sVersion, 'pDim2', '', 'pDim3', '', 'pDim4', '', 'pDim5', '', 'pDim6', '', 'pDim7', '',
+      'pDim8', sYear, 'pDim9', sMonth, 'pDim10', 'zFPB_KPI_ClearScope', 'pDim11', '', 'pDim12', '',
+      'pZeroOut', 1, 'pKeepView', 0 );
+    IF( nRet <> ProcessExitNormal() ); AsciiOutput( sLog, 'ERROR', 'KPI zero-out failed' ); ProcessError; ENDIF;
+  ENDIF;
+  IF( sPart @= 'ALL' % sPart @= 'CONTROL' );
+    nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_Control', 'pView', 'zFPB_Control_FCClear',
+      'pDim1', sVersion, 'pDim2', 'Default', 'pDim3', sYear, 'pDim4', sMonth, 'pDim5', 'FC Closed IN',
+      'pDim6', '', 'pDim7', '', 'pDim8', '', 'pDim9', '', 'pDim10', '', 'pDim11', '', 'pDim12', '',
+      'pZeroOut', 1, 'pKeepView', 0 );
+    IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+    nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_Control', 'pView', 'zFPB_Control_FCClear',
+      'pDim1', sVersion, 'pDim2', 'Default', 'pDim3', sYear, 'pDim4', sMonth, 'pDim5', 'FC Horizon IN',
+      'pDim6', '', 'pDim7', '', 'pDim8', '', 'pDim9', '', 'pDim10', '', 'pDim11', '', 'pDim12', '',
+      'pZeroOut', 1, 'pKeepView', 0 );
+    IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+  ENDIF;
+ENDIF;
+
+nRows = 0;  nCtl = 0;  nRej = 0;
+#### METADATA
+#### DATA
+#--- time
+sY = 'Y' | vYear;
+sM = 'Annual';
+IF( vMonth @<> '' & UPPER( vMonth ) @<> 'ANNUAL' ); sM = 'M' | NumberToString( NUMBR( vMonth ) ); ENDIF;
+
+#--- row filter (same selection as the zero-out)
+IF( sVersion @<> '' & vVersion @<> sVersion ); ItemSkip; ENDIF;
+IF( sYear    @<> '' & sY       @<> sYear    ); ItemSkip; ENDIF;
+IF( sMonth   @<> '' & sM       @<> sMonth   ); ItemSkip; ENDIF;
+IF( vValue @= '' ); nRej = nRej + 1; ItemReject( 'empty value: ' | vSource ); ENDIF;
+nVal = NUMBR( vValue );
+
+IF( DIMIX('FPB_Version', vVersion) = 0 % DIMIX('FPB_Years', sY) = 0 % DIMIX('FPB_Months', sM) = 0 );
+  nRej = nRej + 1; ItemReject( 'bad version/year/month: ' | vVersion | ' ' | sY | ' ' | sM );
+ENDIF;
+
+#--- forecast controls
+IF( vMeasure @= 'FC Closed IN' % vMeasure @= 'FC Horizon IN' );
+  IF( sPart @= 'INPUTS' ); ItemSkip; ENDIF;
+  CellPutN( nVal, 'FPB_Control', vVersion, 'Default', sY, sM, vMeasure );
+  nCtl = nCtl + 1;
+  ItemSkip;
+ENDIF;
+IF( sPart @= 'CONTROL' ); ItemSkip; ENDIF;
+
+#--- the 12 planner inputs
+IF( SCAN( '|' | vMeasure | '|', '|Volume Growth IN|Volume Target IN|Price Increase IN|Standard Discount IN|Promo Discount IN|Logistics Discount IN|Rebate Rate IN|Growth Bonus Rate IN|Growth Bonus Threshold IN|Trade Fees IN|Marketing Spend IN|Marketing Split IN|' ) = 0 );
+  nRej = nRej + 1; ItemReject( 'unexpected measure: ' | vMeasure );
+ENDIF;
+
+sCust = vInputCustomer;  IF( sCust @= '' ); sCust = 'NoCustomer'; ENDIF;
+sProd = vInputProduct;   IF( sProd @= '' ); sProd = 'NoProduct';  ENDIF;
+sCh   = vChannel;        IF( sCh   @= '' ); sCh   = 'NoChannel';  ENDIF;
+sCtry = vCountry;        IF( sCtry @= '' ); sCtry = 'Global';     ENDIF;
+
+IF( DIMIX('FPB_InputCustomer', sCust) = 0 ); nRej = nRej + 1; ItemReject( 'unknown customer/group: ' | sCust ); ENDIF;
+IF( DIMIX('FPB_InputProduct',  sProd) = 0 ); nRej = nRej + 1; ItemReject( 'unknown product: ' | sProd );        ENDIF;
+
+# group-keyed rows sit on the group's channel and country
+IF( sCust @<> 'NoCustomer' );
+  sCh   = ATTRS( 'FPB_InputCustomer', sCust, 'Channel' );
+  sCtry = ATTRS( 'FPB_InputCustomer', sCust, 'Country' );
+  IF( sCh @= '' % sCtry @= '' ); nRej = nRej + 1; ItemReject( 'group without Channel/Country attribute: ' | sCust ); ENDIF;
+  IF( vCountry @<> '' & vCountry @<> 'Global' & vCountry @<> sCtry ); nRej = nRej + 1; ItemReject( 'country differs from master data: ' | sCust ); ENDIF;
+ENDIF;
+IF( DIMIX('FPB_Channel', sCh) = 0 % DIMIX('FPB_Country', sCtry) = 0 );
+  nRej = nRej + 1; ItemReject( 'bad channel/country: ' | sCh | ' ' | sCtry );
+ENDIF;
+
+CellPutN( nVal, 'FPB_Drivers', vVersion, sCh, sCust, sProd, 'NoCostCenter', 'NoAccount', sCtry, sY, sM, vMeasure );
+CellPutN( 1,    'FPB_Drivers', vVersion, sCh, sCust, sProd, 'NoCostCenter', 'NoAccount', sCtry, sY, sM, vMeasure | ' Entered' );
+nRows = nRows + 1;
+#### EPILOG
+# TM1 reopens (truncates) an AsciiOutput file when another tab writes to it, so the Epilog logs to its own file.
+AsciiOutput( SUBST( sLog, 1, LONG( sLog ) - 4 ) | '_epilog.log', 'rows', NumberToString( nRows ), 'control', NumberToString( nCtl ), 'rejected', NumberToString( nRej ) );
+IF( sPart @= 'ALL' % sPart @= 'CONTROL' );
+  nRet = ExecuteProcess( 'z.FPB.Control.FeedFlags' );
+  IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+ENDIF;

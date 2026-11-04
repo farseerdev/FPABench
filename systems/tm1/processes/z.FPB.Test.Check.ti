@@ -1,0 +1,40 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Test.Check
+#### PARAMETERS
+pTest      String   ''
+pOut       String   ''
+pVersion   String   'FC 6+6'
+pYear      String   'Y2026'
+pMonth     String   ''
+pCustomer  String   ''
+pSKU       String   ''
+pGroup     String   ''
+pCountry   String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sV = pVersion;  IF( sV @= '' ); sV = 'FC 6+6'; ENDIF;
+sY = pYear;     IF( sY @= '' ); sY = 'Y2026';  ENDIF;
+sT = pTest;
+IF( sT @= 'W1' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'VOLUME_CELL', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pMonth', pMonth, 'pCustomer', pCustomer, 'pSKU', pSKU );
+ELSEIF( sT @= 'W8' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'CHECK_GB_GROUP', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pGroup', pGroup );
+ELSEIF( sT @= 'W2' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_OUT', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pCountry', pCountry );
+ELSEIF( sT @= 'M2' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_OUT', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pCountry', ATTRS('FPB_InputCustomer', pGroup, 'Country') );
+ELSEIF( sT @= 'L2' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'CHECK_IMPORT_TOTAL', 'pOut', pOut, 'pYear', 'Y2026', 'pMonth', 'M7' );
+ELSEIF( sT @= 'M4' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'CHECK_OPEX_IN_EBIT', 'pOut', pOut, 'pVariant', 'M4' );
+ELSE;
+  nRet = ProcessExitNormal();
+ENDIF;
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+#### METADATA
+#### DATA
+#### EPILOG

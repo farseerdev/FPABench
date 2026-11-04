@@ -1,0 +1,24 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Test.M3
+#### PARAMETERS
+pCustomer  String   ''
+pGroup     String   ''
+pTarget    String   ''
+pOut       String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+IF( ELISPAR('FPB_Customer', pGroup, pCustomer) = 0 % DIMIX('FPB_Customer', pTarget) = 0 ); ProcessError; ENDIF;
+IF( ATTRS('FPB_InputCustomer', pGroup, 'Channel') @<> ATTRS('FPB_InputCustomer', pTarget, 'Channel')
+  % ATTRS('FPB_InputCustomer', pGroup, 'Country') @<> ATTRS('FPB_InputCustomer', pTarget, 'Country') ); ProcessError; ENDIF;
+DimensionElementComponentDelete( 'FPB_Customer', pGroup, pCustomer );
+DimensionElementComponentAdd( 'FPB_Customer', pTarget, pCustomer, 1 );
+#### METADATA
+#### DATA
+#### EPILOG
+AttrPutS( pTarget, 'FPB_Customer', pCustomer, 'CustomerGroup' );
+nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'GROSS_SALES_GROUPS', 'pOut', pOut, 'pGroup', pGroup, 'pGroup2', pTarget );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;

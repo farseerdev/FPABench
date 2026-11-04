@@ -1,0 +1,80 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Test.Write
+#### PARAMETERS
+pTest          String   ''
+pOut           String   ''
+pVersion       String   'FC 6+6'
+pYear          String   'Y2026'
+pCustomer      String   ''
+pSKU           String   ''
+pMonth         String   ''
+pGroup         String   ''
+pCategory      String   ''
+pBrand         String   ''
+pCurrency      String   ''
+pCostCenter    String   ''
+pAccount       String   ''
+pCountry       String   ''
+pOtherCountry  String   ''
+pValue         Numeric  0
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sV = pVersion;  IF( sV @= '' ); sV = 'FC 6+6'; ENDIF;
+sY = pYear;     IF( sY @= '' ); sY = 'Y2026';  ENDIF;
+sT = pTest;
+
+IF( sT @= 'W1' % sT @= 'C1' % sT @= 'C3' );
+  sCh = ATTRS('FPB_Customer', pCustomer, 'Channel');  sC = ATTRS('FPB_Customer', pCustomer, 'Country');
+  IF( sCh @= '' % DIMIX('FPB_InputCustomer', pCustomer) = 0 % DIMIX('FPB_InputProduct', pSKU) = 0 ); ProcessError; ENDIF;
+  IF( sT @= 'C3' );
+    nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_OUT', 'pOut', pOut | '.before', 'pVersion', sV, 'pYear', sY, 'pCountry', pOtherCountry );
+  ENDIF;
+  CellPutN( pValue, 'FPB_Drivers', sV, sCh, pCustomer, pSKU, 'NoCostCenter', 'NoAccount', sC, sY, pMonth, 'Volume Override IN' );
+  CellPutN( 1,      'FPB_Drivers', sV, sCh, pCustomer, pSKU, 'NoCostCenter', 'NoAccount', sC, sY, pMonth, 'Volume Override IN Entered' );
+  sRead = 'EBIT_OUT';  sReadCountry = pCountry;  sReadMonth = '';
+  IF( sT @= 'C3' ); sReadCountry = pOtherCountry; ENDIF;
+ELSEIF( sT @= 'W3' );
+  sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+  CellPutN( pValue, 'FPB_Drivers', sV, sCh, pGroup, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, pMonth, 'Rebate Rate IN' );
+  CellPutN( 1,      'FPB_Drivers', sV, sCh, pGroup, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, pMonth, 'Rebate Rate IN Entered' );
+  sRead = 'EBIT_OUT';  sReadCountry = sC;  sReadMonth = pMonth;
+ELSEIF( sT @= 'W4' );
+  CellPutN( pValue, 'FPB_Drivers', sV, 'NoChannel', 'NoCustomer', pBrand, 'NoCostCenter', 'NoAccount', 'Global', sY, 'Annual', 'Price Increase IN' );
+  CellPutN( 1,      'FPB_Drivers', sV, 'NoChannel', 'NoCustomer', pBrand, 'NoCostCenter', 'NoAccount', 'Global', sY, 'Annual', 'Price Increase IN Entered' );
+  sRead = 'GROSS_SALES_BRAND_PLAN';  sReadCountry = '';  sReadMonth = '';
+ELSEIF( sT @= 'W5' );
+  CellPutN( pValue, 'FPB_FX', sV, 'Average', 'EUR', pCurrency, sY, pMonth );
+  sRead = 'COGS_COUNTRY';  sReadCountry = pCountry;  sReadMonth = pMonth;
+ELSEIF( sT @= 'W6' );
+  sC = ATTRS('FPB_CostCenter', pCostCenter, 'Country');
+  CellPutN( pValue, 'FPB_Drivers', sV, 'NoChannel', 'NoCustomer', 'NoProduct', pCostCenter, pAccount, sC, sY, pMonth, 'OPEX IN' );
+  CellPutN( 1,      'FPB_Drivers', sV, 'NoChannel', 'NoCustomer', 'NoProduct', pCostCenter, pAccount, sC, sY, pMonth, 'OPEX IN Entered' );
+  sRead = 'EBIT_OUT';  sReadCountry = sC;  sReadMonth = pMonth;
+ELSEIF( sT @= 'W7' );
+  sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+  CellPutN( pValue, 'FPB_Drivers', sV, sCh, pGroup, pCategory, 'NoCostCenter', 'NoAccount', sC, sY, 'Annual', 'Volume Target IN' );
+  CellPutN( 1,      'FPB_Drivers', sV, sCh, pGroup, pCategory, 'NoCostCenter', 'NoAccount', sC, sY, 'Annual', 'Volume Target IN Entered' );
+  sRead = 'VOLUME_GROUP_CAT_PLAN';  sReadCountry = '';  sReadMonth = '';
+ELSEIF( sT @= 'W8' );
+  sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+  CellPutN( pValue, 'FPB_Drivers', sV, sCh, pGroup, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, 'Annual', 'Growth Bonus Threshold IN' );
+  CellPutN( 1,      'FPB_Drivers', sV, sCh, pGroup, 'NoProduct', 'NoCostCenter', 'NoAccount', sC, sY, 'Annual', 'Growth Bonus Threshold IN Entered' );
+  sRead = 'GB_GROUP';  sReadCountry = '';  sReadMonth = '';
+ELSEIF( sT @= 'L3' );
+  AttrPutN( pValue, 'FPB_Product', pSKU, 'UnitWeightKg' );
+  sRead = 'LOGISTICS_BRAND';  sReadCountry = '';  sReadMonth = '';
+ELSE;
+  ProcessError;
+ENDIF;
+#### METADATA
+#### DATA
+#### EPILOG
+nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', sRead, 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pMonth', sReadMonth,
+                       'pCountry', sReadCountry, 'pGroup', pGroup, 'pBrand', pBrand, 'pCategory', pCategory );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+# The FPABench timer stops at the proving read. The checks of the run (W1, W8) are read afterwards,
+# untimed, by z.FPB.Test.Check.

@@ -1,0 +1,80 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Run.L1
+#### PARAMETERS
+pPkgDir   String   'C:\FPABench-TM1'
+pDataDir  String   'C:\FPABench-10m\tm1_load'
+pClear    Numeric  0
+pBulk     Numeric  1
+pOut      String   ''
+pSave     Numeric  1
+pLogDir   String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+# folders end with the separator the name already uses ('/' for file storage names, else '\')
+sPkg = pPkgDir;
+IF( sPkg @<> '' & SUBST( sPkg, LONG( sPkg ), 1 ) @<> '\' & SUBST( sPkg, LONG( sPkg ), 1 ) @<> '/' );
+  IF( SCAN( '/', sPkg ) > 0 ); sPkg = sPkg | '/'; ELSE; sPkg = sPkg | '\'; ENDIF;
+ENDIF;
+sData = pDataDir;
+IF( sData @<> '' & SUBST( sData, LONG( sData ), 1 ) @<> '\' & SUBST( sData, LONG( sData ), 1 ) @<> '/' );
+  IF( SCAN( '/', sData ) > 0 ); sData = sData | '/'; ELSE; sData = sData | '\'; ENDIF;
+ENDIF;
+sRules = sPkg | 'rules';
+IF( SCAN( '/', sPkg ) > 0 % sPkg @= '' ); sRules = sRules | '/'; ELSE; sRules = sRules | '\'; ENDIF;
+sLog = pLogDir;
+IF( sLog @= '' ); sLog = GetProcessErrorFileDirectory; ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_Run_L1.log';
+AsciiOutput( sLog, 'start', TIMST( NOW, '\Y-\m-\d \h:\i:\s' ) );
+
+IF( pClear = 1 );
+  CubeClearData( 'FPB_Reporting' );
+  CubeClearData( 'FPB_Drivers' );
+  CubeClearData( 'FPB_FX' );
+  CubeClearData( 'FPB_Control' );
+ENDIF;
+
+# rules: Control and FX always on (FeedFlags and the loaders read FC Actual / FC Plan)
+RuleLoadFromFile( 'FPB_Control', sRules | 'FPB_Control.rux' );
+RuleLoadFromFile( 'FPB_FX',      sRules | 'FPB_FX.rux' );
+IF( pBulk = 1 );
+  RuleLoadFromFile( 'FPB_Reporting', sRules | 'FPB_Empty.rux' );
+  RuleLoadFromFile( 'FPB_Drivers',   sRules | 'FPB_Empty.rux' );
+ENDIF;
+
+# 1. version flags first: feeders of the fact data read Feed Actual Copy / Feed Plan
+nRet = ExecuteProcess( 'z.FPB.Load.Drivers', 'pFile', sData | 'FPB_Drivers.csv', 'pVersion', 'ALL', 'pYear', 'ALL', 'pMonth', 'ALL', 'pZeroOut', 0, 'pPart', 'CONTROL', 'pLogDir', pLogDir );
+IF( nRet <> ProcessExitNormal() ); AsciiOutput( sLog, 'ERROR', 'control load' ); ProcessError; ENDIF;
+# 2. rates
+nRet = ExecuteProcess( 'z.FPB.Load.FX', 'pFile', sData | 'FPB_FX.csv', 'pVersion', 'ALL', 'pYear', 'ALL', 'pMonth', 'ALL', 'pZeroOut', 0, 'pLogDir', pLogDir );
+IF( nRet <> ProcessExitNormal() ); AsciiOutput( sLog, 'ERROR', 'fx load' ); ProcessError; ENDIF;
+# 3. planner inputs at their own grain
+nRet = ExecuteProcess( 'z.FPB.Load.Drivers', 'pFile', sData | 'FPB_Drivers.csv', 'pVersion', 'ALL', 'pYear', 'ALL', 'pMonth', 'ALL', 'pZeroOut', 0, 'pPart', 'INPUTS', 'pLogDir', pLogDir );
+IF( nRet <> ProcessExitNormal() ); AsciiOutput( sLog, 'ERROR', 'drivers load' ); ProcessError; ENDIF;
+# 4. ERP export, master prices/costs, leaf-level inputs
+nRet = ExecuteProcess( 'z.FPB.Load.Leaf', 'pFile', sData | 'FPB_Leaf.csv', 'pVersion', 'ALL', 'pYear', 'ALL', 'pMonth', 'ALL', 'pZeroOut', 0, 'pLogDir', pLogDir );
+IF( nRet <> ProcessExitNormal() ); AsciiOutput( sLog, 'ERROR', 'leaf load' ); ProcessError; ENDIF;
+
+# 5. attach the calculation rules (bulk feeder pass)
+IF( pBulk = 1 );
+  RuleLoadFromFile( 'FPB_Drivers',   sRules | 'FPB_Drivers.rux' );
+  RuleLoadFromFile( 'FPB_Reporting', sRules | 'FPB_Reporting.rux' );
+ENDIF;
+AsciiOutput( sLog, 'loaded', TIMST( NOW, '\Y-\m-\d \h:\i:\s' ) );
+#### METADATA
+#### DATA
+#### EPILOG
+# 6. proving read
+IF( pOut @<> '' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'L1', 'pOut', pOut );
+  IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+ENDIF;
+IF( pSave = 1 ); SaveDataAll; ENDIF;
+# TM1 reopens (truncates) an AsciiOutput file when another tab writes to it, so the Epilog logs to its own file.
+AsciiOutput( SUBST( sLog, 1, LONG( sLog ) - 4 ) | '_epilog.log', 'done', TIMST( NOW, '\Y-\m-\d \h:\i:\s' ) );

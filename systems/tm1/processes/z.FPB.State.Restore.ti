@@ -1,0 +1,80 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.State.Restore
+#### PARAMETERS
+pJournal   String   ''
+pRulesDir  String   'C:\FPABench-TM1\rules'
+pEmptyDir  String   'C:\FPABench-TM1\stage\empty'
+#### DATASOURCE
+ASCII 'C:\FPABench-TM1\run\W2_cells.csv'
+#### VARIABLES
+vKind             String
+vObject           String
+v1                String
+v2                String
+v3                String
+v4                String
+v5                String
+v6                String
+v7                String
+v8                String
+v9                String
+v10               String
+v11               String
+v12               String
+vValue            String
+#### PROLOG
+nSave = 0;
+IF( FileExists( pJournal ) = 0 );
+  # the run changed nothing (no journal written)
+  DataSourceType = 'NULL';
+ELSE;
+  DatasourceNameForServer = pJournal;
+  DatasourceASCIIDelimiter = ',';
+  DatasourceASCIIQuoteCharacter = Char(34);
+  DatasourceASCIIHeaderRecords = 0;
+ENDIF;
+sEmpty = pEmptyDir;
+IF( sEmpty @<> '' & SUBST( sEmpty, LONG( sEmpty ), 1 ) @<> '\' & SUBST( sEmpty, LONG( sEmpty ), 1 ) @<> '/' );
+  IF( SCAN( '/', sEmpty ) > 0 ); sEmpty = sEmpty | '/'; ELSE; sEmpty = sEmpty | '\'; ENDIF;
+ENDIF;
+#### METADATA
+# structure first: dimension edits are committed before the Data tab runs
+IF( vKind @= 'DELCUST' );
+  IF( DIMIX( 'FPB_Customer', v1 ) > 0 );      DimensionElementDelete( 'FPB_Customer', v1 );      ENDIF;
+  IF( DIMIX( 'FPB_InputCustomer', v1 ) > 0 ); DimensionElementDelete( 'FPB_InputCustomer', v1 ); ENDIF;
+ELSEIF( vKind @= 'MOVECUST' );
+  IF( ELISPAR( 'FPB_Customer', v2, v1 ) = 1 ); DimensionElementComponentDelete( 'FPB_Customer', v2, v1 ); ENDIF;
+  IF( ELISPAR( 'FPB_Customer', v3, v1 ) = 0 ); DimensionElementComponentAdd( 'FPB_Customer', v3, v1, 1 );  ENDIF;
+ENDIF;
+#### DATA
+IF( vKind @= 'CELL' );
+  n = NUMBR( vValue );
+  IF( vObject @= 'FPB_Drivers' );
+    CellPutN( n, vObject, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10 );
+  ELSEIF( vObject @= 'FPB_FX' );
+    CellPutN( n, vObject, v1, v2, v3, v4, v5, v6 );
+  ELSEIF( vObject @= 'FPB_Control' );
+    CellPutN( n, vObject, v1, v2, v3, v4, v5 );
+  ELSE;
+    ItemReject( 'unknown cube in journal: ' | vObject );
+  ENDIF;
+ELSEIF( vKind @= 'ATTR' );
+  AttrPutN( NUMBR( vValue ), vObject, v1, v2 );
+ELSEIF( vKind @= 'MOVECUST' );
+  AttrPutS( v3, 'FPB_Customer', v1, 'CustomerGroup' );
+ELSEIF( vKind @= 'CLEARACTUAL' );
+  # the base data has no actuals in this month: zero what the increment loaded (header-only files load nothing)
+  nRet = ExecuteProcess( 'z.FPB.Load.Leaf', 'pFile', sEmpty | 'FPB_Leaf.csv', 'pVersion', 'Actual', 'pYear', v1, 'pMonth', v2, 'pZeroOut', 1 );
+  IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+  nRet = ExecuteProcess( 'z.FPB.Load.FX', 'pFile', sEmpty | 'FPB_FX.csv', 'pVersion', 'Actual', 'pYear', v1, 'pMonth', v2, 'pZeroOut', 1 );
+  IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+ELSEIF( vKind @= 'RULES' );
+  nRet = ExecuteProcess( 'z.FPB.Rules.Load', 'pDir', pRulesDir, 'pVariant', v1, 'pCubes', 'REPORTING' );
+  IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+ELSEIF( vKind @= 'SAVE' );
+  nSave = 1;
+ENDIF;
+#### EPILOG
+IF( nSave = 1 ); SaveDataAll; ENDIF;

@@ -1,0 +1,36 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Control.FeedFlags
+#### PARAMETERS
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+nY = 1;
+WHILE( nY <= DIMSIZ('FPB_Years') );
+  sY = DIMNM( 'FPB_Years', nY );
+  IF( DTYPE('FPB_Years', sY) @= 'N' );
+    nM = 1;
+    WHILE( nM <= 12 );
+      sM = 'M' | NumberToString( nM );
+      nAct = 0;  nPlan = 0;
+      nV = 1;
+      WHILE( nV <= DIMSIZ('FPB_Version') );
+        sV = DIMNM( 'FPB_Version', nV );
+        IF( DTYPE('FPB_Version', sV) @= 'N' );
+          IF( sV @<> 'Actual' & CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Actual' ) = 1 ); nAct = 1;  ENDIF;
+          IF( CellGetN( 'FPB_Control', sV, 'Default', sY, sM, 'FC Plan' ) = 1 );                   nPlan = 1; ENDIF;
+        ENDIF;
+        nV = nV + 1;
+      END;
+      CellPutN( nAct,  'FPB_Control', 'Actual', 'Default', sY, sM, 'Feed Actual Copy' );
+      CellPutN( nPlan, 'FPB_Control', 'Actual', 'Default', sY, sM, 'Feed Plan' );
+      nM = nM + 1;
+    END;
+  ENDIF;
+  nY = nY + 1;
+END;
+#### METADATA
+#### DATA
+#### EPILOG

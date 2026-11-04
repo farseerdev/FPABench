@@ -1,0 +1,73 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Load.FX
+#### PARAMETERS
+pFile     String   'C:\FPABench-10m\tm1_load\FPB_FX.csv'
+pVersion  String   'ALL'
+pYear     String   'ALL'
+pMonth    String   'ALL'
+pZeroOut  Numeric  0
+pLogDir   String   ''
+#### DATASOURCE
+ASCII 'C:\FPABench-10m\tm1_load\FPB_FX.csv'
+#### VARIABLES
+vSource           String
+vVersion          String
+vYear             String
+vMonth            String
+vFXType           String
+vFrom             String
+vTo               String
+vRate             String
+vDirection        String
+#### PROLOG
+sLog = pLogDir;
+IF( sLog @= '' ); sLog = GetProcessErrorFileDirectory; ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_Load_FX.log';
+IF( FileExists( pFile ) = 0 ); ProcessError; ENDIF;
+sVersion = pVersion;  IF( UPPER( sVersion ) @= 'ALL' ); sVersion = ''; ENDIF;
+sYear    = pYear;     IF( UPPER( sYear )    @= 'ALL' ); sYear    = ''; ENDIF;
+sMonth   = pMonth;    IF( UPPER( sMonth )   @= 'ALL' ); sMonth   = ''; ENDIF;
+DatasourceNameForServer = pFile;
+DatasourceASCIIDelimiter = ',';
+DatasourceASCIIQuoteCharacter = Char(34);
+DatasourceASCIIHeaderRecords = 1;
+IF( pZeroOut = 1 );
+  # FPB_FX has no measure dimension; the last dimension (Months) must be restricted for a zero-out,
+  # so clear month by month when pMonth = ALL.
+  nM = 1;
+  WHILE( nM <= 12 );
+    sM = 'M' | NumberToString( nM );
+    IF( sMonth @= '' % sMonth @= sM );
+      nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_FX', 'pView', 'zFPB_FX_Clear',
+        'pDim1', sVersion, 'pDim2', 'Average', 'pDim3', '', 'pDim4', '', 'pDim5', sYear, 'pDim6', sM,
+        'pDim7', '', 'pDim8', '', 'pDim9', '', 'pDim10', '', 'pDim11', '', 'pDim12', '',
+        'pZeroOut', 1, 'pKeepView', 0 );
+      IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+    ENDIF;
+    nM = nM + 1;
+  END;
+ENDIF;
+nRows = 0;  nSkip = 0;
+#### METADATA
+#### DATA
+IF( vDirection @<> 'Source' ); nSkip = nSkip + 1; ItemSkip; ENDIF;
+sY = 'Y' | vYear;
+sM = 'M' | NumberToString( NUMBR( vMonth ) );
+IF( sVersion @<> '' & vVersion @<> sVersion ); ItemSkip; ENDIF;
+IF( sYear    @<> '' & sY       @<> sYear    ); ItemSkip; ENDIF;
+IF( sMonth   @<> '' & sM       @<> sMonth   ); ItemSkip; ENDIF;
+IF( vFrom @<> 'EUR' ); ItemReject( 'source rate must be quoted from EUR: ' | vFrom | '>' | vTo ); ENDIF;
+IF( DIMIX('FPB_Version', vVersion) = 0 % DIMIX('FPB_CurrencyListReverse', vTo) = 0 % DIMIX('FPB_Years', sY) = 0 % DIMIX('FPB_Months', sM) = 0 );
+  ItemReject( 'bad coordinate: ' | vVersion | ' ' | vTo | ' ' | sY | ' ' | sM );
+ENDIF;
+nRate = NUMBR( vRate );
+IF( nRate <= 0 ); ItemReject( 'rate must be above 0: ' | vRate ); ENDIF;
+CellPutN( nRate, 'FPB_FX', vVersion, 'Average', 'EUR', vTo, sY, sM );
+nRows = nRows + 1;
+#### EPILOG
+AsciiOutput( sLog, 'rows', NumberToString( nRows ), 'inverse skipped', NumberToString( nSkip ) );

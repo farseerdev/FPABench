@@ -1,0 +1,71 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Check.Cells
+#### PARAMETERS
+pOut      String   ''
+pTol      Numeric  0.01
+#### DATASOURCE
+View 'FPB_Reporting' 'zFPB_Check_Units'
+#### VARIABLES
+vVersion          String
+vCurrency         String
+vScenario         String
+vChannel          String
+vCustomer         String
+vProduct          String
+vCostCenter       String
+vAccount          String
+vCountry          String
+vYear             String
+vMonth            String
+vMeasure          String
+vValue            Numeric
+#### PROLOG
+nRet = ExecuteProcess( 'z.FPB.View.Create', 'pCube', 'FPB_Reporting', 'pView', 'zFPB_Check_Units',
+  'pDim1', '', 'pDim2', 'LCY', 'pDim3', 'Periodic', 'pDim4', '', 'pDim5', '', 'pDim6', '', 'pDim7', 'NoCostCenter',
+  'pDim8', 'NoAccount', 'pDim9', '', 'pDim10', '', 'pDim11', '', 'pDim12', 'Units', 'pZeroOut', 0, 'pKeepView', 1 );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+ViewExtractSkipZeroesSet( 'FPB_Reporting', 'zFPB_Check_Units', 1 );
+ViewExtractSkipCalcsSet( 'FPB_Reporting', 'zFPB_Check_Units', 1 );
+ViewExtractSkipRuleValuesSet( 'FPB_Reporting', 'zFPB_Check_Units', 0 );
+DatasourceType = 'VIEW';
+DatasourceNameForServer = 'FPB_Reporting';
+DatasourceCubeview = 'zFPB_Check_Units';
+nTol = pTol;  IF( nTol <= 0 ); nTol = 0.01; ENDIF;
+nUC = 0; nUPC = 0; nUP = 0; nFX = 0;
+#### METADATA
+#### DATA
+IF( DTYPE('FPB_Months', vMonth) @<> 'N' % vMonth @= 'Annual' ); ItemSkip; ENDIF;
+nAct  = CellGetN( 'FPB_Control', vVersion, 'Default', vYear, vMonth, 'FC Actual' );
+nPlan = CellGetN( 'FPB_Control', vVersion, 'Default', vYear, vMonth, 'FC Plan' );
+IF( nAct <> 1 & nPlan <> 1 ); ItemSkip; ENDIF;
+sKey = 'Customer=' | vCustomer | ';SKU=' | vProduct | ';Versions=' | vVersion | ';Years=' | vYear | ';Months=' | vMonth;
+IF( vVersion @= 'Actual' );
+  IF( CellGetN( 'FPB_Drivers', 'Actual', 'NoChannel', 'NoCustomer', vProduct, 'NoCostCenter', 'NoAccount', 'Global', vYear, 'Annual', 'IMPORT Standard Cost' ) = 0 );
+    nUC = nUC + 1; AsciiOutput( pOut, 'CHECK Uncosted Volume', sKey, NumberToString( vValue ) );
+  ENDIF;
+ELSEIF( nPlan = 1 );
+  IF( CellGetN( 'FPB_Drivers', vVersion, 'NoChannel', 'NoCustomer', vProduct, 'NoCostCenter', 'NoAccount', 'Global', vYear, 'Annual', 'Standard Cost Plan' ) = 0 );
+    nUPC = nUPC + 1; AsciiOutput( pOut, 'CHECK Uncosted Plan Volume', sKey, NumberToString( vValue ) );
+  ENDIF;
+  IF( CellGetN( 'FPB_Drivers', vVersion, 'NoChannel', 'NoCustomer', vProduct, 'NoCostCenter', 'NoAccount', vCountry, vYear, vMonth, 'List Price Plan' ) = 0 );
+    nUP = nUP + 1; AsciiOutput( pOut, 'CHECK Unpriced Volume', sKey, NumberToString( vValue ) );
+  ENDIF;
+ENDIF;
+IF( CellGetN( 'FPB_FX', vVersion, 'Effective', 'EUR', ATTRS('FPB_Country', vCountry, 'Currency'), vYear, vMonth ) <= 0 );
+  nFX = nFX + 1; AsciiOutput( pOut, 'CHECK Volume without FX Rate', sKey, NumberToString( vValue ) );
+ENDIF;
+#### EPILOG
+# The Data tab wrote the check rows to pOut; a second tab writing to pOut would truncate it.
+sSum = pOut | '.summary';
+AsciiOutput( sSum, 'SUMMARY', 'CHECK Uncosted Volume',        NumberToString( nUC ) );
+AsciiOutput( sSum, 'SUMMARY', 'CHECK Uncosted Plan Volume',   NumberToString( nUPC ) );
+AsciiOutput( sSum, 'SUMMARY', 'CHECK Unpriced Volume',        NumberToString( nUP ) );
+AsciiOutput( sSum, 'SUMMARY', 'CHECK Volume without FX Rate', NumberToString( nFX ) );
+ViewDestroy( 'FPB_Reporting', 'zFPB_Check_Units' );
+SubsetDestroy( 'FPB_Currency', 'zFPB_Check_Units' );
+SubsetDestroy( 'FPB_CurrencyScenario', 'zFPB_Check_Units' );
+SubsetDestroy( 'FPB_CostCenter', 'zFPB_Check_Units' );
+SubsetDestroy( 'FPB_Account', 'zFPB_Check_Units' );
+SubsetDestroy( 'FPB_Reporting_m', 'zFPB_Check_Units' );

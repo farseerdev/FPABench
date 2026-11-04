@@ -1,0 +1,45 @@
+FPABench-TM1
+Copyright 2026 the contributors
+
+The original code in this repository is licensed under the Apache License, Version 2.0 (see LICENSE).
+That licence grants no rights in IBM software and does not replace the licences of third-party
+material listed below.
+
+CONTENTS
+This repository contains source definitions (TM1 rule files and TurboIntegrator process sources),
+scripts and documentation, intended to build and run the FPABench model on a separately licensed IBM
+Planning Analytics / TM1 server. It is experimental and has not been installed, executed or validated on
+IBM Planning Analytics TM1 Server v11 or TM1 Database v12. It contains no IBM software or libraries, no
+files saved by a TM1 server, no exported TM1 server database and no measured TM1 benchmark results.
+
+IBM SOFTWARE
+Running this code requires your own appropriately licensed IBM Planning Analytics environment.
+Before publishing performance measurements or comparative benchmark results, users must review the
+licence terms applicable to their IBM software installation, including any restrictions on performance
+testing or disclosure, and obtain any authorisation required by those terms.
+Results produced with this code are not certified or endorsed by IBM.
+
+NO AFFILIATION
+IBM, Cognos and TM1 are trademarks or registered trademarks of International Business Machines
+Corporation. This project is independently developed and is not affiliated with, endorsed by, sponsored
+by or supported by IBM. The names are used only to identify the software this code is intended for.
+
+CREATED USING CLAUDE
+The code in this repository, including the TurboIntegrator processes, rules and scripts, was created
+using Claude Opus 5.5 (Anthropic) and requires validation before use.
+
+THIRD-PARTY MATERIAL
+This project implements FPABench (https://github.com/farseerdev/FPABench), made by Farseer
+(https://www.farseer.com). Upstream, FPABench's code is licensed under the Apache License 2.0 and its
+model, data and documentation under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). This
+package was built against upstream commit 3c02a65c16181e3918cae7a5381de3d4c352d890.
+Adapted from FPABench's CC BY 4.0 material, with changes in language and structure to fit TM1:
+  rules/                             the model's formulas, translated into TM1 rule syntax
+  docs/MAPPING.md                    the FPABench model's variables, with where each lives in TM1
+  processes/, scripts/               follow FPABench's test definitions and dataset layout
+Nothing here implies endorsement by FPABench's authors or Farseer.
+This package contains no FPABench data. The installer writes the dataset, the harness plan, the W2 cells
+and the reference answers on your machine, from your own checkout of FPABench; FPABench's licences apply
+to them.
+The DuckDB packages the installer's Reference stage installs through the FPABench entry are not included
+here and carry their own licences.

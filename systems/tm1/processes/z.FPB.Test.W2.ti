@@ -1,0 +1,33 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Test.W2
+#### PARAMETERS
+pFile     String   'C:\FPABench-TM1\run\W2_cells.csv'
+pOut      String   ''
+pVersion  String   'FC 6+6'
+pYear     String   'Y2026'
+pCountry  String   ''
+#### DATASOURCE
+ASCII 'C:\FPABench-TM1\run\W2_cells.csv'
+#### VARIABLES
+vCustomer         String
+vSKU              String
+vMonth            String
+vValue            String
+#### PROLOG
+sV = pVersion;  IF( sV @= '' ); sV = 'FC 6+6'; ENDIF;
+sY = pYear;     IF( sY @= '' ); sY = 'Y2026';  ENDIF;
+DatasourceNameForServer = pFile;
+DatasourceASCIIDelimiter = ',';
+DatasourceASCIIQuoteCharacter = Char(34);
+DatasourceASCIIHeaderRecords = 1;
+#### METADATA
+#### DATA
+sCh = ATTRS('FPB_Customer', vCustomer, 'Channel');  sC = ATTRS('FPB_Customer', vCustomer, 'Country');
+CellPutN( NUMBR( vValue ), 'FPB_Drivers', sV, sCh, vCustomer, vSKU, 'NoCostCenter', 'NoAccount', sC, sY, vMonth, 'Volume Override IN' );
+CellPutN( 1,               'FPB_Drivers', sV, sCh, vCustomer, vSKU, 'NoCostCenter', 'NoAccount', sC, sY, vMonth, 'Volume Override IN Entered' );
+#### EPILOG
+nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'VOLUME_COUNTRY_PLAN', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pCountry', pCountry );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+# EBIT OUT of the country (the check) is read afterwards, untimed, by z.FPB.Test.Check.

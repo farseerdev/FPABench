@@ -1,0 +1,24 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Test.Rules
+#### PARAMETERS
+pTest      String   ''
+pRulesDir  String   'C:\FPABench-TM1\rules'
+pOut       String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+nRet = ExecuteProcess( 'z.FPB.Rules.Load', 'pDir', pRulesDir, 'pVariant', pTest, 'pCubes', 'REPORTING' );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+#### METADATA
+#### DATA
+#### EPILOG
+IF( pTest @= 'M1' );
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'LOGISTICS_BRAND_COUNTRY', 'pOut', pOut );
+ELSE;
+  nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'CM3_COUNTRY', 'pOut', pOut );
+  # CHECK OPEX in EBIT (M4 variant) is read afterwards, untimed, by z.FPB.Test.Check.
+ENDIF;
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
