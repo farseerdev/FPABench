@@ -18,7 +18,7 @@
   Every folder must be readable (and OutDirectory / LogDirectory writable) by the TM1 server, because
   the TI processes open these files themselves.
 
-  Generated with the help of Claude Opus 5.5; requires validation. Provided as is (see LICENSE).
+  Generated with the help of Claude Opus 5.5; requires validation. Provided as is (see the repository's LICENSE).
 #>
 function Join-FPBenchPath([string]$Dir, [string]$Name) {
   # keeps the separator style of the folder: '/' for names such as file storage paths, '\' otherwise

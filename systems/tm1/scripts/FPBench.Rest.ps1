@@ -17,7 +17,7 @@
                               any other http:// URL is refused, because the sign-in would travel unencrypted
   The sign-in header and the password are never written to the console or to a log.
 
-  Generated with the help of Claude Opus 5.5; requires validation. Provided as is (see LICENSE).
+  Generated with the help of Claude Opus 5.5; requires validation. Provided as is (see the repository's LICENSE).
 #>
 
 function Initialize-FPBenchRest {

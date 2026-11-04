@@ -30,7 +30,7 @@
     #### PROLOG / #### METADATA / #### DATA / #### EPILOG   the code of each tab
 
   The TI processes were generated with the help of Claude Opus 5.5 and require validation.
-  Provided as is, without warranty (see LICENSE).
+  Provided as is, without warranty (see the repository's LICENSE).
 #>
 param(
   [Parameter(Mandatory = $true)][string]$Config,

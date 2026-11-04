@@ -53,7 +53,7 @@
     node scripts\compare.mjs <ReferenceFile> <OutDirectory>\answers            (add --quick after -Quick)
 
   The TI processes and rules this harness drives were generated with the help of Claude Opus 5.5 and
-  require validation. Provided as is, without warranty (see LICENSE).
+  require validation. Provided as is, without warranty (see the repository's LICENSE).
 #>
 param(
   [Parameter(Mandatory = $true)][string]$Config,

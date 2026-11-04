@@ -41,7 +41,7 @@
   TM1 Database 12 (file storage) is not handled yet.
 
   The TI processes and rules were generated with the help of Claude Opus 5.5 and require validation.
-  Provided as is, without warranty (see LICENSE).
+  Provided as is, without warranty (see the repository's LICENSE).
 #>
 param(
   [Parameter(Mandatory = $true)][string]$Config,

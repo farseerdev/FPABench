@@ -4,7 +4,7 @@ An FPABench implementation for IBM Planning Analytics TM1 Server v11, for anyone
 
 > **Status: experimental and untested.** It has not been installed or run on TM1 v11 or TM1 Database v12. It ships no results. Its timings are not yet comparable with FPABench's published results: see [Known gaps](#known-gaps).
 >
-> Independently developed and not affiliated with or endorsed by IBM. IBM, Cognos and TM1 are IBM trademarks. No IBM software is included. See [NOTICE](NOTICE). The code was created using Claude Opus 5.5 (Anthropic) and needs validation before use.
+> Independently developed and not affiliated with or endorsed by IBM. IBM, Cognos and TM1 are IBM trademarks. No IBM software is included. See [IBM software and licences](#ibm-software-and-licences). The code was created using Claude Opus 5.5 (Anthropic) and needs validation before use.
 
 The model sits in TM1 rules and feeders. TurboIntegrator (TI) processes load the data, perform each test's action and read the answers. The package holds no FPABench data: the installer generates the dataset and the reference answers on your machine, from your own FPABench checkout.
 
@@ -112,8 +112,14 @@ Use the scripts only on an isolated, disposable server that holds nothing you ne
 
 The password comes from the environment variable named in `PasswordEnvVar`, from `Password` in your local config, or from a prompt. It is never logged. `.gitignore` keeps `FPBench.config.psd1` out of the repository. `RestBaseUrl` must use https, except for a server on the same machine with `AllowInsecureHttp = $true`.
 
-## Licence and publishing
+## IBM software and licences
 
-The code is under the [Apache License 2.0](LICENSE). It grants no rights in IBM software. The rules and `docs/MAPPING.md` translate FPABench's model, which is under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The scripts read FPABench's data from your checkout, and FPABench's licences apply to what they write. Built against FPABench commit `3c02a65c16181e3918cae7a5381de3d4c352d890`.
+The package holds no IBM software, libraries or files saved by a TM1 server. It is not affiliated with, endorsed by or supported by IBM. IBM, Cognos and TM1 are trademarks of International Business Machines Corporation, named only to identify the software this code is for. Running it needs your own licensed IBM Planning Analytics.
+
+The code is under FPABench's [Apache License 2.0](../../LICENSE), which grants no rights in IBM software. The rules and `docs/MAPPING.md` translate FPABench's model, which is under [CC BY 4.0](../../LICENSE-CC-BY-4.0). Built against FPABench commit `3c02a65c16181e3918cae7a5381de3d4c352d890`.
 
 Publishing this code, running it on your TM1 server, and publishing its timings are separate acts. Before publishing measurements or comparisons, review the licence of your IBM installation, including any limits on performance testing or disclosure, and get any authorisation it requires. Results are not certified or endorsed by IBM. This is not legal advice.
+
+## Contributing
+
+Corrections are welcome by pull request, as for the rest of FPABench. Don't submit IBM software or anything taken from it: binaries, libraries, IBM sample code, or files a TM1 server saves, such as `.cub` and `.dim` files. Processes go in as `.ti` sources, and rules as hand-written `.rux` files. Don't commit a config with a server address, user name or password.
