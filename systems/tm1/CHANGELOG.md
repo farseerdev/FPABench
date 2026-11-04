@@ -2,6 +2,11 @@
 
 ## Current issue
 
+**Answers checked against RAMA's**
+- The installer's Reference stage downloads `expected.json`, the answers and checks RAMA recorded for the published dataset, with `scripts/fetch-expected.mjs`. It checks the file against its SHA-256 and that it belongs to the dataset. Every FPABench entry is held to these answers. The installer no longer records DuckDB's answers, and `scripts/windows-import-hook.mjs`, which only that needed, is removed.
+- The harness plan comes from `expected.json`, so W8 writes the thresholds RAMA wrote. `z.FPB.Test.W8Setup` runs only without them.
+- `compare.mjs` reads `expected.json`. It checks W8 and the `.check` files, fails a missing answer file or check, and takes `--quick` after `-Quick`. The checks the harness does not return yet make W1, W4, W5, L3, M1, M3, M4 and C1 fail.
+
 **Review in FPABench, PR #54**
 - README.md and docs/BENCHMARK_METHODOLOGY.md are shorter. Repeated notices are gone: NOTICE holds them.
 - README.md has a new Known gaps section: where the harness differs from how FPABench times and checks its other entries. The methodology doc now says that W8 and the `.check` files are not compared, and that `-Quick` times 3 runs of each single-cell write.

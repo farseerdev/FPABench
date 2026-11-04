@@ -9,7 +9,7 @@ How `scripts/Run-FPBench.ps1` times the FPABench tests on TM1, what its numbers 
 | Benchmark | [FPABench](https://github.com/farseerdev/FPABench), by [Farseer](https://www.farseer.com), built against commit `3c02a65c16181e3918cae7a5381de3d4c352d890` |
 | Dataset | `node data/generate.mjs --size 10m`, seed 20261012 |
 | Tests | FPABench's `tests/tests.json`, `tests/README.md` and `tests/method.md` |
-| Reference answers | Recorded by the installer with the FPABench runner's `duckdb-tables` entry, on the dataset's `picks.json`, into `<WorkDir>\tm1_reference\answers-duckdb-10m.json`. W8 is left out. |
+| Reference answers | RAMA's recorded answers and checks, the `expected.json` FPABench publishes with the 10m dataset. The installer downloads it into `<WorkDir>\tm1_reference\expected.json` and checks it belongs to the dataset. Every FPABench entry is held to it. |
 
 Farseer makes FPABench and RAMA, one of its systems. Say so when you compare results.
 
@@ -37,10 +37,10 @@ Farseer makes FPABench and RAMA, one of its systems. Say so when you compare res
 A time counts only with a correct answer. After a run, compare the answers with the reference:
 
 ```
-node scripts\compare.mjs <WorkDir>\tm1_reference\answers-duckdb-10m.json <OutDirectory>\answers
+node scripts\compare.mjs <WorkDir>\tm1_reference\expected.json <OutDirectory>\answers
 ```
 
-`compare.mjs` matches answers by key, within 0.01 or a relative 1e-9, whichever is larger, and R4's ratios within a relative 1e-6. C2's rows must all be 0. It does not check W8 or the `.check` files, and it skips a test with no answer file. Report every test that differs, was skipped or was not checked.
+`compare.mjs` matches answers by key, within 0.01 or a relative 1e-9, whichever is larger, and R4's ratios within a relative 1e-6. A missing row counts as 0. What `expected.json` lists as zero must be 0, and every other check it has must come back and match. A missing answer file is a failure. After `-Quick`, add `--quick`: only the runs that have a file are compared. Report every test that differs or is incomplete.
 
 ## What to disclose
 

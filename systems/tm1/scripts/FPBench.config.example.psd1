@@ -27,7 +27,7 @@
     # OutDirectory       = 'C:\FPABench-10m\tm1_results'
     # LogDirectory       = 'C:\FPABench-10m\tm1_logs'
     # PlanFile           = 'C:\FPABench-10m\tm1_plan\plan.json'
-    # ReferenceFile      = 'C:\FPABench-10m\tm1_reference\answers-duckdb-10m.json'
+    # ReferenceFile      = 'C:\FPABench-10m\tm1_reference\expected.json'
     # PackageDirectory   = '<this package, as the server sees it>'  # default: the folder above scripts\
 
     # ---- local server only: R8, -FromSnapshot and -Affinity (leave ServiceName out for a remote server)

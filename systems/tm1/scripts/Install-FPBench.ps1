@@ -13,11 +13,11 @@
 
   Stages, in order (-From starts at a later one, for example after fixing a failure):
     Data     generate the 10m dataset with the FPABench generator if WorkDir has none; write the three
-             load files, the July-close increment, the nine dimension structure files, and the harness
-             plan and W2 cells from the dataset's picks.json
-    Reference  write the reference answers with the FPABench runner's DuckDB entry, unless the file
-             already exists (installs that entry's packages in -Repo; can take a long time).
-             -SkipReference leaves this out, and the Check stage then does not compare the L1 answers
+             load files, the July-close increment and the nine dimension structure files
+    Reference  download RAMA's recorded answers for the dataset (expected.json, fetch-expected.mjs) and
+             check they belong to it; write the harness plan and W2 cells from them. -SkipReference
+             writes the plan from the dataset's picks.json instead, and the Check stage then does not
+             compare the L1 answers
     Import   create the 28 processes (Import-FPBench.ps1); stop on any compile error
     Build    z.FPB.Build.All: the 20 dimensions and the four cubes (only adds, never deletes)
     Setup    z.FPB.Setup.Model (pApply = 0 first, then 1), z.FPB.Setup.GroupAttr, z.FPB.Setup.HandlingFactor
@@ -79,7 +79,7 @@ function Invoke-Step([string]$Process, [hashtable]$Params) {
 function With-Log([hashtable]$P) { if ($C.LogDirectory) { $P.pLogDir = $C.LogDirectory }; return $P }
 
 # ---- prerequisites
-if ((Run-Stage 'Data') -or (Run-Stage 'Check')) {
+if ((Run-Stage 'Data') -or (Run-Stage 'Reference') -or (Run-Stage 'Check')) {
   if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'Node.js 22.15 or later is needed (https://nodejs.org)' }
   $nodeVersion = [version]((& node --version).TrimStart('v'))
   if ($nodeVersion -lt [version]'22.15.0') { throw "Node.js 22.15 or later is needed (found $(& node --version))" }
@@ -100,8 +100,8 @@ $procsOn = @(@((Invoke-FPBRest 'GET' '/Processes?$select=Name').value) | ForEach
 Log ("preflight: {0} of 4 FPB cubes, {1} FPB dimensions, {2} of {3} z.FPB processes already on the server" -f $cubesOn.Count, $dimsOn.Count, $procsOn.Count, $ours.Count)
 $plan = @(); $blockers = @()
 if (Run-Stage 'Data')   { $plan += 'Data:   local files only (' + $C.DatasetDirectory + ', ' + $C.StageDirectory + ', ...)' }
-if ((Run-Stage 'Reference') -and -not $SkipReference) {
-  $plan += $(if (Test-Path $C.ReferenceFile) { 'Reference: keep the existing ' + $C.ReferenceFile } else { 'Reference: write ' + $C.ReferenceFile + ' with the FPABench DuckDB entry (can take a long time)' })
+if (Run-Stage 'Reference') {
+  $plan += $(if ($SkipReference) { 'Reference: no answers; the plan from picks.json' } else { "Reference: RAMA's answers into " + $C.ReferenceFile + ', and the plan from them' })
 }
 if (Run-Stage 'Import') {
   $plan += ("Import: create {0} processes{1}" -f ($ours.Count - $procsOn.Count), $(if ($procsOn.Count) { ", replace $($procsOn.Count)" } else { '' }))
@@ -141,22 +141,19 @@ if (Run-Stage 'Data') {
   Invoke-Node @((Join-Path $PSScriptRoot 'stage-official.mjs'), $C.DatasetDirectory, $C.StageDirectory) 'staging the three load files'
   Invoke-Node @((Join-Path $PSScriptRoot 'stage-official.mjs'), $C.DatasetDirectory, $C.IncrementDirectory, 'close-2026-07') 'staging the July close (L2)'
   Invoke-Node @((Join-Path $PSScriptRoot 'stage-structure.mjs'), $Repo, $C.DatasetDirectory, $C.StructureDirectory) 'writing the dimension structure files'
-  $picks = Join-Path $C.DatasetDirectory 'picks.json'
-  if (-not (Test-Path $picks)) { throw "$picks not found: this dataset is from an older generator. Generate it again from the FPABench commit named in docs\BENCHMARK_METHODOLOGY.md into an empty folder" }
-  Invoke-Node @((Join-Path $PSScriptRoot 'picks-to-tm1.mjs'), $picks, (Split-Path -Parent $C.PlanFile)) 'writing the harness plan and the W2 cells'
 }
 
 # ---- Reference
-if ((Run-Stage 'Reference') -and -not $SkipReference) {
+if (Run-Stage 'Reference') {
   Log 'Reference'
-  if (Test-Path $C.ReferenceFile) {
-    Log "  keeping $($C.ReferenceFile)"
-  } else {
-    if (-not $Repo) { throw '-Repo <FPABench repository folder> is needed to write the reference answers (or use -SkipReference)' }
-    Log '  running the FPABench DuckDB entry (can take a long time)'
-    Write-FPBenchReference -DatasetDirectory $C.DatasetDirectory -ReferenceFile $C.ReferenceFile -Repo $Repo
-    Log "  wrote $($C.ReferenceFile)"
+  $picks = Join-Path $C.DatasetDirectory 'picks.json'
+  if (-not (Test-Path $picks)) { throw "$picks not found: this dataset is from an older generator. Generate it again from the FPABench commit named in docs\BENCHMARK_METHODOLOGY.md into an empty folder" }
+  if (-not $SkipReference) {
+    if (-not $Repo) { throw '-Repo <FPABench repository folder> is needed to download the expected answers (or use -SkipReference)' }
+    Invoke-Node @((Join-Path $PSScriptRoot 'fetch-expected.mjs'), $Repo, $C.DatasetDirectory, $C.ReferenceFile) "downloading RAMA's answers for the dataset"
+    $picks = $C.ReferenceFile
   }
+  Invoke-Node @((Join-Path $PSScriptRoot 'picks-to-tm1.mjs'), $picks, (Split-Path -Parent $C.PlanFile)) 'writing the harness plan and the W2 cells'
 }
 
 # ---- Import
@@ -216,8 +213,8 @@ if (Run-Stage 'Check') {
   }
   if (-not $ok) { throw "z.FPB.Check.Run found differences: see $checkFile" }
   if (Test-Path $C.ReferenceFile) {
-    & node (Join-Path $PSScriptRoot 'compare.mjs') $C.ReferenceFile $answers 'L1'
-    if ($LASTEXITCODE -ne 0) { throw 'the L1 answers differ from the FPABench reference (listed above)' }
+    & node (Join-Path $PSScriptRoot 'compare.mjs') $C.ReferenceFile $answers 'L1' --quick
+    if ($LASTEXITCODE -ne 0) { throw "the L1 answers differ from RAMA's (listed above)" }
   } else {
     Log "  no reference answers at $($C.ReferenceFile): the L1 answers were not compared"
   }

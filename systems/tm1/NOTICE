@@ -38,8 +38,6 @@ Adapted from FPABench's CC BY 4.0 material, with changes in language and structu
   docs/MAPPING.md                    the FPABench model's variables, with where each lives in TM1
   processes/, scripts/               follow FPABench's test definitions and dataset layout
 Nothing here implies endorsement by FPABench's authors or Farseer.
-This package contains no FPABench data. The installer writes the dataset, the harness plan, the W2 cells
-and the reference answers on your machine, from your own checkout of FPABench; FPABench's licences apply
-to them.
-The DuckDB packages the installer's Reference stage installs through the FPABench entry are not included
-here and carry their own licences.
+This package contains no FPABench data. The installer writes the dataset, the harness plan and the W2
+cells on your machine, from your own checkout of FPABench, and downloads FPABench's published reference
+answers (expected.json); FPABench's licences apply to them.

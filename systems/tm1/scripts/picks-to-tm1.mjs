@@ -1,6 +1,7 @@
-// Turns a dataset's picks.json into the TM1 harness plan: for every test, the list of runs with the
-// parameters of the TM1 test process, plus the W2 cell file.
-//   node scripts/picks-to-tm1.mjs <picks.json> <out dir>
+// Turns the picks into the TM1 harness plan: for every test, the list of runs with the parameters of the
+// TM1 test process, plus the W2 cell file. The picks are RAMA's expected.json, which holds the dataset's
+// picks.json and the W8 thresholds RAMA worked out, or the dataset's picks.json without them.
+//   node scripts/picks-to-tm1.mjs <expected.json or picks.json> <out dir>
 // Writes <out dir>/plan.json and <out dir>/W2_cells_<run>.csv
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,7 +20,8 @@ plan.tests.W5 = { process: 'z.FPB.Test.Write', runs: runs(P.W5, (p) => ({ pTest:
 for (const t of ['W6a', 'W6b'])
   plan.tests[t] = { process: 'z.FPB.Test.Write', runs: runs(P[t], (p) => ({ pTest: 'W6', pCostCenter: p.at['Cost Center'], pAccount: p.at.Account, pMonth: p.at.Months, pValue: p.value, pCountry: p.country, pVersion: p.at.Versions, pYear: p.at.Years })) };
 plan.tests.W7 = { process: 'z.FPB.Test.Write', runs: runs(P.W7, (p) => ({ pTest: 'W7', pGroup: p.group, pCategory: p.category, pValue: p.value })) };
-plan.tests.W8 = { process: 'z.FPB.Test.Write', setup: 'z.FPB.Test.W8Setup', runs: runs(P.W8, (p) => ({ pTest: 'W8', pGroup: p.group })) };
+// W8 writes the threshold RAMA wrote, where expected.json has it. Else z.FPB.Test.W8Setup works it out.
+plan.tests.W8 = { process: 'z.FPB.Test.Write', setup: 'z.FPB.Test.W8Setup', runs: runs(P.W8, (p) => ({ pTest: 'W8', pGroup: p.group, ...(p.value !== undefined ? { pValue: p.value } : {}) })) };
 plan.tests.L3 = { process: 'z.FPB.Test.Write', repeats: P.L3.repeats, runs: [{ warmup: false, index: 0, params: { pTest: 'L3', pSKU: P.L3.sku, pBrand: P.L3.brand, pValue: P.L3.value } }] };
 
 // W2: one cell file (the same cells in every repeat, from the snapshot)

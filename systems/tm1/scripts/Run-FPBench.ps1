@@ -50,7 +50,7 @@
                     0-11; choose the performance-core threads) and raise it to High priority; re-applied after
                     every service start (R8, -FromSnapshot)
   Then
-    node scripts\compare.mjs <ReferenceFile> <OutDirectory>\answers
+    node scripts\compare.mjs <ReferenceFile> <OutDirectory>\answers            (add --quick after -Quick)
 
   The TI processes and rules this harness drives were generated with the help of Claude Opus 5.5 and
   require validation. Provided as is, without warranty (see LICENSE).
@@ -292,7 +292,7 @@ foreach ($t in $order) {
         try {
           foreach ($run in $runs) {
             $p = To-Hash $run.params
-            if ($t -eq 'W8') {
+            if ($t -eq 'W8' -and -not $p.ContainsKey('pValue')) {
               $tmp = Join-Path $C.OutDirectory "W8_setup_$($run.index).txt"
               if (Test-Path $tmp) { Remove-Item $tmp }
               Invoke-Untimed 'z.FPB.Test.W8Setup' @{ pGroup = $p.pGroup; pOut = $tmp } 'W8 setup'

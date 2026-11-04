@@ -65,8 +65,8 @@ You need your own licensed TM1 v11 server with the REST API on, used for nothing
 
    | Stage | What it does |
    | --- | --- |
-   | Data | Generates the 10m dataset if `WorkDir` has none. Writes the load files, the July-close increment, the dimension structure files, the harness plan and the W2 cells. |
-   | Reference | Records reference answers with the FPABench runner's `duckdb-tables` entry. `-SkipReference` leaves this out. |
+   | Data | Generates the 10m dataset if `WorkDir` has none. Writes the load files, the July-close increment and the dimension structure files. |
+   | Reference | Downloads RAMA's recorded answers for the dataset, the `expected.json` FPABench publishes, and checks they belong to it. Writes the harness plan and the W2 cells from them. `-SkipReference` uses the dataset's `picks.json` instead. |
    | Import | Creates the 28 processes through REST. A compile error stops the install. |
    | Build | `z.FPB.Build.All`: the 20 dimensions and four cubes |
    | Setup | `z.FPB.Setup.Model` as a dry run, then for real, then `z.FPB.Setup.GroupAttr` and `z.FPB.Setup.HandlingFactor` |
@@ -77,7 +77,7 @@ You need your own licensed TM1 v11 server with the REST API on, used for nothing
 3. **Run.** In PowerShell, elevated if the config names a local `ServiceName`:
    ```
    .\scripts\Run-FPBench.ps1 -Config .\scripts\FPBench.config.psd1
-   node scripts\compare.mjs <WorkDir>\tm1_reference\answers-duckdb-10m.json <WorkDir>\tm1_results\answers
+   node scripts\compare.mjs <WorkDir>\tm1_reference\expected.json <WorkDir>\tm1_results\answers
    ```
 
 The harness signs in once and runs each test as one timed `tm1.ExecuteWithReturn` call: the action, then its proving read. It undoes each run inside the running server with `z.FPB.State.Save` and `z.FPB.State.Restore`. R8 stops and starts the TM1 service. [`BENCHMARK_METHODOLOGY.md`](docs/BENCHMARK_METHODOLOGY.md) has the details.
@@ -88,8 +88,7 @@ These make the harness's numbers differ from how FPABench times and checks its o
 
 | Gap | FPABench's method |
 | --- | --- |
-| Answers are checked against DuckDB's recorded answers. W8 has no reference, and the `.check` files are never compared. | Every entry is held to RAMA's recorded answers and checks, the `expected.json` of the published dataset |
-| `compare.mjs` skips a test whose answer file is missing | A missing answer is a failure |
+| The harness returns only some of the checks: W1, W2, W8, M2, L2 and part of M4. `compare.mjs` reports the others as not returned, so W1, W4, W5, L3, M1, M3, M4 and C1 fail until they are added. | Every check in `expected.json` comes back and matches |
 | L1 times only the cube load. The dimensions and attributes are built untimed, in Build and Setup. | L1 loads master data too, from an empty system |
 | L3 does not save to disk | A load's timer covers writing to disk |
 | L2 adds the increment to Actual Y2026 M7 instead of replacing it. That is right only because the base has no M7 actuals. | A load replaces the cells it names |
