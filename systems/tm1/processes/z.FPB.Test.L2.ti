@@ -1,0 +1,32 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Test.L2
+#### PARAMETERS
+pIncDir   String   'C:\FPABench-10m\tm1_load_close-2026-07'
+pOut      String   ''
+pSave     Numeric  1
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sDir = pIncDir;
+IF( sDir @<> '' & SUBST( sDir, LONG( sDir ), 1 ) @<> '\' & SUBST( sDir, LONG( sDir ), 1 ) @<> '/' );
+  IF( SCAN( '/', sDir ) > 0 ); sDir = sDir | '/'; ELSE; sDir = sDir | '\'; ENDIF;
+ENDIF;
+nRet = ExecuteProcess( 'z.FPB.Load.FX',   'pFile', sDir | 'FPB_FX.csv',   'pVersion', 'ALL', 'pYear', 'ALL', 'pMonth', 'ALL', 'pZeroOut', 0 );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+nRet = ExecuteProcess( 'z.FPB.Load.Leaf', 'pFile', sDir | 'FPB_Leaf.csv', 'pVersion', 'ALL', 'pYear', 'ALL', 'pMonth', 'ALL', 'pZeroOut', 0 );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+CellPutN( 1, 'FPB_Control', 'Actual', 'Default', 'Y2026', 'M7', 'FC Closed IN' );
+CellPutN( 1, 'FPB_Control', 'Actual', 'Default', 'Y2026', 'M7', 'FC Horizon IN' );
+# Moving only the Actual version's flags never changes Feed Actual Copy / Feed Plan, so no feeder
+# reprocessing is needed. Closing a month in a forecast version would need z.FPB.Control.FeedFlags
+# followed by CubeProcessFeeders on the four cubes.
+#### METADATA
+#### DATA
+#### EPILOG
+nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'EBIT_BY_COUNTRY', 'pOut', pOut, 'pVersion', 'Actual', 'pYear', 'Y2026', 'pMonth', 'M7' );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+IF( pSave = 1 ); SaveDataAll; ENDIF;
+# CHECK Import Total (Y2026, M7) is read afterwards, untimed, by z.FPB.Test.Check.

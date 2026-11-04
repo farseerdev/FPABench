@@ -1,0 +1,166 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Build.Dimension
+#### PARAMETERS
+pDim      String   ''
+pFile     String   'C:\FPABench-10m\tm1_structure\FPB_Version.csv'
+pLogDir   String   ''
+#### DATASOURCE
+ASCII 'C:\FPABench-10m\tm1_structure\FPB_Version.csv'
+#### VARIABLES
+vParent           String
+vChild            String
+vWeight           String
+vAlias            String
+vType             String
+vA1               String
+vA2               String
+vA3               String
+vA4               String
+vA5               String
+vA6               String
+vA7               String
+vA8               String
+vA9               String
+vA10              String
+vA11              String
+vA12              String
+vA13              String
+vA14              String
+vA15              String
+vA16              String
+#### PROLOG
+# Builds one dimension from a structure file written by scripts/stage-structure.mjs.
+#   Row 1 (header): Parent,Child,Weight,Alias,Type, then up to 16 attributes named "<name>:S" or "<name>:N".
+#   Other rows: one parent-child link each; Parent is blank for an element without a parent.
+# Creates the dimension if it is missing. It only adds: elements, links, attributes and their values.
+# It never deletes an element or a link and never changes the weight of an existing link.
+# The alias column goes to the alias attribute 'Code and Name Alias'.
+
+sLog = pLogDir;
+IF( sLog @= '' );
+  sLog = GetProcessErrorFileDirectory;
+ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_Build_' | pDim | '.log';
+
+IF( pDim @= '' );
+  AsciiOutput( sLog, 'ERROR', 'pDim is blank' );
+  ProcessError;
+ENDIF;
+IF( FileExists( pFile ) = 0 );
+  AsciiOutput( sLog, 'ERROR', 'structure file not found', pFile );
+  ProcessError;
+ENDIF;
+
+DatasourceNameForServer = pFile;
+DatasourceASCIIDelimiter = ',';
+DatasourceASCIIQuoteCharacter = Char(34);
+# row 1 is read: it declares the attributes (TI comments must start their own line)
+DatasourceASCIIHeaderRecords = 0;
+
+IF( DimensionExists( pDim ) = 0 );
+  DimensionCreate( pDim );
+ENDIF;
+
+sAlias = 'Code and Name Alias';
+# the 16 attribute headers, '|'-separated, filled from row 1 in the Metadata tab
+sHeads = '';
+nMetaRow = 0;
+nDataRow = 0;
+nLinks = 0;
+#### METADATA
+nMetaRow = nMetaRow + 1;
+IF( nMetaRow = 1 );
+  #--- header: create the attributes it declares. Attributes are created here, in the Metadata tab,
+  #    so that they exist before the Data tab writes their values.
+  nAttrDim = DimensionExists( '}ElementAttributes_' | pDim );
+  IF( nAttrDim = 0 );
+    AttrInsert( pDim, '', sAlias, 'A' );
+  ELSEIF( DIMIX( '}ElementAttributes_' | pDim, sAlias ) = 0 );
+    AttrInsert( pDim, '', sAlias, 'A' );
+  ENDIF;
+  n = 1;
+  WHILE( n <= 16 );
+    sH = TRIM( Expand( '%vA' | NumberToString( n ) | '%' ) );
+    IF( sH @<> '' );
+      sName = TRIM( SUBST( sH, 1, LONG( sH ) - 2 ) );
+      sT = UPPER( SUBST( sH, LONG( sH ), 1 ) );
+      IF( SUBST( sH, LONG( sH ) - 1, 1 ) @<> ':' % ( sT @<> 'S' & sT @<> 'N' ) % sName @= '' );
+        AsciiOutput( sLog, 'ERROR', 'attribute header must be <name>:S or <name>:N', sH );
+        ProcessError;
+      ENDIF;
+      # a dimension without attributes before this run has none of the header's attributes yet
+      IF( nAttrDim = 0 );
+        AttrInsert( pDim, '', sName, sT );
+      ELSEIF( DIMIX( '}ElementAttributes_' | pDim, sName ) = 0 );
+        AttrInsert( pDim, '', sName, sT );
+      ENDIF;
+      sHeads = sHeads | sName | ':' | sT;
+    ENDIF;
+    sHeads = sHeads | '|';
+    n = n + 1;
+  END;
+  ItemSkip;
+ENDIF;
+
+sParent = TRIM( vParent );
+sChild  = TRIM( vChild );
+sType   = UPPER( TRIM( vType ) );
+IF( sChild @= '' );
+  ItemReject( 'blank Child' );
+ENDIF;
+IF( sType @<> 'N' & sType @<> 'C' );
+  ItemReject( 'Type must be N or C: ' | sChild );
+ENDIF;
+
+# the parent first, so the element order follows the file (DIMIX sees only elements saved before this run;
+# inserting an element again within the run changes nothing)
+IF( sParent @<> '' );
+  IF( DIMIX( pDim, sParent ) = 0 ); DimensionElementInsert( pDim, '', sParent, 'C' ); ENDIF;
+ENDIF;
+IF( DIMIX( pDim, sChild ) = 0 ); DimensionElementInsert( pDim, '', sChild, sType ); ENDIF;
+IF( sParent @<> '' );
+  IF( ELISPAR( pDim, sParent, sChild ) = 0 );
+    DimensionElementComponentAdd( pDim, sParent, sChild, NUMBR( vWeight ) );
+  ENDIF;
+  nLinks = nLinks + 1;
+ENDIF;
+#### DATA
+nDataRow = nDataRow + 1;
+IF( nDataRow = 1 );
+  # header: its attributes were created in the Metadata tab
+  ItemSkip;
+ENDIF;
+
+sChild = TRIM( vChild );
+IF( TRIM( vAlias ) @<> '' );
+  AttrPutS( TRIM( vAlias ), pDim, sChild, sAlias );
+ENDIF;
+
+#--- attribute values, column n against header n
+sRest = sHeads;
+n = 1;
+WHILE( n <= 16 );
+  nP = SCAN( '|', sRest );
+  sH = SUBST( sRest, 1, nP - 1 );
+  sRest = SUBST( sRest, nP + 1, LONG( sRest ) - nP );
+  IF( sH @<> '' );
+    sV = TRIM( Expand( '%vA' | NumberToString( n ) | '%' ) );
+    IF( sV @<> '' );
+      sName = SUBST( sH, 1, LONG( sH ) - 2 );
+      IF( SUBST( sH, LONG( sH ), 1 ) @= 'N' );
+        AttrPutN( NUMBR( sV ), pDim, sChild, sName );
+      ELSE;
+        AttrPutS( sV, pDim, sChild, sName );
+      ENDIF;
+    ENDIF;
+  ENDIF;
+  n = n + 1;
+END;
+#### EPILOG
+AsciiOutput( sLog, pDim, 'rows', NumberToString( nMetaRow - 1 ), 'links', NumberToString( nLinks ),
+  'elements now', NumberToString( DIMSIZ( pDim ) ) );

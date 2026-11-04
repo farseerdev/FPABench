@@ -1,0 +1,107 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.State.Save
+#### PARAMETERS
+pTest        String   ''
+pJournal     String   ''
+pVersion     String   'FC 6+6'
+pYear        String   'Y2026'
+pCustomer    String   ''
+pSKU         String   ''
+pMonth       String   ''
+pGroup       String   ''
+pCategory    String   ''
+pBrand       String   ''
+pCurrency    String   ''
+pCostCenter  String   ''
+pAccount     String   ''
+pFile        String   'C:\FPABench-TM1\run\W2_cells.csv'
+pTarget      String   ''
+#### DATASOURCE
+ASCII 'C:\FPABench-TM1\run\W2_cells.csv'
+#### VARIABLES
+vCustomer         String
+vSKU              String
+vMonth            String
+vValue            String
+#### PROLOG
+sV = pVersion;  IF( sV @= '' ); sV = 'FC 6+6'; ENDIF;
+sY = pYear;     IF( sY @= '' ); sY = 'Y2026';  ENDIF;
+sJ = pJournal;
+sT = pTest;
+IF( sJ @= '' ); ProcessError; ENDIF;
+
+IF( sT @= 'W2' );
+  DatasourceNameForServer = pFile;
+  DatasourceASCIIDelimiter = ',';
+  DatasourceASCIIQuoteCharacter = Char(34);
+  DatasourceASCIIHeaderRecords = 1;
+ELSE;
+  DataSourceType = 'NULL';
+
+  # Drivers input cells: the first nine coordinates, then the measures (value and its Entered flag)
+  sD1 = sV;  sD2 = '';  sD3 = '';  sD4 = '';  sD5 = 'NoCostCenter';  sD6 = 'NoAccount';  sD7 = '';  sD8 = sY;  sD9 = '';
+  sMeasures = '';
+  IF( sT @= 'W1' % sT @= 'C1' % sT @= 'C3' );
+    sD2 = ATTRS('FPB_Customer', pCustomer, 'Channel');  sD3 = pCustomer;  sD4 = pSKU;
+    sD7 = ATTRS('FPB_Customer', pCustomer, 'Country');  sD9 = pMonth;
+    sMeasures = 'Volume Override IN|Volume Override IN Entered|';
+  ELSEIF( sT @= 'W3' );
+    sD2 = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sD3 = pGroup;  sD4 = 'NoProduct';
+    sD7 = ATTRS('FPB_InputCustomer', pGroup, 'Country');  sD9 = pMonth;
+    sMeasures = 'Rebate Rate IN|Rebate Rate IN Entered|';
+  ELSEIF( sT @= 'W4' );
+    sD2 = 'NoChannel';  sD3 = 'NoCustomer';  sD4 = pBrand;  sD7 = 'Global';  sD9 = 'Annual';
+    sMeasures = 'Price Increase IN|Price Increase IN Entered|';
+  ELSEIF( sT @= 'W6' );
+    sD2 = 'NoChannel';  sD3 = 'NoCustomer';  sD4 = 'NoProduct';  sD5 = pCostCenter;  sD6 = pAccount;
+    sD7 = ATTRS('FPB_CostCenter', pCostCenter, 'Country');  sD9 = pMonth;
+    sMeasures = 'OPEX IN|OPEX IN Entered|';
+  ELSEIF( sT @= 'W7' );
+    sD2 = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sD3 = pGroup;  sD4 = pCategory;
+    sD7 = ATTRS('FPB_InputCustomer', pGroup, 'Country');  sD9 = 'Annual';
+    sMeasures = 'Volume Target IN|Volume Target IN Entered|';
+  ELSEIF( sT @= 'W8' );
+    sD2 = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sD3 = pGroup;  sD4 = 'NoProduct';
+    sD7 = ATTRS('FPB_InputCustomer', pGroup, 'Country');  sD9 = 'Annual';
+    sMeasures = 'Growth Bonus Threshold IN|Growth Bonus Threshold IN Entered|';
+  ELSEIF( sT @= 'W5' );
+    n = CellGetN( 'FPB_FX', sV, 'Average', 'EUR', pCurrency, sY, pMonth );
+    AsciiOutput( sJ, 'CELL', 'FPB_FX', sV, 'Average', 'EUR', pCurrency, sY, pMonth, '', '', '', '', '', '', TRIM( STR( n, 40, 15 ) ) );
+  ELSEIF( sT @= 'L3' );
+    n = ATTRN( 'FPB_Product', pSKU, 'UnitWeightKg' );
+    AsciiOutput( sJ, 'ATTR', 'FPB_Product', pSKU, 'UnitWeightKg', '', '', '', '', '', '', '', '', '', '', TRIM( STR( n, 40, 15 ) ) );
+    AsciiOutput( sJ, 'SAVE', '', '', '', '', '', '', '', '', '', '', '', '', '', '' );
+  ELSEIF( sT @= 'L2' );
+    n = CellGetN( 'FPB_Control', 'Actual', 'Default', 'Y2026', 'M7', 'FC Closed IN' );
+    AsciiOutput( sJ, 'CELL', 'FPB_Control', 'Actual', 'Default', 'Y2026', 'M7', 'FC Closed IN', '', '', '', '', '', '', '', TRIM( STR( n, 40, 15 ) ) );
+    n = CellGetN( 'FPB_Control', 'Actual', 'Default', 'Y2026', 'M7', 'FC Horizon IN' );
+    AsciiOutput( sJ, 'CELL', 'FPB_Control', 'Actual', 'Default', 'Y2026', 'M7', 'FC Horizon IN', '', '', '', '', '', '', '', TRIM( STR( n, 40, 15 ) ) );
+    AsciiOutput( sJ, 'CLEARACTUAL', '', 'Y2026', 'M7', '', '', '', '', '', '', '', '', '', '', '' );
+    AsciiOutput( sJ, 'SAVE', '', '', '', '', '', '', '', '', '', '', '', '', '', '' );
+  ELSEIF( sT @= 'M1' % sT @= 'M4' );
+    AsciiOutput( sJ, 'RULES', '', 'BASE', '', '', '', '', '', '', '', '', '', '', '', '' );
+  ELSEIF( sT @= 'M2' );
+    AsciiOutput( sJ, 'DELCUST', '', pCustomer, '', '', '', '', '', '', '', '', '', '', '', '' );
+  ELSEIF( sT @= 'M3' );
+    AsciiOutput( sJ, 'MOVECUST', '', pCustomer, pTarget, pGroup, '', '', '', '', '', '', '', '', '', '' );
+  ELSE;
+    ProcessError;
+  ENDIF;
+
+  WHILE( sMeasures @<> '' );
+    nP = SCAN( '|', sMeasures );  sMeas = SUBST( sMeasures, 1, nP - 1 );  sMeasures = SUBST( sMeasures, nP + 1, LONG( sMeasures ) - nP );
+    n = CellGetN( 'FPB_Drivers', sD1, sD2, sD3, sD4, sD5, sD6, sD7, sD8, sD9, sMeas );
+    AsciiOutput( sJ, 'CELL', 'FPB_Drivers', sD1, sD2, sD3, sD4, sD5, sD6, sD7, sD8, sD9, sMeas, '', '', TRIM( STR( n, 40, 15 ) ) );
+  END;
+ENDIF;
+#### METADATA
+#### DATA
+# W2 only: the 1,000 pasted cells (value and Entered flag)
+sCh = ATTRS('FPB_Customer', vCustomer, 'Channel');  sC = ATTRS('FPB_Customer', vCustomer, 'Country');
+n = CellGetN( 'FPB_Drivers', sV, sCh, vCustomer, vSKU, 'NoCostCenter', 'NoAccount', sC, sY, vMonth, 'Volume Override IN' );
+AsciiOutput( sJ, 'CELL', 'FPB_Drivers', sV, sCh, vCustomer, vSKU, 'NoCostCenter', 'NoAccount', sC, sY, vMonth, 'Volume Override IN', '', '', TRIM( STR( n, 40, 15 ) ) );
+n = CellGetN( 'FPB_Drivers', sV, sCh, vCustomer, vSKU, 'NoCostCenter', 'NoAccount', sC, sY, vMonth, 'Volume Override IN Entered' );
+AsciiOutput( sJ, 'CELL', 'FPB_Drivers', sV, sCh, vCustomer, vSKU, 'NoCostCenter', 'NoAccount', sC, sY, vMonth, 'Volume Override IN Entered', '', '', TRIM( STR( n, 40, 15 ) ) );
+#### EPILOG

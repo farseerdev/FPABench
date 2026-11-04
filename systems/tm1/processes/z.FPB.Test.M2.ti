@@ -1,0 +1,44 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Test.M2
+#### PARAMETERS
+pCustomer  String   'NEW-CUST-1'
+pGroup     String   ''
+pRegion    String   ''
+pSKU       String   ''
+pValue     Numeric  0
+pVersion   String   'FC 6+6'
+pYear      String   'Y2026'
+pMonth     String   'M7'
+pOut       String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+IF( DIMIX('FPB_Customer', pCustomer) > 0 % DIMIX('FPB_InputCustomer', pCustomer) > 0 ); ProcessError; ENDIF;
+IF( DIMIX('FPB_Customer', pGroup) = 0 % DIMIX('FPB_Customer', pRegion) = 0 ); ProcessError; ENDIF;
+DimensionElementInsert( 'FPB_Customer', '', pCustomer, 'N' );
+DimensionElementComponentAdd( 'FPB_Customer', pGroup, pCustomer, 1 );
+DimensionElementComponentAdd( 'FPB_Customer', pRegion, pCustomer, 1 );
+DimensionElementInsert( 'FPB_InputCustomer', '', pCustomer, 'N' );
+DimensionElementComponentAdd( 'FPB_InputCustomer', 'Customers', pCustomer, 1 );
+#### METADATA
+#### DATA
+#### EPILOG
+sV = pVersion;  IF( sV @= '' ); sV = 'FC 6+6'; ENDIF;
+sY = pYear;     IF( sY @= '' ); sY = 'Y2026';  ENDIF;
+sCh = ATTRS('FPB_InputCustomer', pGroup, 'Channel');  sC = ATTRS('FPB_InputCustomer', pGroup, 'Country');
+AttrPutS( 'Customer', 'FPB_Customer', pCustomer, 'Source Level' );
+AttrPutS( pGroup, 'FPB_Customer', pCustomer, 'CustomerGroup' );
+AttrPutS( pRegion, 'FPB_Customer', pCustomer, 'Region' );
+AttrPutS( sCh, 'FPB_Customer', pCustomer, 'Channel' );
+AttrPutS( sC, 'FPB_Customer', pCustomer, 'Country' );
+AttrPutS( ATTRS('FPB_Country', sC, 'Currency'), 'FPB_Customer', pCustomer, 'Currency' );
+AttrPutS( sCh, 'FPB_InputCustomer', pCustomer, 'Channel' );
+AttrPutS( sC, 'FPB_InputCustomer', pCustomer, 'Country' );
+CellPutN( pValue, 'FPB_Drivers', sV, sCh, pCustomer, pSKU, 'NoCostCenter', 'NoAccount', sC, sY, pMonth, 'Volume Override IN' );
+CellPutN( 1,      'FPB_Drivers', sV, sCh, pCustomer, pSKU, 'NoCostCenter', 'NoAccount', sC, sY, pMonth, 'Volume Override IN Entered' );
+nRet = ExecuteProcess( 'z.FPB.Read', 'pTest', 'VOLUME_GROUP_MONTH', 'pOut', pOut, 'pVersion', sV, 'pYear', sY, 'pMonth', pMonth, 'pGroup', pGroup );
+IF( nRet <> ProcessExitNormal() ); ProcessError; ENDIF;
+# EBIT OUT of the group's country (the check) is read afterwards, untimed, by z.FPB.Test.Check.

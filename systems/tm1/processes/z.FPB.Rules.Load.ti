@@ -1,0 +1,37 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Rules.Load
+#### PARAMETERS
+pDir      String   'C:\FPABench-TM1\rules'
+pVariant  String   'BASE'
+pCubes    String   'ALL'
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sDir = pDir;
+IF( sDir @<> '' & SUBST( sDir, LONG( sDir ), 1 ) @<> '\' & SUBST( sDir, LONG( sDir ), 1 ) @<> '/' );
+  IF( SCAN( '/', sDir ) > 0 ); sDir = sDir | '/'; ELSE; sDir = sDir | '\'; ENDIF;
+ENDIF;
+sVar = UPPER( pVariant );
+sRep = 'FPB_Reporting.rux';
+IF( sVar @= 'M1' ); sRep = 'FPB_Reporting.M1.rux'; ENDIF;
+IF( sVar @= 'M4' ); sRep = 'FPB_Reporting.M4.rux'; ENDIF;
+IF( sVar @<> 'BASE' & sVar @<> 'M1' & sVar @<> 'M4' ); ProcessError; ENDIF;
+sCtl = 'FPB_Control.rux';  sFx = 'FPB_FX.rux';  sDrv = 'FPB_Drivers.rux';
+
+IF( FileExists( sDir | sRep ) = 0 % FileExists( sDir | sCtl ) = 0 % FileExists( sDir | sFx ) = 0 % FileExists( sDir | sDrv ) = 0 );
+  ProcessError;
+ENDIF;
+
+# Order matters: Control and FX first (Drivers/Reporting rules and feeders read them)
+IF( UPPER( pCubes ) @= 'ALL' );
+  RuleLoadFromFile( 'FPB_Control', sDir | sCtl );
+  RuleLoadFromFile( 'FPB_FX',      sDir | sFx );
+  RuleLoadFromFile( 'FPB_Drivers', sDir | sDrv );
+ENDIF;
+RuleLoadFromFile( 'FPB_Reporting', sDir | sRep );
+#### METADATA
+#### DATA
+#### EPILOG

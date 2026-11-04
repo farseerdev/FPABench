@@ -1,0 +1,40 @@
+#==============================================================================
+# FPB_FX - exchange rates
+# Dims: FPB_Version, FPB_FXType, FPB_CurrencyList (from), FPB_CurrencyListReverse (to),
+#       FPB_Years, FPB_Months          (no measure dimension: the cell is the rate)
+# Rates are local currency per 1 EUR, held at From = EUR, To = local currency.
+#   'Average'   stored: Actual version = IMPORT FX Rate, plan versions = FX Rate IN
+#   'Carry'     rule  : last actual rate of a closed month, held flat (FX Rate Carry)
+#   'Effective' rule  : the FPABench model's merged FX Rate (actual on FC Actual months,
+#                       typed plan rate or carry on FC Plan months)
+# Inverse pairs (local -> EUR) are derived from 'Effective' here; the loader skips
+# the "Derived inverse" rows of FPB_FX.csv so they are never stored twice.
+# USD/GBP have no source rates in FPABench and are left empty on purpose.
+# STATUS : generated with the help of Claude Opus 5.5; requires validation.
+#==============================================================================
+SKIPCHECK;
+
+['Carry'] = N:
+   IF( !FPB_CurrencyList @<> 'EUR' % !FPB_Months @= 'Annual', 0,
+   IF( DB('FPB_Control', !FPB_Version, 'Default', !FPB_Years, !FPB_Months, 'FC Closed IN') = 1
+       & DB('FPB_FX', 'Actual', 'Average', 'EUR', !FPB_CurrencyListReverse, !FPB_Years, !FPB_Months) <> 0,
+       DB('FPB_FX', 'Actual', 'Average', 'EUR', !FPB_CurrencyListReverse, !FPB_Years, !FPB_Months),
+   IF( !FPB_Months @= 'M1' & ATTRS('FPB_Years', !FPB_Years, 'Prev') @= '', 0,
+       DB('FPB_FX', !FPB_Version, 'Carry', 'EUR', !FPB_CurrencyListReverse,
+          IF( !FPB_Months @= 'M1', ATTRS('FPB_Years', !FPB_Years, 'Prev'), !FPB_Years ),
+          ATTRS('FPB_Months', !FPB_Months, 'Prev') ) )));
+
+['Effective'] = N:
+   IF( !FPB_Months @= 'Annual', 0,
+   IF( !FPB_CurrencyList @= 'EUR',
+       IF( DB('FPB_Control', !FPB_Version, 'Default', !FPB_Years, !FPB_Months, 'FC Actual') = 1,
+           DB('FPB_FX', 'Actual', 'Average', 'EUR', !FPB_CurrencyListReverse, !FPB_Years, !FPB_Months),
+       IF( DB('FPB_Control', !FPB_Version, 'Default', !FPB_Years, !FPB_Months, 'FC Plan') = 1,
+           IF( ['Average'] <> 0, ['Average'], ['Carry'] ),
+           0 )),
+   IF( !FPB_CurrencyListReverse @= 'EUR',
+       1 \ DB('FPB_FX', !FPB_Version, 'Effective', 'EUR', !FPB_CurrencyList, !FPB_Years, !FPB_Months),
+       0 )));
+
+FEEDERS;
+# Rates are only ever read cell by cell (DB), never consolidated: no feeders needed.

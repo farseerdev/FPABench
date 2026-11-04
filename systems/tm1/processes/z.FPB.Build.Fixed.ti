@@ -1,0 +1,186 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Build.Fixed
+#### PARAMETERS
+pLogDir   String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+# Run after z.FPB.Build.Dimension has built FPB_Customer, FPB_Product and the other base dimensions.
+# Creates the dimensions that are part of the TM1 design rather than the master data, and the
+# dimension-specific special members. Only adds; an existing dimension keeps what it has.
+#   FPB_Currency            LCY, USD, EUR, GBP (reporting currency selector)
+#   FPB_CurrencyScenario    Periodic
+#   FPB_FXType              Average            (z.FPB.Setup.Model adds Carry and Effective)
+#   FPB_ControlParam        Default
+#   FPB_CurrencyList        EUR, PLN, CZK, HUF, USD, GBP
+#   FPB_CurrencyListReverse EUR, PLN, CZK, HUF, USD, GBP
+#   FPB_Control_m           4 measures         (z.FPB.Setup.Model adds 3)
+#   FPB_Reporting_m         Amount, Units      (z.FPB.Setup.Model adds 24)
+#   FPB_Drivers_m           47 input and import measures (z.FPB.Setup.Model adds 18 helpers and 2 scopes)
+#   FPB_InputCustomer       Customers and Customer Groups as N elements, from FPB_Customer's Source Level
+#   FPB_InputProduct        Brands, Categories and SKUs as N elements, from FPB_Product's Source Level
+#   special members         NoCustomer, NoProduct, NoCostCenter, NoAccount, NoChannel, Global (FPB_Country),
+#                           Annual (FPB_Months); N elements outside the hierarchies
+
+sLog = pLogDir;
+IF( sLog @= '' );
+  sLog = GetProcessErrorFileDirectory;
+ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_Build_Fixed.log';
+
+#--- the base dimensions this process reads or extends
+sList = 'FPB_Customer|FPB_Product|FPB_CostCenter|FPB_Account|FPB_Channel|FPB_Country|FPB_Months|';
+WHILE( sList @<> '' );
+  nP = SCAN( '|', sList );  sDim = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+  IF( DimensionExists( sDim ) = 0 );
+    AsciiOutput( sLog, 'ERROR', 'missing dimension - run z.FPB.Build.Dimension for it first', sDim );
+    ProcessError;
+  ENDIF;
+END;
+IF( DimensionExists( '}ElementAttributes_FPB_Customer' ) = 0 % DimensionExists( '}ElementAttributes_FPB_Product' ) = 0 );
+  AsciiOutput( sLog, 'ERROR', 'FPB_Customer and FPB_Product need their Source Level attribute' );
+  ProcessError;
+ENDIF;
+IF( DIMIX( '}ElementAttributes_FPB_Customer', 'Source Level' ) = 0 % DIMIX( '}ElementAttributes_FPB_Product', 'Source Level' ) = 0 );
+  AsciiOutput( sLog, 'ERROR', 'FPB_Customer and FPB_Product need their Source Level attribute' );
+  ProcessError;
+ENDIF;
+
+#--- flat dimensions: '<dimension>:<member>|<member>|...;' entries
+sAll = 'FPB_Currency:LCY|USD|EUR|GBP|;'
+     | 'FPB_CurrencyScenario:Periodic|;'
+     | 'FPB_FXType:Average|;'
+     | 'FPB_ControlParam:Default|;'
+     | 'FPB_CurrencyList:EUR|PLN|CZK|HUF|USD|GBP|;'
+     | 'FPB_CurrencyListReverse:EUR|PLN|CZK|HUF|USD|GBP|;'
+     | 'FPB_Control_m:FC Closed IN|FC Horizon IN|FC Actual|FC Plan|;'
+     | 'FPB_Reporting_m:Amount|Units|;'
+     | 'FPB_Drivers_m:Volume Growth IN Entered|Volume Growth IN|Volume Target IN|Volume Override IN|Price Increase IN|'
+     | 'Standard Discount IN|Promo Discount IN|Logistics Discount IN|Rebate Rate IN|Growth Bonus Rate IN|Growth Bonus Threshold IN|'
+     | 'Trade Fees IN|Promo Funding IN|Standard Cost IN|Marketing Spend IN|Marketing Split IN|OPEX IN|'
+     | 'IMPORT Volume|IMPORT Gross Sales|IMPORT Standard Discounts|IMPORT Promo Discounts|IMPORT Logistics Discounts|'
+     | 'IMPORT Promo Funding|IMPORT Rebates|IMPORT Rebate True-ups|IMPORT Growth Bonus|IMPORT Trade Fees|IMPORT OPEX|'
+     | 'IMPORT Marketing|IMPORT List Price|IMPORT Standard Cost|IMPORT Control Total|'
+     | 'Volume Override IN Entered|Promo Funding IN Entered|Standard Cost IN Entered|OPEX IN Entered|Volume Target IN Entered|'
+     | 'Price Increase IN Entered|Standard Discount IN Entered|Promo Discount IN Entered|Logistics Discount IN Entered|'
+     | 'Rebate Rate IN Entered|Growth Bonus Rate IN Entered|Growth Bonus Threshold IN Entered|Trade Fees IN Entered|'
+     | 'Marketing Spend IN Entered|Marketing Split IN Entered|;';
+WHILE( sAll @<> '' );
+  nP = SCAN( ';', sAll );  sEntry = SUBST( sAll, 1, nP - 1 );  sAll = SUBST( sAll, nP + 1, LONG( sAll ) - nP );
+  nC = SCAN( ':', sEntry );
+  sDim = SUBST( sEntry, 1, nC - 1 );
+  sList = SUBST( sEntry, nC + 1, LONG( sEntry ) - nC );
+  IF( DimensionExists( sDim ) = 0 );
+    DimensionCreate( sDim );
+    AsciiOutput( sLog, 'CREATE', sDim );
+  ENDIF;
+  WHILE( sList @<> '' );
+    nP = SCAN( '|', sList );  sEl = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+    IF( DIMIX( sDim, sEl ) = 0 );
+      DimensionElementInsert( sDim, '', sEl, 'N' );
+    ENDIF;
+  END;
+END;
+# FPB_Currency is the reporting-currency selector: these four members and no others
+IF( DIMSIZ( 'FPB_Currency' ) <> 4 );
+  AsciiOutput( sLog, 'ERROR', 'FPB_Currency must hold exactly LCY, USD, EUR, GBP', NumberToString( DIMSIZ( 'FPB_Currency' ) ) );
+  ProcessError;
+ENDIF;
+
+#--- FPB_InputCustomer: All_Hierarchies > Customers, Customer Groups (weight 0) > N members (weight 1)
+sDim = 'FPB_InputCustomer';
+IF( DimensionExists( sDim ) = 0 );
+  DimensionCreate( sDim );
+  AsciiOutput( sLog, 'CREATE', sDim );
+ENDIF;
+IF( DIMIX( sDim, 'All_Hierarchies' ) = 0 ); DimensionElementInsert( sDim, '', 'All_Hierarchies', 'C' ); ENDIF;
+sList = 'Customers|Customer Groups|';
+WHILE( sList @<> '' );
+  nP = SCAN( '|', sList );  sB = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+  IF( DIMIX( sDim, sB ) = 0 ); DimensionElementInsert( sDim, '', sB, 'C' ); ENDIF;
+  IF( ELISPAR( sDim, 'All_Hierarchies', sB ) = 0 ); DimensionElementComponentAdd( sDim, 'All_Hierarchies', sB, 0 ); ENDIF;
+END;
+nCust = 0;
+nGroups = 0;
+nI = 1;
+nMax = DIMSIZ( 'FPB_Customer' );
+WHILE( nI <= nMax );
+  sEl = DIMNM( 'FPB_Customer', nI );
+  sLevel = ATTRS( 'FPB_Customer', sEl, 'Source Level' );
+  sB = '';
+  IF( sLevel @= 'Customer' );
+    sB = 'Customers';  nCust = nCust + 1;
+  ELSEIF( sLevel @= 'Customer Group' );
+    sB = 'Customer Groups';  nGroups = nGroups + 1;
+  ENDIF;
+  IF( sB @<> '' );
+    IF( DIMIX( sDim, sEl ) = 0 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF;
+    IF( ELISPAR( sDim, sB, sEl ) = 0 ); DimensionElementComponentAdd( sDim, sB, sEl, 1 ); ENDIF;
+  ENDIF;
+  nI = nI + 1;
+END;
+IF( DIMIX( sDim, 'NoCustomer' ) = 0 ); DimensionElementInsert( sDim, '', 'NoCustomer', 'N' ); ENDIF;
+AsciiOutput( sLog, sDim, 'customers', NumberToString( nCust ), 'groups', NumberToString( nGroups ) );
+IF( nCust = 0 % nGroups = 0 );
+  AsciiOutput( sLog, 'ERROR', 'no element of FPB_Customer has Source Level Customer / Customer Group' );
+  ProcessError;
+ENDIF;
+
+#--- FPB_InputProduct: All_Hierarchies > Brands, Categories (weight 1), SKUs (weight 0) > N members (weight 1)
+sDim = 'FPB_InputProduct';
+IF( DimensionExists( sDim ) = 0 );
+  DimensionCreate( sDim );
+  AsciiOutput( sLog, 'CREATE', sDim );
+ENDIF;
+IF( DIMIX( sDim, 'All_Hierarchies' ) = 0 ); DimensionElementInsert( sDim, '', 'All_Hierarchies', 'C' ); ENDIF;
+# '<branch>:<Source Level>:<weight under All_Hierarchies>'
+sAll = 'Brands:Brand:1;Categories:Category:1;SKUs:SKU:0;';
+WHILE( sAll @<> '' );
+  nP = SCAN( ';', sAll );  sEntry = SUBST( sAll, 1, nP - 1 );  sAll = SUBST( sAll, nP + 1, LONG( sAll ) - nP );
+  nC = SCAN( ':', sEntry );  sB = SUBST( sEntry, 1, nC - 1 );  sEntry = SUBST( sEntry, nC + 1, LONG( sEntry ) - nC );
+  nC = SCAN( ':', sEntry );  sLevelWanted = SUBST( sEntry, 1, nC - 1 );  nW = NUMBR( SUBST( sEntry, nC + 1, LONG( sEntry ) - nC ) );
+  IF( DIMIX( sDim, sB ) = 0 ); DimensionElementInsert( sDim, '', sB, 'C' ); ENDIF;
+  IF( ELISPAR( sDim, 'All_Hierarchies', sB ) = 0 ); DimensionElementComponentAdd( sDim, 'All_Hierarchies', sB, nW ); ENDIF;
+  nFound = 0;
+  nI = 1;
+  nMax = DIMSIZ( 'FPB_Product' );
+  WHILE( nI <= nMax );
+    sEl = DIMNM( 'FPB_Product', nI );
+    IF( ATTRS( 'FPB_Product', sEl, 'Source Level' ) @= sLevelWanted );
+      IF( DIMIX( sDim, sEl ) = 0 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF;
+      IF( ELISPAR( sDim, sB, sEl ) = 0 ); DimensionElementComponentAdd( sDim, sB, sEl, 1 ); ENDIF;
+      nFound = nFound + 1;
+    ENDIF;
+    nI = nI + 1;
+  END;
+  AsciiOutput( sLog, sDim, sB, NumberToString( nFound ) );
+  IF( nFound = 0 );
+    AsciiOutput( sLog, 'ERROR', 'no element of FPB_Product has Source Level', sLevelWanted );
+    ProcessError;
+  ENDIF;
+END;
+IF( DIMIX( sDim, 'NoProduct' ) = 0 ); DimensionElementInsert( sDim, '', 'NoProduct', 'N' ); ENDIF;
+#--- special members, added last: TM1 commits these inserts only when the Prolog ends, but DIMSIZ/DIMNM
+#    already list them, and ATTRS on such an element fails. The loops above read FPB_Customer and FPB_Product.
+sAll = 'FPB_Customer:NoCustomer;FPB_Product:NoProduct;FPB_CostCenter:NoCostCenter;FPB_Account:NoAccount;'
+     | 'FPB_Channel:NoChannel;FPB_Country:Global;FPB_Months:Annual;';
+WHILE( sAll @<> '' );
+  nP = SCAN( ';', sAll );  sEntry = SUBST( sAll, 1, nP - 1 );  sAll = SUBST( sAll, nP + 1, LONG( sAll ) - nP );
+  nC = SCAN( ':', sEntry );
+  sDim = SUBST( sEntry, 1, nC - 1 );
+  sEl = SUBST( sEntry, nC + 1, LONG( sEntry ) - nC );
+  IF( DIMIX( sDim, sEl ) = 0 );
+    DimensionElementInsert( sDim, '', sEl, 'N' );
+  ENDIF;
+END;
+
+AsciiOutput( sLog, 'DONE' );
+#### METADATA
+#### DATA
+#### EPILOG

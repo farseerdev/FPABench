@@ -1,0 +1,30 @@
+# Local config: server address and credentials (copy the .example file instead)
+scripts/FPBench.config.psd1
+*.local.psd1
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.pem
+*.key
+
+# Generated data, results and logs (normally under WorkDir, outside the repository)
+official_10m/
+tm1_load/
+tm1_load_close-*/
+tm1_structure/
+tm1_plan/
+tm1_reference/
+tm1_results/
+tm1_snapshot/
+tm1_logs/
+tm1-results*.json
+*.log
+
+# Editors, tools and OS files
+node_modules/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

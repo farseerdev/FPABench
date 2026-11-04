@@ -1,0 +1,23 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Setup.HandlingFactor
+#### PARAMETERS
+pFile     String   'C:\FPABench-10m\official_10m\master\handling_factors.csv'
+#### DATASOURCE
+ASCII 'C:\FPABench-10m\official_10m\master\handling_factors.csv'
+#### VARIABLES
+vZone             String
+vFactor           String
+#### PROLOG
+DatasourceNameForServer = pFile;
+DatasourceASCIIDelimiter = ',';
+DatasourceASCIIQuoteCharacter = Char(34);
+DatasourceASCIIHeaderRecords = 1;
+#### METADATA
+#### DATA
+IF( DIMIX('FPB_Product', vZone) = 0 );
+  ItemReject( 'Temperature zone not in FPB_Product: ' | vZone );
+ENDIF;
+AttrPutN( NUMBR( vFactor ), 'FPB_Product', vZone, 'HandlingFactor' );
+#### EPILOG

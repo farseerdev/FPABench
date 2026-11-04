@@ -1,0 +1,13 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Noop
+#### PARAMETERS
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+nX = 0;
+#### METADATA
+#### DATA
+#### EPILOG

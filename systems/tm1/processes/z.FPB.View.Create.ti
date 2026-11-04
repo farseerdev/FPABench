@@ -1,0 +1,162 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.View.Create
+#### PARAMETERS
+pCube      String   ''
+pView      String   ''
+pDim1      String   ''
+pDim2      String   ''
+pDim3      String   ''
+pDim4      String   ''
+pDim5      String   ''
+pDim6      String   ''
+pDim7      String   ''
+pDim8      String   ''
+pDim9      String   ''
+pDim10     String   ''
+pDim11     String   ''
+pDim12     String   ''
+pZeroOut   Numeric  0
+pKeepView  Numeric  1
+pLogDir    String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sCube = pCube;
+sView = pView;
+sLog = pLogDir;
+IF( sLog @= '' ); sLog = GetProcessErrorFileDirectory; ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_View_Create.log';
+sErr  = '';
+nDims = 0;
+sLastSel = '';
+
+IF( sView @= '' );
+  sErr = 'pView is blank';
+ELSEIF( CubeExists( sCube ) = 0 );
+  sErr = 'cube does not exist: ' | sCube;
+ELSEIF( TabDim( sCube, 13 ) @<> '' );
+  sErr = sCube | ' has more than 12 dimensions';
+ENDIF;
+
+#--- 1. validate every selection before anything is created or cleared
+nDim = 1;
+WHILE( sErr @= '' & nDim <= 12 );
+  sDimension = TabDim( sCube, nDim );
+  IF(     nDim = 1  ); sSel = pDim1;
+  ELSEIF( nDim = 2  ); sSel = pDim2;
+  ELSEIF( nDim = 3  ); sSel = pDim3;
+  ELSEIF( nDim = 4  ); sSel = pDim4;
+  ELSEIF( nDim = 5  ); sSel = pDim5;
+  ELSEIF( nDim = 6  ); sSel = pDim6;
+  ELSEIF( nDim = 7  ); sSel = pDim7;
+  ELSEIF( nDim = 8  ); sSel = pDim8;
+  ELSEIF( nDim = 9  ); sSel = pDim9;
+  ELSEIF( nDim = 10 ); sSel = pDim10;
+  ELSEIF( nDim = 11 ); sSel = pDim11;
+  ELSE;                sSel = pDim12;
+  ENDIF;
+  IF( UPPER( sSel ) @= 'ALL' ); sSel = ''; ENDIF;
+  IF( sDimension @= '' );
+    IF( sSel @<> '' ); sErr = 'pDim' | NumberToString( nDim ) | ' is set but ' | sCube | ' has ' | NumberToString( nDims ) | ' dimensions'; ENDIF;
+  ELSE;
+    nDims = nDim;
+    sLastSel = sSel;
+    IF( sSel @<> '' );
+      IF( DIMIX( sDimension, sSel ) = 0 );
+        sErr = 'element "' | sSel | '" not in ' | sDimension;
+      ELSEIF( DTYPE( sDimension, sSel ) @= 'C' & ELCOMPN( sDimension, sSel ) = 0 );
+        sErr = 'consolidation "' | sSel | '" in ' | sDimension | ' has no children';
+      ENDIF;
+    ENDIF;
+  ENDIF;
+  nDim = nDim + 1;
+END;
+IF( sErr @= '' & pZeroOut = 1 & sLastSel @= '' );
+  sErr = 'pZeroOut = 1 but the measure dimension ' | TabDim( sCube, nDims ) | ' is unrestricted - aborted';
+ENDIF;
+IF( sErr @<> '' );
+  AsciiOutput( sLog, 'ERROR', sCube, sView, sErr );
+  ProcessError;
+ENDIF;
+
+#--- 2. view and one subset per selected dimension
+IF( ViewExists( sCube, sView ) = 1 ); ViewDestroy( sCube, sView ); ENDIF;
+ViewCreate( sCube, sView );
+
+nDim = 1;
+WHILE( nDim <= nDims );
+  sDimension = TabDim( sCube, nDim );
+  IF(     nDim = 1  ); sSel = pDim1;
+  ELSEIF( nDim = 2  ); sSel = pDim2;
+  ELSEIF( nDim = 3  ); sSel = pDim3;
+  ELSEIF( nDim = 4  ); sSel = pDim4;
+  ELSEIF( nDim = 5  ); sSel = pDim5;
+  ELSEIF( nDim = 6  ); sSel = pDim6;
+  ELSEIF( nDim = 7  ); sSel = pDim7;
+  ELSEIF( nDim = 8  ); sSel = pDim8;
+  ELSEIF( nDim = 9  ); sSel = pDim9;
+  ELSEIF( nDim = 10 ); sSel = pDim10;
+  ELSEIF( nDim = 11 ); sSel = pDim11;
+  ELSE;                sSel = pDim12;
+  ENDIF;
+  IF( UPPER( sSel ) @= 'ALL' ); sSel = ''; ENDIF;
+
+  IF( sSel @= '' );
+    sScope = 'ALL (unassigned)';
+  ELSE;
+    sSel = DIMNM( sDimension, DIMIX( sDimension, sSel ) );
+    IF( SubsetExists( sDimension, sView ) = 1 ); SubsetDestroy( sDimension, sView ); ENDIF;
+    SubsetCreate( sDimension, sView );
+    IF( DTYPE( sDimension, sSel ) @= 'C' );
+      nPos = 0;
+      nIdx = 1;
+      nMax = DIMSIZ( sDimension );
+      WHILE( nIdx <= nMax );
+        sLeaf = DIMNM( sDimension, nIdx );
+        IF( DTYPE( sDimension, sLeaf ) @= 'N' );
+          IF( ELISANC( sDimension, sSel, sLeaf ) = 1 );
+            nPos = nPos + 1;
+            SubsetElementInsert( sDimension, sView, sLeaf, nPos );
+          ENDIF;
+        ENDIF;
+        nIdx = nIdx + 1;
+      END;
+      IF( nPos = 0 );
+        AsciiOutput( sLog, 'ERROR', sCube, sView, sSel | ' has no N-level descendants' );
+        ViewDestroy( sCube, sView );
+        ProcessError;
+      ENDIF;
+      sScope = sSel | ' -> ' | NumberToString( nPos ) | ' leaves';
+    ELSE;
+      SubsetElementInsert( sDimension, sView, sSel, 1 );
+      sScope = sSel;
+    ENDIF;
+    ViewSubsetAssign( sCube, sView, sDimension, sView );
+  ENDIF;
+  AsciiOutput( sLog, sCube, sView, NumberToString( nDim ), sDimension, sScope );
+  nDim = nDim + 1;
+END;
+
+#--- 3. optional zero-out
+IF( pZeroOut = 1 );
+  AsciiOutput( sLog, 'ZEROOUT', sCube, sView );
+  ViewZeroOut( sCube, sView );
+ENDIF;
+#### METADATA
+#### DATA
+#### EPILOG
+IF( pKeepView = 0 );
+  IF( ViewExists( pCube, pView ) = 1 ); ViewDestroy( pCube, pView ); ENDIF;
+  nDim = 1;
+  WHILE( TabDim( pCube, nDim ) @<> '' );
+    sDimension = TabDim( pCube, nDim );
+    IF( SubsetExists( sDimension, pView ) = 1 ); SubsetDestroy( sDimension, pView ); ENDIF;
+    nDim = nDim + 1;
+  END;
+ENDIF;

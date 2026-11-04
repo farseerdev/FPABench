@@ -1,0 +1,33 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Setup.GroupAttr
+#### PARAMETERS
+pFile     String   'C:\FPABench-10m\official_10m\master\customer_groups.csv'
+#### DATASOURCE
+ASCII 'C:\FPABench-10m\official_10m\master\customer_groups.csv'
+#### VARIABLES
+vGroup            String
+vName             String
+vChannel          String
+vCountry          String
+#### PROLOG
+DatasourceNameForServer = pFile;
+DatasourceASCIIDelimiter = ',';
+DatasourceASCIIQuoteCharacter = Char(34);
+DatasourceASCIIHeaderRecords = 1;
+IF( DIMIX('}ElementAttributes_FPB_InputCustomer', 'Channel') = 0 % DIMIX('}ElementAttributes_FPB_InputCustomer', 'Country') = 0 );
+  # run z.FPB.Setup.Model with pApply = 1 first
+  ProcessError;
+ENDIF;
+#### METADATA
+#### DATA
+IF( DIMIX('FPB_InputCustomer', vGroup) = 0 );
+  ItemReject( 'Customer group not in FPB_InputCustomer: ' | vGroup );
+ENDIF;
+IF( DIMIX('FPB_Channel', vChannel) = 0 % DIMIX('FPB_Country', vCountry) = 0 );
+  ItemReject( 'Unknown channel or country for ' | vGroup );
+ENDIF;
+AttrPutS( vChannel, 'FPB_InputCustomer', vGroup, 'Channel' );
+AttrPutS( vCountry, 'FPB_InputCustomer', vGroup, 'Country' );
+#### EPILOG

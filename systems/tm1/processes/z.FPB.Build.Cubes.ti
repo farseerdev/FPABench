@@ -1,0 +1,102 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Build.Cubes
+#### PARAMETERS
+pDestroy  Numeric  0
+pLogDir   String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+# Creates the four cubes, with their dimensions in this exact order. A cube that exists is checked
+# against the order and left as it is.
+# pDestroy = 1 first DESTROYS the four cubes and all their data. Back up the server before using it.
+
+sLog = pLogDir;
+IF( sLog @= '' );
+  sLog = GetProcessErrorFileDirectory;
+ENDIF;
+IF( sLog @<> '' & SUBST( sLog, LONG( sLog ), 1 ) @<> '\' & SUBST( sLog, LONG( sLog ), 1 ) @<> '/' );
+  IF( SCAN( '/', sLog ) > 0 ); sLog = sLog | '/'; ELSE; sLog = sLog | '\'; ENDIF;
+ENDIF;
+sLog = sLog | 'zFPB_Build_Cubes.log';
+
+IF( pDestroy <> 0 & pDestroy <> 1 );
+  AsciiOutput( sLog, 'ERROR', 'pDestroy must be 0 or 1' );
+  ProcessError;
+ENDIF;
+
+# '<cube>:<dimension>|<dimension>|...;'
+sCubes = 'FPB_Drivers:FPB_Version|FPB_Channel|FPB_InputCustomer|FPB_InputProduct|FPB_CostCenter|FPB_Account|FPB_Country|FPB_Years|FPB_Months|FPB_Drivers_m|;'
+       | 'FPB_Reporting:FPB_Version|FPB_Currency|FPB_CurrencyScenario|FPB_Channel|FPB_Customer|FPB_Product|FPB_CostCenter|FPB_Account|FPB_Country|FPB_Years|FPB_Months|FPB_Reporting_m|;'
+       | 'FPB_FX:FPB_Version|FPB_FXType|FPB_CurrencyList|FPB_CurrencyListReverse|FPB_Years|FPB_Months|;'
+       | 'FPB_Control:FPB_Version|FPB_ControlParam|FPB_Years|FPB_Months|FPB_Control_m|;';
+
+#--- every dimension must exist before anything is changed
+sAll = sCubes;
+WHILE( sAll @<> '' );
+  nP = SCAN( ';', sAll );  sEntry = SUBST( sAll, 1, nP - 1 );  sAll = SUBST( sAll, nP + 1, LONG( sAll ) - nP );
+  nC = SCAN( ':', sEntry );  sList = SUBST( sEntry, nC + 1, LONG( sEntry ) - nC );
+  WHILE( sList @<> '' );
+    nP = SCAN( '|', sList );  sDim = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+    IF( DimensionExists( sDim ) = 0 );
+      AsciiOutput( sLog, 'ERROR', 'missing dimension - run z.FPB.Build.Dimension / z.FPB.Build.Fixed first', sDim );
+      ProcessError;
+    ENDIF;
+  END;
+END;
+
+IF( pDestroy = 1 );
+  sAll = sCubes;
+  WHILE( sAll @<> '' );
+    nP = SCAN( ';', sAll );  sEntry = SUBST( sAll, 1, nP - 1 );  sAll = SUBST( sAll, nP + 1, LONG( sAll ) - nP );
+    sCube = SUBST( sEntry, 1, SCAN( ':', sEntry ) - 1 );
+    IF( CubeExists( sCube ) = 1 );
+      CubeDestroy( sCube );
+      AsciiOutput( sLog, 'DESTROYED', sCube );
+    ENDIF;
+  END;
+ENDIF;
+
+#--- existing cubes: check the dimension order
+sAll = sCubes;
+WHILE( sAll @<> '' );
+  nP = SCAN( ';', sAll );  sEntry = SUBST( sAll, 1, nP - 1 );  sAll = SUBST( sAll, nP + 1, LONG( sAll ) - nP );
+  nC = SCAN( ':', sEntry );  sCube = SUBST( sEntry, 1, nC - 1 );  sList = SUBST( sEntry, nC + 1, LONG( sEntry ) - nC );
+  IF( CubeExists( sCube ) = 1 );
+    n = 1;
+    WHILE( sList @<> '' );
+      nP = SCAN( '|', sList );  sDim = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+      IF( TABDIM( sCube, n ) @<> sDim );
+        AsciiOutput( sLog, 'ERROR', sCube | ' exists with a different dimension ' | NumberToString( n ), TABDIM( sCube, n ), 'expected ' | sDim );
+        ProcessError;
+      ENDIF;
+      n = n + 1;
+    END;
+    AsciiOutput( sLog, 'EXISTS', sCube );
+  ENDIF;
+END;
+
+#--- create the missing cubes
+IF( CubeExists( 'FPB_Drivers' ) = 0 );
+  CubeCreate( 'FPB_Drivers', 'FPB_Version', 'FPB_Channel', 'FPB_InputCustomer', 'FPB_InputProduct', 'FPB_CostCenter',
+    'FPB_Account', 'FPB_Country', 'FPB_Years', 'FPB_Months', 'FPB_Drivers_m' );
+  AsciiOutput( sLog, 'CREATED', 'FPB_Drivers' );
+ENDIF;
+IF( CubeExists( 'FPB_Reporting' ) = 0 );
+  CubeCreate( 'FPB_Reporting', 'FPB_Version', 'FPB_Currency', 'FPB_CurrencyScenario', 'FPB_Channel', 'FPB_Customer',
+    'FPB_Product', 'FPB_CostCenter', 'FPB_Account', 'FPB_Country', 'FPB_Years', 'FPB_Months', 'FPB_Reporting_m' );
+  AsciiOutput( sLog, 'CREATED', 'FPB_Reporting' );
+ENDIF;
+IF( CubeExists( 'FPB_FX' ) = 0 );
+  CubeCreate( 'FPB_FX', 'FPB_Version', 'FPB_FXType', 'FPB_CurrencyList', 'FPB_CurrencyListReverse', 'FPB_Years', 'FPB_Months' );
+  AsciiOutput( sLog, 'CREATED', 'FPB_FX' );
+ENDIF;
+IF( CubeExists( 'FPB_Control' ) = 0 );
+  CubeCreate( 'FPB_Control', 'FPB_Version', 'FPB_ControlParam', 'FPB_Years', 'FPB_Months', 'FPB_Control_m' );
+  AsciiOutput( sLog, 'CREATED', 'FPB_Control' );
+ENDIF;
+#### METADATA
+#### DATA
+#### EPILOG

@@ -1,0 +1,25 @@
+#==============================================================================
+# FPB_Control - FPABench layer 0 (version setup)
+# Dims: FPB_Version, FPB_ControlParam, FPB_Years, FPB_Months, FPB_Control_m
+# Inputs : FC Closed IN, FC Horizon IN            (z.FPB.Load.Drivers)
+# Stored : Feed Actual Copy, Feed Plan           (z.FPB.Control.FeedFlags, at
+#          version Actual; used only by feeders in Drivers/Reporting)
+# STATUS : generated with the help of Claude Opus 5.5; requires validation.
+#==============================================================================
+SKIPCHECK;
+
+# 1 where the version shows actuals: inside its horizon and already closed
+['FC Actual'] = N: ['FC Horizon IN'] * ['FC Closed IN'];
+
+# 1 where the version shows plan: inside its horizon and not yet closed
+['FC Plan'] = N: IF( ['FC Closed IN'] = 0, ['FC Horizon IN'], 0 );
+
+# How many months of the year the version plans (held on month 'Annual')
+['FC Plan Months'] = N:
+   IF( !FPB_Months @= 'Annual',
+       DB('FPB_Control', !FPB_Version, !FPB_ControlParam, !FPB_Years, 'All_Hierarchies', 'FC Plan'),
+       0 );
+
+FEEDERS;
+
+['FC Horizon IN'] => ['FC Actual'], ['FC Plan'];

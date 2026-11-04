@@ -1,0 +1,198 @@
+# FPABench on TM1: TurboIntegrator process source. scripts/Import-FPBench.ps1 creates or updates
+# this process through the TM1 REST API. Generated with the help of Claude Opus 5.5; requires validation.
+
+#### PROCESS z.FPB.Setup.Model
+#### PARAMETERS
+pApply    Numeric  0
+pLog      String   ''
+#### DATASOURCE
+None
+#### VARIABLES
+#### PROLOG
+sLog = pLog;
+IF( sLog @= '' );
+  sLog = GetProcessErrorFileDirectory | 'zFPB_Setup_Model.log';
+ENDIF;
+AsciiOutput( sLog, 'z.FPB.Setup.Model', 'pApply', NumberToString( pApply ) );
+
+#--- sanity: the dimensions this process edits
+IF( DimensionExists('FPB_Control_m') = 0 % DimensionExists('FPB_FXType') = 0 % DimensionExists('FPB_Drivers_m') = 0
+  % DimensionExists('FPB_Reporting_m') = 0 % DimensionExists('FPB_Product') = 0 % DimensionExists('FPB_Customer') = 0
+  % DimensionExists('FPB_CostCenter') = 0 % DimensionExists('FPB_InputCustomer') = 0 % DimensionExists('FPB_Years') = 0
+  % DimensionExists('FPB_Months') = 0 );
+  AsciiOutput( sLog, 'ERROR', 'a required dimension is missing' );
+  ProcessError;
+ENDIF;
+IF( DIMIX('FPB_Product', 'By Product') = 0 % DIMIX('FPB_Customer', 'All_Hierarchies') = 0 % DIMIX('FPB_CostCenter', 'All_Hierarchies') = 0
+  % DIMIX('FPB_Product', 'NoProduct') = 0 % DIMIX('FPB_Customer', 'NoCustomer') = 0 % DIMIX('FPB_CostCenter', 'NoCostCenter') = 0 );
+  AsciiOutput( sLog, 'ERROR', 'By Product / All_Hierarchies / special members missing - run z.FPB.Build.All first' );
+  ProcessError;
+ENDIF;
+
+#--- FPB_Control_m
+sDim = 'FPB_Control_m';
+sEl = 'FC Plan Months';   IF( DIMIX(sDim, sEl) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sEl ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF; ENDIF;
+sEl = 'Feed Actual Copy'; IF( DIMIX(sDim, sEl) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sEl ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF; ENDIF;
+sEl = 'Feed Plan';        IF( DIMIX(sDim, sEl) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sEl ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF; ENDIF;
+
+#--- FPB_FXType
+sDim = 'FPB_FXType';
+sEl = 'Carry';     IF( DIMIX(sDim, sEl) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sEl ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF; ENDIF;
+sEl = 'Effective'; IF( DIMIX(sDim, sEl) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sEl ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF; ENDIF;
+
+#--- FPB_Drivers_m helpers (rule-calculated)
+sDim = 'FPB_Drivers_m';
+sList = 'List Price Carry|List Price Plan|Std Disc Rate Carry|Std Disc Rate|Rebate Rate Carry|Rebate Rate|Log Disc Rate Carry|Log Disc Rate|Standard Cost Plan|Marketing Pool|GB Rate|GB Entitlement|GB Booked|GB Remaining|GB Plan Unallocated|GB Unallocated|Rebates Unallocated|Trade Fees Unallocated|';
+WHILE( sList @<> '' );
+  nP = SCAN( '|', sList );  sEl = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+  IF( DIMIX(sDim, sEl) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sEl ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF; ENDIF;
+END;
+
+#--- zero-out scopes (weight 0, never read as totals)
+sScope = 'zFPB_KPI_ClearScope';
+sList = 'Volume Growth IN|Volume Target IN|Price Increase IN|Standard Discount IN|Promo Discount IN|Logistics Discount IN|Rebate Rate IN|Growth Bonus Rate IN|Growth Bonus Threshold IN|Trade Fees IN|Marketing Spend IN|Marketing Split IN|';
+IF( DIMIX(sDim, sScope) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sScope ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sScope, 'C' ); ENDIF; ENDIF;
+WHILE( sList @<> '' );
+  nP = SCAN( '|', sList );  sEl = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+  IF( DIMIX(sDim, sEl) = 0 % DIMIX(sDim, sEl | ' Entered') = 0 );
+    AsciiOutput( sLog, 'ERROR', 'missing input measure or its Entered flag', sEl );
+    ProcessError;
+  ENDIF;
+  IF( pApply = 1 );
+    IF( ELISPAR( sDim, sScope, sEl ) = 0 );            DimensionElementComponentAdd( sDim, sScope, sEl, 0 );            ENDIF;
+    IF( ELISPAR( sDim, sScope, sEl | ' Entered' ) = 0 ); DimensionElementComponentAdd( sDim, sScope, sEl | ' Entered', 0 ); ENDIF;
+  ENDIF;
+END;
+
+sScope = 'zFPB_Leaf_ClearScope';
+sList = 'IMPORT Rebates|IMPORT Rebate True-ups|IMPORT Growth Bonus|IMPORT Trade Fees|IMPORT OPEX|IMPORT Marketing|IMPORT List Price|IMPORT Standard Cost|IMPORT Control Total|Volume Override IN|Volume Override IN Entered|Promo Funding IN|Promo Funding IN Entered|Standard Cost IN|Standard Cost IN Entered|OPEX IN|OPEX IN Entered|';
+IF( DIMIX(sDim, sScope) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sScope ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sScope, 'C' ); ENDIF; ENDIF;
+WHILE( sList @<> '' );
+  nP = SCAN( '|', sList );  sEl = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+  IF( DIMIX(sDim, sEl) = 0 );
+    AsciiOutput( sLog, 'ERROR', 'missing measure', sEl );
+    ProcessError;
+  ENDIF;
+  IF( pApply = 1 & ELISPAR( sDim, sScope, sEl ) = 0 ); DimensionElementComponentAdd( sDim, sScope, sEl, 0 ); ENDIF;
+END;
+
+#--- FPB_Reporting_m helpers and KPIs
+sDim = 'FPB_Reporting_m';
+sList = 'Invoice Sales Positive|Invoice Sales Plan|Handling KG|Handling KG Positive|IS Positive CB|NS Positive CB|Net Price per Unit|Gross-to-Net %|Gross Margin %|Contribution Margin II %|Contribution Margin III %|EBIT %|Standard Discounts % of Gross Sales|Promo Discounts % of Gross Sales|Logistics Discounts % of Gross Sales|Rebates % of Gross Sales|Growth Bonus % of Gross Sales|Trade Fees % of Gross Sales|Promo Funding % of Gross Sales|COGS % of Gross Sales|Logistics % of Gross Sales|Sales Force % of Gross Sales|Marketing % of Gross Sales|Overheads % of Gross Sales|';
+WHILE( sList @<> '' );
+  nP = SCAN( '|', sList );  sEl = SUBST( sList, 1, nP - 1 );  sList = SUBST( sList, nP + 1, LONG( sList ) - nP );
+  IF( DIMIX(sDim, sEl) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sEl ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sEl, 'N' ); ENDIF; ENDIF;
+END;
+
+#--- FPB_Product: brand-level leaves
+sDim = 'FPB_Product';
+sBL  = 'Brand Level';
+# count the elements before inserting: TM1 commits Prolog inserts only when the Prolog ends, but DIMSIZ/DIMNM
+# already list them, and ATTRS on such an element fails. The loop below reads only the elements that existed.
+nMax = DIMSIZ( sDim );
+IF( DIMIX(sDim, sBL) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sBL ); IF( pApply = 1 ); DimensionElementInsert( sDim, '', sBL, 'C' ); ENDIF; ENDIF;
+IF( pApply = 1 );
+  IF( ELISPAR( sDim, 'By Product', sBL ) = 0 );  DimensionElementComponentAdd( sDim, 'By Product', sBL, 1 );  ENDIF;
+  IF( ELISPAR( sDim, sBL, 'NoProduct' ) = 0 );   DimensionElementComponentAdd( sDim, sBL, 'NoProduct', 1 );   ENDIF;
+ENDIF;
+nBrands = 0;
+nI = 1;
+WHILE( nI <= nMax );
+  sEl = DIMNM( sDim, nI );
+  sLevel = '';
+  IF( DTYPE( sDim, sEl ) @= 'C' );
+    sLevel = ATTRS( sDim, sEl, 'Source Level' );
+  ENDIF;
+  IF( sLevel @= 'Brand' );
+    nBrands = nBrands + 1;
+    sLeaf = sEl | ' (Brand Level)';
+    IF( DIMIX(sDim, sLeaf) = 0 ); AsciiOutput( sLog, 'ADD', sDim, sLeaf ); ENDIF;
+    IF( pApply = 1 );
+      IF( DIMIX(sDim, sLeaf) = 0 ); DimensionElementInsert( sDim, '', sLeaf, 'N' ); ENDIF;
+      IF( ELISPAR( sDim, sEl, sLeaf ) = 0 ); DimensionElementComponentAdd( sDim, sEl, sLeaf, 1 ); ENDIF;
+      IF( ELISPAR( sDim, sBL, sLeaf ) = 0 ); DimensionElementComponentAdd( sDim, sBL, sLeaf, 1 ); ENDIF;
+    ENDIF;
+  ENDIF;
+  nI = nI + 1;
+END;
+AsciiOutput( sLog, 'INFO', 'brands found', NumberToString( nBrands ) );
+IF( nBrands = 0 );
+  AsciiOutput( sLog, 'ERROR', 'no element of FPB_Product has Source Level = Brand' );
+  ProcessError;
+ENDIF;
+
+#--- special members inside the totals the reads use
+IF( ELISPAR( 'FPB_Customer', 'All_Hierarchies', 'NoCustomer' ) = 0 );
+  AsciiOutput( sLog, 'ADD', 'FPB_Customer', 'All_Hierarchies > NoCustomer' );
+  IF( pApply = 1 ); DimensionElementComponentAdd( 'FPB_Customer', 'All_Hierarchies', 'NoCustomer', 1 ); ENDIF;
+ENDIF;
+IF( ELISPAR( 'FPB_CostCenter', 'All_Hierarchies', 'NoCostCenter' ) = 0 );
+  AsciiOutput( sLog, 'ADD', 'FPB_CostCenter', 'All_Hierarchies > NoCostCenter' );
+  IF( pApply = 1 ); DimensionElementComponentAdd( 'FPB_CostCenter', 'All_Hierarchies', 'NoCostCenter', 1 ); ENDIF;
+ENDIF;
+
+#--- attributes
+IF( pApply = 1 );
+  IF( DIMIX('}ElementAttributes_FPB_Years', 'Prev') = 0 );           AttrInsert( 'FPB_Years', '', 'Prev', 'S' );           ENDIF;
+  IF( DIMIX('}ElementAttributes_FPB_Years', 'Next') = 0 );           AttrInsert( 'FPB_Years', '', 'Next', 'S' );           ENDIF;
+  IF( DIMIX('}ElementAttributes_FPB_Months', 'Prev') = 0 );          AttrInsert( 'FPB_Months', '', 'Prev', 'S' );          ENDIF;
+  IF( DIMIX('}ElementAttributes_FPB_Months', 'Next') = 0 );          AttrInsert( 'FPB_Months', '', 'Next', 'S' );          ENDIF;
+  IF( DIMIX('}ElementAttributes_FPB_Product', 'HandlingFactor') = 0 ); AttrInsert( 'FPB_Product', '', 'HandlingFactor', 'N' ); ENDIF;
+  # FPB_InputCustomer has no attribute dimension until its first attribute is created
+  nAttrDim = DimensionExists( '}ElementAttributes_FPB_InputCustomer' );
+  IF( nAttrDim = 0 );
+    AttrInsert( 'FPB_InputCustomer', '', 'Channel', 'S' );
+    AttrInsert( 'FPB_InputCustomer', '', 'Country', 'S' );
+  ELSE;
+    IF( DIMIX( '}ElementAttributes_FPB_InputCustomer', 'Channel' ) = 0 ); AttrInsert( 'FPB_InputCustomer', '', 'Channel', 'S' ); ENDIF;
+    IF( DIMIX( '}ElementAttributes_FPB_InputCustomer', 'Country' ) = 0 ); AttrInsert( 'FPB_InputCustomer', '', 'Country', 'S' ); ENDIF;
+  ENDIF;
+ENDIF;
+AsciiOutput( sLog, 'PROLOG DONE' );
+#### METADATA
+#### DATA
+#### EPILOG
+IF( pApply = 1 );
+  #--- Years: Prev / Next from the 'Ynnnn' names
+  nI = 1;
+  nMax = DIMSIZ('FPB_Years');
+  WHILE( nI <= nMax );
+    sY = DIMNM( 'FPB_Years', nI );
+    IF( DTYPE('FPB_Years', sY) @= 'N' & SUBST( sY, 1, 1 ) @= 'Y' & LONG( sY ) = 5 );
+      nY = NUMBR( SUBST( sY, 2, 4 ) );
+      sP = 'Y' | NumberToString( nY - 1 );
+      sN = 'Y' | NumberToString( nY + 1 );
+      IF( DIMIX('FPB_Years', sP) = 0 ); sP = ''; ENDIF;
+      IF( DIMIX('FPB_Years', sN) = 0 ); sN = ''; ENDIF;
+      AttrPutS( sP, 'FPB_Years', sY, 'Prev' );
+      AttrPutS( sN, 'FPB_Years', sY, 'Next' );
+    ENDIF;
+    nI = nI + 1;
+  END;
+  #--- Months: M1..M12 ring (year roll-over is handled in the rules)
+  nM = 1;
+  WHILE( nM <= 12 );
+    sM = 'M' | NumberToString( nM );
+    nP = nM - 1;  IF( nP = 0 );  nP = 12; ENDIF;
+    nN = nM + 1;  IF( nN = 13 ); nN = 1;  ENDIF;
+    AttrPutS( 'M' | NumberToString( nP ), 'FPB_Months', sM, 'Prev' );
+    AttrPutS( 'M' | NumberToString( nN ), 'FPB_Months', sM, 'Next' );
+    nM = nM + 1;
+  END;
+  #--- brand-level leaves: Brand and Source Level attributes
+  nI = 1;
+  nMax = DIMSIZ('FPB_Product');
+  WHILE( nI <= nMax );
+    sEl = DIMNM( 'FPB_Product', nI );
+    IF( DTYPE('FPB_Product', sEl) @= 'C' & ATTRS('FPB_Product', sEl, 'Source Level') @= 'Brand' );
+      sLeaf = sEl | ' (Brand Level)';
+      IF( DIMIX('FPB_Product', sLeaf) > 0 );
+        AttrPutS( sEl, 'FPB_Product', sLeaf, 'Brand' );
+        AttrPutS( 'Brand Level', 'FPB_Product', sLeaf, 'Source Level' );
+      ENDIF;
+    ENDIF;
+    nI = nI + 1;
+  END;
+ENDIF;
+# TM1 reopens (truncates) an AsciiOutput file when another tab writes to it, so the Epilog logs to its own file.
+AsciiOutput( SUBST( sLog, 1, LONG( sLog ) - 4 ) | '_epilog.log', 'EPILOG DONE', 'pApply', NumberToString( pApply ) );
