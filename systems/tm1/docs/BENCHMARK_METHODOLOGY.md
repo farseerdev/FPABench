@@ -1,88 +1,55 @@
 # Benchmark methodology
 
-How `scripts/Run-FPBench.ps1` measures the FPABench tests on TM1, what its numbers mean, and what to
-disclose if you publish them. This repository contains no recorded TM1 results: everything below
-describes how results would be produced.
+How `scripts/Run-FPBench.ps1` times the FPABench tests on TM1, what its numbers mean, and what to disclose with them. The package holds no results, and the harness has not run on a TM1 server. Where it differs from FPABench's own method, see [Known gaps](../README.md#known-gaps).
 
-## Upstream benchmark
+## Source
 
 | | |
-|---|---|
-| Benchmark | [FPABench](https://github.com/farseerdev/FPABench), made by [Farseer](https://www.farseer.com) |
-| Upstream commit used for this package | `3c02a65c16181e3918cae7a5381de3d4c352d890` (25 Oct 2026) |
-| Dataset | generated with the upstream generator: `node data/generate.mjs --size 10m` (seed 20261012) |
-| Test definitions | upstream `tests/method.md` and the per-test descriptions in the upstream repository |
-| Reference answers | written by the installer to `<WorkDir>\tm1_reference\answers-duckdb-10m.json` with the upstream runner's `duckdb-tables` entry on that dataset, using the dataset's `picks.json`. Nothing here comes with this package. |
+| --- | --- |
+| Benchmark | [FPABench](https://github.com/farseerdev/FPABench), by [Farseer](https://www.farseer.com), built against commit `3c02a65c16181e3918cae7a5381de3d4c352d890` |
+| Dataset | `node data/generate.mjs --size 10m`, seed 20261012 |
+| Tests | FPABench's `tests/tests.json`, `tests/README.md` and `tests/method.md` |
+| Reference answers | Recorded by the installer with the FPABench runner's `duckdb-tables` entry, on the dataset's `picks.json`, into `<WorkDir>\tm1_reference\answers-duckdb-10m.json`. W8 is left out. |
 
-FPABench is published by Farseer, which also develops one of the benchmarked systems (RAMA). The
-benchmark's definitions, data and reference implementation are public, so they can be inspected; say
-so when comparing results with any system, including Farseer's.
+Farseer makes FPABench and RAMA, one of its systems. Say so when you compare results.
 
 ## What is timed
 
-- **One call per run.** Each timed run is one REST call (`POST /Processes('<name>')/tm1.ExecuteWithReturn`)
-  to a TI process that performs the test's action (write, load or model change) and then its proving read.
-  The Stopwatch in the harness starts just before the call and stops when the server's response arrives.
-  Signing in is not timed: the harness keeps one session for the whole run.
-- **Checks are not timed.** For W1, W2, W8, M2, M4 and L2, the values that prove the run correct are read
-  afterwards by `z.FPB.Test.Check`, outside the timer.
-- **Undo is not timed.** Before each run `z.FPB.State.Save` records what the run will change; afterwards
-  `z.FPB.State.Restore` puts it back inside the running server. The server is not restarted between tests.
-- **Warm-up.** Before the read tests (R1–R7, C2), untimed warm-up reads run whenever TM1's calculation cache
-  was emptied (after a load, restart, rule reload or undo), so reads meet a server in its normal working
-  state. Writes, loads and model changes get no warm-up. `-NoWarmup` turns this off; the choice is recorded.
-- **R8 (open the model)** stops the TM1 Windows service, starts it, and times until the first read succeeds
-  (wall clock). It needs the server on the same machine and is reported as not measurable otherwise.
-- **Repetitions** come from the harness plan the installer writes (`<WorkDir>\tm1_plan\plan.json`) (`repeats`, `warm`, and the list of runs for single-cell writes);
-  `-Quick` runs each test once (four runs for single-cell writes).
+- **One call per run.** Each run is one REST call, `POST /Processes('<name>')/tm1.ExecuteWithReturn`, to a TI process that performs the test's action and then its proving read. The timer starts just before the call and stops when the response arrives. Signing in is not timed.
+- **Checks, undo and warm-up are not timed.** `z.FPB.Test.Check` reads the checks of W1, W2, W8, M2, M4 and L2 after the run. `z.FPB.State.Save` and `z.FPB.State.Restore` undo each run inside the running server. Before the reads, R1 to R7 and C2, an untimed warm-up runs whenever TM1's calculation cache was emptied. `-NoWarmup` turns it off.
+- **R8** stops the TM1 Windows service, starts it, and times until the first read succeeds. It needs the server on the same machine.
+- **Repeats** come from the harness plan, `<WorkDir>\tm1_plan\plan.json`. `-Quick` runs each test once, and single-cell writes 4 times: 1 warm-up and 3 timed.
 
 ## The numbers in `tm1-results.json`
 
 | Field | Meaning |
-|---|---|
-| `rawMs` | every timed call, in milliseconds, as measured by the client |
-| `medianMs` | median of `rawMs` |
-| `p95Ms` | 95th percentile, for the single-cell write tests |
-| `noopMedianMs` | median of ten calls to `z.FPB.Noop`, an empty process: the cost of one REST call without TM1 work |
-| `netMedianMs` | `max(0, medianMs - noopMedianMs)`: an **estimate** of the time spent in TM1 beyond the call overhead. It is not measured inside the TM1 engine |
-| `wallSec` | the whole test including untimed resets and checks, for orientation only |
-| `settings` | every harness choice (transport, reset method, warm-up, affinity, checks) |
-
-The client-side timings include network latency and the REST layer. Server-side process timings (for
-example from the TM1 server log) can be used to cross-check them; say which you report.
+| --- | --- |
+| `rawMs` | Every timed call, in milliseconds, measured by the client |
+| `medianMs` | The median of `rawMs` |
+| `p95Ms` | The 95th percentile, for single-cell writes |
+| `noopMedianMs` | The median of ten calls to `z.FPB.Noop`, an empty process: one REST call without TM1 work |
+| `netMedianMs` | `max(0, medianMs - noopMedianMs)`. An estimate, not measured inside TM1. FPABench does not subtract round trips, so compare `medianMs`. |
+| `wallSec` | The whole test with its resets and checks, for orientation only |
+| `settings` | Every harness choice: transport, reset, warm-up, affinity, checks |
 
 ## Correctness
 
-A time counts only with a correct answer. After a run, compare every answer file with the reference:
+A time counts only with a correct answer. After a run, compare the answers with the reference:
 
 ```
 node scripts\compare.mjs <WorkDir>\tm1_reference\answers-duckdb-10m.json <OutDirectory>\answers
 ```
 
-`compare.mjs` matches answers by key. The tolerance is 0.01 absolute (or 1e-9 relative for large values),
-and 1e-6 relative for the R4 ratios; C2 rows must all be 0. Report any test whose answers differ, and
-do not report its time as comparable.
+`compare.mjs` matches answers by key, within 0.01 or a relative 1e-9, whichever is larger, and R4's ratios within a relative 1e-6. C2's rows must all be 0. It does not check W8 or the `.check` files, and it skips a test with no answer file. Report every test that differs, was skipped or was not checked.
 
-## What to disclose with published results
+## What to disclose
 
-- FPABench upstream commit, dataset size and seed; this package's version or commit.
-- IBM Planning Analytics / TM1 product, version and fix pack, and its relevant `tm1s.cfg` settings
-  (for example `MTQ`, `PersistentFeeders`).
-- Operating system, CPU model, cores and threads, memory, storage, virtualisation, and whether client
-  and server ran on the same machine. Any processor affinity (`-Affinity`) or priority change.
-- The harness settings recorded in `tm1-results.json`, the number of runs, and whether `-Quick` or
-  `-NoWarmup` was used.
-- Whether timings are client-side (`medianMs`, `netMedianMs`) or server-side.
-- The result of `compare.mjs`, and every test that failed, was skipped (for example R8) or differs from
-  the reference.
-- Every way the TM1 model differs from the FPABench model description, and anything that makes a
-  comparison with another system less than like for like (for example a different machine, or a
-  different meaning of "a write is visible").
+- The FPABench commit, dataset size and seed, and this package's commit.
+- The TM1 product, version and fix pack, and the relevant `tm1s.cfg` settings, such as `MTQ` and `PersistentFeeders`.
+- The operating system, CPU, cores and threads, memory, storage and virtualisation, and whether client and server shared the machine. Any `-Affinity` or priority change.
+- The harness settings in `tm1-results.json`, the number of runs, and whether `-Quick` or `-NoWarmup` was used.
+- Whether the times are client-side or server-side.
+- The output of `compare.mjs`, and every test that failed, was skipped, or differs from the reference.
+- Every way the TM1 model or harness differs from FPABench's model and method, including the [Known gaps](../README.md#known-gaps).
 
-Before publishing performance measurements or comparative benchmark results, users must review the licence
-terms applicable to their IBM software installation, including any restrictions on performance testing or
-disclosure, and obtain any authorisation required by those terms. Results produced with this code are not
-certified or endorsed by IBM.
-
-This harness has not been installed, executed or validated on IBM Planning Analytics TM1 Server v11 or TM1
-Database v12. This document describes how it is designed to measure.
+Before publishing measurements or comparisons, review the licence of your IBM installation, including any limits on performance testing or disclosure, and get any authorisation it requires. Results are not certified or endorsed by IBM.

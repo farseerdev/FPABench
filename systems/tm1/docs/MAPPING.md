@@ -1,12 +1,8 @@
-# FPABench model → TM1 mapping (the four FPB cubes)
+# FPABench model to TM1 mapping
 
-Every variable of the FPABench model (the `model` folder of the FPABench repository) and where it lives in TM1. "Consolidated read" means a `DB()` on
-consolidated elements: TM1 sums the fed/stored leaves natively, no rule. "Inline" means the variable has no
-cells of its own: it is an expression inside the rule that needs it.
+Where each variable of the FPABench model lives in the four FPB cubes. "Consolidated read" is a `DB()` of consolidated elements: TM1 sums the fed and stored leaves, with no rule. "Inline" is a variable with no cells of its own, an expression inside the rule that needs it.
 
-Short names: **R** = FPB_Reporting, **D** = FPB_Drivers, **C** = FPB_Control, **FX** = FPB_FX.
-R coordinates are written (Customer, Product, Account, Measure); everything in R is on `LCY`, `Periodic`,
-the customer's channel and country, `NoCostCenter`, unless stated otherwise.
+Short names: **R** is FPB_Reporting, **D** FPB_Drivers, **C** FPB_Control and **FX** FPB_FX. R coordinates are written (Customer, Product, Account, Measure). Everything in R is on `LCY`, `Periodic`, the customer's channel and country, and `NoCostCenter`, unless stated otherwise.
 
 ## Coordinates in FPB_Reporting
 

@@ -2,6 +2,11 @@
 
 ## Current issue
 
+**Review in FPABench, PR #54**
+- README.md and docs/BENCHMARK_METHODOLOGY.md are shorter. Repeated notices are gone: NOTICE holds them.
+- README.md has a new Known gaps section: where the harness differs from how FPABench times and checks its other entries. The methodology doc now says that W8 and the `.check` files are not compared, and that `-Quick` times 3 runs of each single-cell write.
+- README.md no longer says feeders never name a version. They name `Actual`, as the rules do.
+
 The package remains experimental. Nothing listed here has been validated on IBM Planning Analytics TM1 Server v11 or TM1 Database v12.
 
 **Documentation and notices**
