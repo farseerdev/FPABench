@@ -57,6 +57,27 @@ Each test is one file per system, `systems/<entry>/tests/<id>.mjs`, written in t
 5. It compares every answer and every check with the expected results, within the tolerances of `tests.json`. Amounts match within 0.01 or a relative 1e-9. A test whose expectation says `ratioRelative`, such as R4, matches within a relative 1e-6. An answer and a recorded answer must have the same rows, since a missing row means no value, not 0. What a pick lists under `zero`, such as C2's answer and every check of L1, must be 0 everywhere, and there a missing row is fine. Those are never recorded, so RAMA is held to them too. A test with a difference is `wrong`, with the first differences.
 
 
+## What it records besides time
+
+On Linux, each test's summary has `resources`, and the result file has `env`. Both are additive: the website and the scores read neither. Without `/proc` they are left out, and `env.source` says `unavailable`. Set `FPABENCH_RESOURCES=0` to leave `resources` out and time a run without the readings.
+
+The readings cover the runner and the processes it started, so a system that runs in the runner, such as RAMA and DuckDB, and a server it starts, such as PostgreSQL and ClickHouse, are measured the same way. The runner scans `/proc` before the test, after its setup, after its first run, after its last run and at its end, never inside the timer and never between two runs in the middle, since a scan takes 0.1 to 0.6 ms and a read can take about as long. What lies between the scans is covered by each process's own `VmHWM` (its peak resident memory), `/proc/<pid>/io` and CPU counters, which only grow. The cost of the scans has not been measured on a quiet machine, which an on or off comparison of `FPABENCH_RESOURCES` needs. [`proc.mjs`](proc.mjs) holds the code.
+
+| Field of `resources` | What it is |
+| --- | --- |
+| `peakRssUpperBoundMB` | An upper bound of the peak resident memory, not a peak measured at one moment. It is the `VmHWM` of each process, reset at the start of the test through `/proc/<pid>/clear_refs`, added up over the processes. The processes peaked at different times, so the sum can be larger than any moment's total. A shared page counts once for each process that maps it, so a server of several processes, PostgreSQL, is overstated. `peakSource` says how it was read. If `clear_refs` cannot be written, it is the largest resident memory at a scan, which can miss a peak between two. |
+| `rssSplitMB` | What the resident memory was made of at the scan where it was largest: `anon` (heap and stack), `file` (mapped files) and `shmem` (`RssAnon`, `RssFile` and `RssShmem` of `/proc/<pid>/status`). A file that a system maps, such as an mmap'd database, counts as `file`, not `anon`. To compare systems that hold their data differently, compare `anon`; `file` is cache the kernel can drop. It is a reading, not a peak of its own. |
+| `rssMB` | Resident memory at three points: `afterSetup` (the restored snapshot, the system not started yet for R8), `afterFirstRun` and `afterLastRun`. |
+| `cpuMs` | CPU time, `user` and `sys`, of the whole test: setup, runs and teardown. A process that started and ended between two scans adds nothing. |
+| `involuntaryCtxSwitches` | Times the kernel took the CPU from the runner's process, a sign of other work on the machine. |
+| `threads` | The most threads the runner and its processes had at one sample. |
+| `io` | `readBytes` and `writeBytes` over the test (`read_bytes` and `write_bytes` of `/proc/<pid>/io`). A read the page cache served is not counted. `writeBytes` is the bytes the process dirtied, which the kernel writes out later, or never if the file is deleted first. It is not the bytes that reached the device. A process that ended between two scans is counted up to its last scan. Left out when `/proc/<pid>/io` cannot be read. |
+| `diskMB` | `apparent` (bytes of the files) and `allocated` (bytes the file system gave them) of the entry's folder in `--work` at the end of the test: its database and its snapshot, not the input cells. A hard link counts once. A copy made by reflink, which shares its blocks with the original, counts in full again, so on a file system that has them the restored copy of the snapshot is counted twice and the number is larger than the space used. |
+
+`env` holds the kernel, the CPU governor, the load average at the start and the end, the steal time (the share of the machine's CPU time, user to steal, that the virtual machine's CPUs spent waiting for the host) during the run, the type of file system of `--work` (not its device or its mount point), and the scheduling class of the runner as `ps` reports it (`FF 50` is SCHED_FIFO 50).
+
+The snapshot that every test but L1 starts from is made again when the system's version, or the RAMA binary named by `RAMA_NODE_ADDON_BINARY`, changes, not only when its files do. The binary counts by its path, size and modification time, not its contents: a rebuild changes the time, and the contents of a file of hundreds of MB would be read at every start for no gain. Only a different build restored with the same size and time would be missed.
+
 ## Not covered yet
 
 - Invariant I3 needs a reference for the source amounts before allocation.

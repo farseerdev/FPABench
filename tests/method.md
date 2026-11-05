@@ -53,7 +53,7 @@ At 1b, with every test, RAMA peaked at 37 GB, DuckDB at 43 GB and ClickHouse at 
 - The runner and the system share the machine, and there are no other limits.
 - No system gets a thread or core limit. Each keeps its default thread setting, so it can use all 4 vCPUs. Each result file records this as `"threads": "default"`.
 - A system that runs out of memory at a size has no result at that size.
-- Each result records peak memory, CPU time and thread count.
+- Each test records, on Linux, the peak and the resting memory, CPU time, threads, disk and storage IO of the runner and its processes, and each result records the machine it ran on. [The runner](../runner/README.md#what-it-records-besides-time) says what each number is. They do not enter a score.
 - Every size runs every test.
 
 ## Repeats
