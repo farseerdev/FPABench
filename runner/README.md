@@ -48,6 +48,12 @@ Each test is one file per system, `systems/<entry>/tests/<id>.mjs`, written in t
 
 `context` holds the work folder, the input cells, the test's picks, the pick of the run, and whatever `setup` puts in it. Each system's `db.mjs` also exports `system`: its name, version and settings, as they go in the results.
 
+## Files measured
+
+The result file has a top-level `installSize`, from [`scripts/sizes-installed.mjs`](../scripts/sizes-installed.mjs). It is the size of the files that the system's packages and programs consist of, not an exact installed size: `packagesMB` and `files` for the entry's `node_modules`, `nativeMB` for each native library or addon of 1 MiB or more in them, and `programsMB` for what is installed elsewhere, such as a database server. A package folder (such as `RAMA_PATH`) counts only the files `npm pack` would ship, a database server counts its programs and the `lib` and `share` folders that belong to them, and a file with several hard links counts once. The sizes are the bytes of file content, in MiB. An entry lists its programs in `entry.json` under `programs`; the script's header describes the fields. A result file without `installSize` is from an older runner, or the files could not be read.
+
+Run `node scripts/sizes-installed.mjs <entry>` to print the same object that the run stores, or `null` where the run stores nothing. The run measures after it has loaded the system, so set the same environment variables for both.
+
 ## What it does
 
 1. It turns the dataset into input cells with `data/cells.mjs`, once. This step is not timed.
