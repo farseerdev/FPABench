@@ -3,7 +3,7 @@
 //   node runner/run.mjs --entry rama --dataset <dir> --work <dir> --out <dir> --record <expected file>
 //   node runner/run.mjs --entry <entry> --dataset <dir> --work <dir> --out <dir> --expected <expected file>
 //   node runner/run.mjs --entry <entry> --dataset 10m --work <dir> --out <dir>    downloads 10m and its expected answers
-//   options: [--tests L1,W3] [--machine <name>] [--quick]
+//   options: [--tests L1,W3] [--machine <name>] [--quick] [--cached-open N] [--drop-caches]
 //
 // The picks, the cells each test writes, come with the dataset in picks.json. --record runs RAMA on them and
 // saves every answer and check as the expected results, with the picks. Every other system is then held to
@@ -95,7 +95,7 @@ if (!entry || !opt('dataset') || !opt('work') || !opt('out') || !(opt('record') 
   node runner/run.mjs --entry <entry> --dataset <10m|100m|1b|10b> --work <dir> --out <dir>          downloads the size and its expected answers
   node runner/run.mjs --entry <entry> --dataset <dir> --work <dir> --out <dir> --expected <file>
   node runner/run.mjs --entry rama --dataset <dir> --work <dir> --out <dir> --record <file>
-  options: [--tests L1,W3] [--machine <name>] [--quick]`);
+  options: [--tests L1,W3] [--machine <name>] [--quick] [--cached-open N] [--drop-caches]`);
     process.exit(2);
 }
 const work = path.resolve(opt('work'));
@@ -128,6 +128,27 @@ fs.mkdirSync(testWork, { recursive: true });
 const spec = JSON.parse(fs.readFileSync(path.join(root, 'tests', 'tests.json'), 'utf8'));
 const record = opt('record') ? path.resolve(opt('record')) : null;
 const quick = args.includes('--quick');
+// R8 only: --cached-open N opens the database N more times after its timed runs, with the files in the page
+// cache, and reports them apart. --drop-caches empties the page cache after each R8 setup, before the open.
+const cachedOpens = Number(opt('cached-open', 0));
+const dropPageCache = (() => {
+    if (!args.includes('--drop-caches')) return null;
+    const drop = () => {
+        try {
+            fs.writeFileSync('/proc/sys/vm/drop_caches', '3');
+        } catch {
+            execFileSync('sudo', ['-n', 'sh', '-c', 'echo 3 > /proc/sys/vm/drop_caches'], { stdio: 'ignore' });
+        }
+    };
+    try {
+        execSync('sync');
+        drop();
+        return drop;
+    } catch {
+        console.error('warning: --drop-caches needs root or passwordless sudo and cannot empty the page cache here, so R8 runs without emptying it, and says so');
+        return null;
+    }
+})();
 const only = opt('tests') ? opt('tests').split(',') : null;
 let picks;
 if (record) {
@@ -247,6 +268,19 @@ function onceSummary(runs, problems, extra = {}) {
     return { check: problems.length ? 'wrong' : 'ok', time: round(median(runs.map((r) => r.ms / 1000))), runs: runs.map((r) => round(r.ms / 1000)), ...(problems.length ? { problems } : {}), ...extra };
 }
 
+/** R8: the timed runs split into the open and the first read, and the cached opens. The total, `time`, is the same as before. */
+function openSummary({ runs, cached }) {
+    const secs = (xs) => xs.map((x) => round(x / 1000));
+    return {
+        openTime: round(median(runs.map((r) => r.openMs)) / 1000),
+        firstReadTime: round(median(runs.map((r) => r.ms - r.openMs)) / 1000),
+        openRuns: secs(runs.map((r) => r.openMs)),
+        pageCache: dropPageCache ? 'dropped before each open' : 'not emptied',
+        ...(cached?.open ? { cachedOpenTime: round(median(cached.open) / 1000), cachedFirstReadTime: round(median(cached.read) / 1000), cachedOpenRuns: secs(cached.open), cachedNote: 'not scored: the same files opened again, in the page cache' } : {}),
+        ...(cached?.error ? { cachedError: cached.error } : {}),
+    };
+}
+
 // --- results ------------------------------------------------------------------------------------------------
 
 // A run of some tests (--tests) adds to the results already in --out.
@@ -260,7 +294,7 @@ function save() {
         machine: opt('machine', os.hostname()),
         date: new Date().toISOString().slice(0, 10),
         system,
-        env: machineEnv.snapshot(),
+        env: { ...machineEnv.snapshot(), dropCaches: dropPageCache !== null },
         host: { platform: `${os.type()} ${os.release()}`, arch: os.arch(), cpus: os.cpus().length, cpu: os.cpus()[0]?.model, memoryGB: Math.round(os.totalmem() / 2 ** 30), node: process.version },
         testsVersion: spec.version,
         dataset: { sha256: datasetId },
@@ -298,10 +332,14 @@ async function runTest(test, p) {
     const once = async (run, pick) => {
         context.pick = pick;
         const t0 = performance.now();
-        if (test.open) await test.open(context);
+        let opened = null;
+        if (test.open) {
+            await test.open(context);
+            opened = performance.now() - t0;
+        }
         answers[run] = await test.run(context);
         if (test.kind === 'load') execSync('sync');
-        runs.push({ ms: performance.now() - t0, warmup: pick.warmup ?? false });
+        runs.push({ ms: performance.now() - t0, openMs: opened, warmup: pick.warmup ?? false });
         // The timer has stopped. Before the check, so a server the teardown stops is read while it is still there.
         meter?.afterRun(run, total);
         if (test.check) checks[run] = await test.check(context);
@@ -316,6 +354,8 @@ async function runTest(test, p) {
             // the first durable commit of the test pays for writing the copy, and a single run counts it (#26).
             execSync('sync');
             meter?.mark('afterSetup');
+            // Untimed: R8 opens a database that is not in the page cache.
+            if (test.open) dropPageCache?.();
             await runs();
         } catch (e) {
             context.failed = true;
@@ -342,7 +382,40 @@ async function runTest(test, p) {
     }
     // After the teardown: the CPU and the IO of the processes it stopped are counted up to their last sample.
     const resources = meter && { ...meter.result(), diskMB: diskUsage(testWork) };
-    return { runs, answers, checks, resources };
+    // After the readings, so the extra opens add nothing to the CPU and IO of the test. The files are on disk
+    // as the last teardown left them and in the page cache, which is what makes these opens cached.
+    let cached = null;
+    if (test.open && !Array.isArray(p) && !p.warm) {
+        try {
+            if (meter) {
+                try {
+                    await test.open(context);
+                    meter.mark('afterOpen'); // before any read; resources.rssMB is the meter's own object, so it shows there
+                } finally {
+                    await test.teardown(context);
+                }
+            }
+            if (cachedOpens > 0) {
+                cached = { open: [], read: [] };
+                for (let i = 0; i < cachedOpens; i++) {
+                    try {
+                        const t0 = performance.now();
+                        await test.open(context);
+                        const t1 = performance.now();
+                        await test.run(context);
+                        cached.open.push(t1 - t0);
+                        cached.read.push(performance.now() - t1);
+                    } finally {
+                        await test.teardown(context);
+                    }
+                }
+            }
+        } catch (e) {
+            log(`${test.id} the extra opens failed: ${e?.message ?? e}`);
+            cached = { error: String(e?.message ?? e) };
+        }
+    }
+    return { runs, answers, checks, resources, cached };
 }
 
 log(`entry ${entry}, ${system.name} ${system.version}, scale ${manifest.size}${record ? ', recording the expected results' : ''}`);
@@ -437,6 +510,7 @@ for (const test of tests) {
         }
 
         const extra = {
+            ...(test.open ? openSummary(result) : {}),
             ...(p.cells ? { cells: p.cells.length } : {}),
             ...(p.notChecked ? { notChecked: p.notChecked } : {}),
         };

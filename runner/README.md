@@ -33,6 +33,8 @@ The dataset brings `picks.json`: for each test, the cells it writes and the valu
 | `--tests` | Only these tests, such as `L1,W1,R1`. They are added to the results already in `--out`. With `--record`, they replace only their own entries in an expected file that is already there. Every test but L1 starts from the snapshot L1 leaves. On a work folder where L1 has not run yet, the runner loads once first, untimed and not recorded, to make one. |
 | `--machine` | The machine, as it goes in the results, such as `n2d-standard-4, local NVMe SSD`. A published result goes in `results/<machine>/<size>/`, with the machine in lower case and hyphens, named by the entry and the system version: `results/n2d-standard-4-local-nvme-ssd/10m/rama-2.0.0-7528851.0.json`. Each version is its own row on the website. |
 | `--quick` | One run of each load, bulk write, model change and read, and three writes per write test, to try the runner. Not for results. A quick record goes with quick runs only. |
+| `--cached-open` | R8 only: after its timed runs, open the database `N` more times with the files in the page cache, and report them as `cachedOpenTime`. They are not scored. |
+| `--drop-caches` | R8 only: empty the page cache after each R8 setup, before the open. Needs root or passwordless `sudo`. Without it the runner says so and R8 runs as before. The page cache belongs to the whole host, so this also empties what every other process and every later test has cached. The result records it as `env.dropCaches`. |
 
 ## The tests
 
@@ -77,6 +79,14 @@ The readings cover the runner and the processes it started, so a system that run
 `env` holds the kernel, the CPU governor, the load average at the start and the end, the steal time (the share of the machine's CPU time, user to steal, that the virtual machine's CPUs spent waiting for the host) during the run, the type of file system of `--work` (not its device or its mount point), and the scheduling class of the runner as `ps` reports it (`FF 50` is SCHED_FIFO 50).
 
 The snapshot that every test but L1 starts from is made again when the system's version, or the RAMA binary named by `RAMA_NODE_ADDON_BINARY`, changes, not only when its files do. The binary counts by its path, size and modification time, not its contents: a rebuild changes the time, and the contents of a file of hundreds of MB would be read at every start for no gain. Only a different build restored with the same size and time would be missed.
+
+### Opening
+
+R8 also reports its time in two parts, `openTime` and `firstReadTime`, with `openRuns` for the three opens. Their sum is `time`, which has not changed. R8 is cold because it starts a stopped system, not because the files are out of the page cache. The setup copies the snapshot and syncs, so the files it just wrote are normally still in the cache and the opens then read from memory. `pageCache` says which it was: `dropped before each open` (`--drop-caches`, the files come from disk) or `not emptied` (the files are normally cached). Compare R8 times only between results with the same `pageCache`. After the timed runs, one more open that is not timed gives `rssMB.afterOpen`, the memory at rest once the model is open. It is taken before any read. With `--cached-open N`, N more opens and first reads follow, as `cachedOpenTime`, `cachedFirstReadTime` and `cachedOpenRuns`. They reopen the files that the last run left, in the page cache, and are not scored. These extra opens come after the readings of the test, so its CPU and IO do not include them.
+
+`--drop-caches` changes the whole host, not only R8: it empties the page cache for every other process and for the tests that run after R8. A result with `env.dropCaches: true` and one without it are not comparable for those tests, nor for anything else that ran on the host. Do not mix them in one comparison.
+
+Loading the data is L1, and L2 and L3 are loads too: `time` is the import time, and `resources` is the memory, CPU, disk and IO of the import.
 
 ## Not covered yet
 
