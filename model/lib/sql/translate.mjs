@@ -1,6 +1,7 @@
 // Translates the FPABench model into SQL for DuckDB, ClickHouse or PostgreSQL: one table per input variable, and one
 // table per calculated variable, built in dependency order. Running the model SQL again after a write
-// rebuilds them all.
+// rebuilds them all. `rebuildSql` also gives the dependency-ordered subset a change reaches, for the entries
+// that rebuild only that.
 //
 // Neither system can keep a derived table current by itself. DuckDB has no materialized views and no
 // triggers. ClickHouse's materialized views react to inserts into one table only. Plain views give the
@@ -50,11 +51,12 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
     const list = (d, xs) => (CH ? `arrayJoin([${xs.map((x) => mid(d, x)).join(', ')}])` : `unnest(${PG ? 'ARRAY' : ''}[${xs.map((x) => mid(d, x)).join(', ')}])`);
     // ClickHouse forces every new part to disk, so writes are durable, as DuckDB's are by default.
     const DURABLE = "SETTINGS fsync_after_insert = 1, fsync_part_directory = 1";
-    // Calculated tables live in memory: DuckDB TEMP tables, ClickHouse Memory tables. PostgreSQL's are
-    // UNLOGGED tables, which skip the write-ahead log, since its TEMP tables belong to one session. Only the inputs need
-    // to survive a crash, since every calculated table can be built again from them. After a restart DuckDB and
-    // ClickHouse build them again on start, and that time counts in R8. PostgreSQL keeps UNLOGGED tables over a
-    // clean restart, and empties them only in crash recovery.
+    // DuckDB's calculated tables are ordinary tables in the database file, so they are as durable as the inputs and
+    // nothing is built again on start. ClickHouse's are Memory tables. PostgreSQL's are UNLOGGED tables, which skip the
+    // write-ahead log, since its TEMP tables belong to one session. Only the inputs need to survive a crash there,
+    // since every calculated table can be built again from them. After a restart ClickHouse builds them again on
+    // start, and that time counts in R8. PostgreSQL keeps UNLOGGED tables over a clean restart, and empties them only
+    // in crash recovery.
     // In ClickHouse the table is created first with plain column types, then filled. A table created from the
     // SELECT would get Nullable columns from join_use_nulls, and Nullable columns are slower to read.
     // insert_null_as_default = 0 makes a NULL fail the insert instead of turning into 0.
@@ -67,7 +69,7 @@ export function translate(model, { versions, years, dialect = 'duckdb', dict }) 
             : PG
               ? `DROP TABLE IF EXISTS ${name};
 CREATE UNLOGGED TABLE ${name} WITH (autovacuum_enabled = false) AS`
-              : `CREATE OR REPLACE TEMP TABLE ${name} AS`;
+              : `CREATE OR REPLACE TABLE ${name} AS`;
     // PostgreSQL plans each statement from the statistics of the tables it reads, and a new table has none until
     // autovacuum gets to it. So each calculated table is analyzed as soon as it is built. At 10m a full rebuild
     // took 76 s without this, and 15 s with it.
@@ -624,7 +626,7 @@ CREATE UNLOGGED TABLE ${name} WITH (autovacuum_enabled = false) AS`
 
     const calc = model.order.filter((v) => v.formula && !v.measure);
     const tables = calc.map((v) => `-- ${v.name} = ${v.formula.replace(/\s+/g, ' ')}\n${translateVariable(v)}${analyze(rel(v))}`);
-    // What each calculated table reads, so a write can rebuild only the tables it reaches.
+    // What each calculated table reads, so an entry can rebuild only the tables a write reaches.
     const reads = new Map(calc.map((v) => [v.name, new Set([...nodesOf(parseFormula(v.formula))].filter((n) => n.type === 'name').map((n) => model.variable(n.name).name))]));
     const flats = flatSql();
     /**

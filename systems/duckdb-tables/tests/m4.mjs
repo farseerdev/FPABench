@@ -1,22 +1,22 @@
 // M4 Allocate one more cost, on DuckDB.
 //
 // The modeller adds a cost pool from the marketing staff's OPEX, allocates it to customers and brands, and
-// subtracts it in contribution margin III. sql/m4.sql is the migration: the new and changed tables and every
-// table that reads one of them. Timed until contribution margin III can be read by country.
+// subtracts it in contribution margin III. sql/m4.sql is the migration: the new input tables, then every
+// calculated table is built again. Timed until contribution margin III can be read by country.
 
-import { restore, members, sqlFile } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const MIGRATION = sqlFile('m4.sql');
+import { restore, members } from '../db.mjs';
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
     },
 
     async run({ db, m }) {
-        await db.run(MIGRATION);
+        await db.migrate('m4');
 
         const rows = await db.rows(`
             SELECT "Country" AS c, sum(v) AS v FROM "Contribution Margin III by Country"

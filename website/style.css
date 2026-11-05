@@ -14,6 +14,10 @@
     --chip-on-text: #000000;
     --chip-off: #ececec;
     --chip-off-text: #333333;
+    --full-fill: #d6d6d6;
+    --full-stripe: #9c9c9c;
+    --full-cell: rgba(127, 127, 127, 0.1);
+    --full-cell-stripe: rgba(127, 127, 127, 0.34);
 }
 
 :root[data-theme='dark'] {
@@ -30,6 +34,10 @@
     --chip-on-text: #ffffff;
     --chip-off: #2a2a2a;
     --chip-off-text: #d0d0d0;
+    --full-fill: #707070;
+    --full-stripe: #3d3d3d;
+    --full-cell: rgba(127, 127, 127, 0.12);
+    --full-cell-stripe: rgba(200, 200, 200, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,6 +55,10 @@
         --chip-on-text: #ffffff;
         --chip-off: #2a2a2a;
         --chip-off-text: #d0d0d0;
+        --full-fill: #707070;
+        --full-stripe: #3d3d3d;
+        --full-cell: rgba(127, 127, 127, 0.12);
+        --full-cell-stripe: rgba(200, 200, 200, 0.3);
         }
 }
 
@@ -361,6 +373,48 @@ th {
 .summary .score.picked {
     color: var(--text);
     font-weight: 600;
+}
+
+/* A result of a full recalculation, for a system with no incremental calculation: grey with skewed zebra lines. */
+.bar.full {
+    background: repeating-linear-gradient(135deg, var(--full-fill) 0 6px, var(--full-stripe) 6px 10px);
+}
+
+.full-note {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-2);
+    font-size: 0.78rem;
+    white-space: normal;
+}
+
+.details td.cell.full {
+    background: repeating-linear-gradient(135deg, var(--full-cell) 0 8px, var(--full-cell-stripe) 8px 12px);
+}
+
+.full-mark {
+    margin-right: 6px;
+    color: var(--text-2);
+}
+
+.legend {
+    max-width: 860px;
+    margin: 4px 0 10px;
+    color: var(--text-2);
+    font-size: 0.85rem;
+}
+
+.swatch {
+    display: inline-block;
+    width: 28px;
+    height: 12px;
+    border-radius: 3px;
+    vertical-align: -1px;
+    margin-right: 4px;
+}
+
+.swatch.full {
+    background: repeating-linear-gradient(135deg, var(--full-fill) 0 6px, var(--full-stripe) 6px 10px);
 }
 
 .machine {

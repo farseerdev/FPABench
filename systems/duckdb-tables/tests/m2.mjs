@@ -4,24 +4,25 @@
 // customer dimension, and calculate.sql builds every calculated table again. Timed until the group's
 // volume in M7 can be read.
 
-import { restore, members, sqlFile } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const CALCULATE = sqlFile('calculate.sql');
+import { restore, members } from '../db.mjs';
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
     },
 
     async run({ db, m, pick: { customer, group, region, sku, value } }) {
-        await db.run(`INSERT INTO "dim Customer" ("Customer", name, "Customer Group", "Region")
-                      SELECT max("Customer") + 1, '${customer}', ${m.id('Customer Group', group)}, ${m.id('Region', region)} FROM "dim Customer"`);
-        await db.run(`INSERT OR REPLACE INTO "Volume Override IN" ("Customer", "SKU", "Versions", "Years", "Months", v)
-                      SELECT "Customer", ${m.id('SKU', sku)}, ${m.id('Versions', 'FC 6+6')}, ${m.id('Years', 'Y2026')}, ${m.id('Months', 'M7')}, ${value}
-                      FROM "dim Customer" WHERE name = '${customer}'`);
-        await db.run(CALCULATE);
+        await db.write(async () => {
+            await db.run(`INSERT INTO "dim Customer" ("Customer", name, "Customer Group", "Region")
+                          SELECT max("Customer") + 1, '${customer}', ${m.id('Customer Group', group)}, ${m.id('Region', region)} FROM "dim Customer"`);
+            await db.run(`INSERT OR REPLACE INTO "Volume Override IN" ("Customer", "SKU", "Versions", "Years", "Months", v)
+                          SELECT "Customer", ${m.id('SKU', sku)}, ${m.id('Versions', 'FC 6+6')}, ${m.id('Years', 'Y2026')}, ${m.id('Months', 'M7')}, ${value}
+                          FROM "dim Customer" WHERE name = '${customer}'`);
+        });
 
         const [volume] = await db.rows(`
             SELECT sum(s.v) AS v FROM "Volume" s JOIN "flat Customer" c ON c."Customer" = s."Customer"

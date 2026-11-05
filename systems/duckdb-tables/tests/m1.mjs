@@ -1,21 +1,21 @@
 // M1 Change a formula, on DuckDB.
 //
-// The modeller changes the formula of Handling KG. sql/m1.sql is the migration: the changed table and every
-// table that reads it, built again. Timed until logistics cost can be read by brand and country.
+// The modeller changes the formula of Handling KG. sql/m1.sql is the migration: the new input tables, if any, then
+// every calculated table is built again. Timed until logistics cost can be read by brand and country.
 
-import { restore, members, sqlFile } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const MIGRATION = sqlFile('m1.sql');
+import { restore, members } from '../db.mjs';
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
     },
 
     async run({ db, m }) {
-        await db.run(MIGRATION);
+        await db.migrate('m1');
 
         const rows = await db.rows(`
             SELECT s."Brand" AS b, f."Country" AS c, sum(s.v) AS v FROM "Logistics Cost" s JOIN "flat Customer" f ON f."Customer" = s."Customer"

@@ -10,6 +10,10 @@
 const data = JSON.parse(document.getElementById('results-data').textContent);
 const SHIFT = 0.01;
 const FLOOR = 300;
+// A test the system answered by recalculating everything, because it has no incremental calculation. Its time
+// stays in the score. The page only shows it as grey and striped, with this text. See tests/method.md.
+const FULL_TEXT = 'not supported - full recalc results';
+const FULL_LEGEND = `${FULL_TEXT}: this system has no incremental calculation, so after the change it recalculated everything. The time is as measured and counts in the score, but it is not a like-for-like match with a system that updates only what changed.`;
 const FAILURES = { wrong: '✗ wrong', error: '☠ error', timeout: '☠ timeout', unsupported: '– not supported', 'not recorded': '– not recorded' };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -91,7 +95,7 @@ function scoredRows() {
         .filter((r) => state.machine.has(r.machine) && state.scale.has(r.scale))
         .map((r) => {
             const own = Object.values(r.tests).filter((x) => x.check === 'ok' && typeof x.time === 'number').map((x) => x.time);
-            return { ...r, entryInfo: entryById.get(r.entry), ratios: {}, scores: {}, slowest: Math.max(0, ...own) };
+            return { ...r, entryInfo: entryById.get(r.entry), ratios: {}, scores: {}, full: {}, counted: {}, slowest: Math.max(0, ...own) };
         });
     for (const kind of data.kinds) {
         const counted = data.tests.filter((t) => t.kind === kind.id && t.status === 'ready' && !excluded.has(t.id));
@@ -111,6 +115,9 @@ function scoredRows() {
         for (const r of rows) {
             const ratios = counted.map((t) => r.ratios[t.id]).filter((x) => x !== undefined);
             r.scores[kind.id] = ratios.length > 0 ? Math.exp(ratios.reduce((sum, x) => sum + Math.log(x), 0) / ratios.length) : null;
+            // How many of the tests in this score were full recalculations.
+            r.counted[kind.id] = ratios.length;
+            r.full[kind.id] = counted.filter((t) => r.ratios[t.id] !== undefined && r.tests[t.id]?.recalc === 'full').length;
         }
     }
     const shown = rows.filter((r) => state.system.has(r.entry));
@@ -128,6 +135,15 @@ const heat = (ratio) => {
     const x = Math.min(1, Math.log(ratio) / Math.log(30));
     return `hsla(${Math.round(120 * (1 - x))}, 75%, 50%, 0.3)`;
 };
+
+// The legend, when a row shown has a test of the picked kind that was a full recalculation.
+function renderLegends(rows) {
+    const kind = one('kind');
+    const any = rows.some((r) => data.tests.some((t) => t.kind === kind && r.tests[t.id]?.recalc === 'full'));
+    const html = any ? `<p class="legend"><span class="swatch full" aria-hidden="true"></span> ${esc(FULL_LEGEND)}</p>` : '';
+    document.getElementById('legend').innerHTML = html;
+    document.getElementById('details-legend').innerHTML = html;
+}
 
 function renderSummary(rows) {
     const el = document.getElementById('summary');
@@ -151,7 +167,11 @@ function renderSummary(rows) {
                 const s = r.scores[k.id];
                 return `<td class="score${k.id === kind ? ' picked' : ' other'}">${s === null ? '–' : ratioText(s)}</td>`;
             });
-            return `<tr><td class="name">${esc(rowName(r))}</td><td class="bar-cell"><span class="bar" style="width:${width(r.scores[kind]).toFixed(1)}%"></span></td>${scores.join('')}</tr>`;
+            const full = r.full[kind];
+            const cell = full
+                ? `<td class="bar-cell" title="${esc(`${FULL_TEXT}: ${full} of ${r.counted[kind]} counted tests`)}"><span class="bar full" style="width:${width(r.scores[kind]).toFixed(1)}%"></span><span class="full-note">↻ ${esc(FULL_TEXT)} (${full} of ${r.counted[kind]} tests)</span></td>`
+                : `<td class="bar-cell"><span class="bar" style="width:${width(r.scores[kind]).toFixed(1)}%"></span></td>`;
+            return `<tr><td class="name">${esc(rowName(r))}</td>${cell}${scores.join('')}</tr>`;
         })
         .join('');
     el.innerHTML = `<table class="summary"><thead><tr><th></th><th></th>${head}</tr></thead><tbody>${body}</tbody></table>`;
@@ -175,9 +195,13 @@ function renderDetails(rows) {
             const time = timeOf(r, test.id);
             if (time === null) return `<td class="fail">${esc(FAILURES[result.check] || result.check)}</td>`;
             const ratio = r.ratios[test.id];
-            const style = ratio ? ` style="background:${heat(ratio)}"` : '';
-            const title = result.p95 ? ` title="95th percentile ${seconds(result.p95)}"` : '';
-            return `<td class="cell"${style}${title}>${seconds(time)}${ratio ? `<span class="x">${ratioText(ratio)}</span>` : ''}</td>`;
+            const full = result.recalc === 'full';
+            // A full recalculation has no heat color: it is grey and striped instead.
+            const style = ratio && !full ? ` style="background:${heat(ratio)}"` : '';
+            const notes = [...(full ? [FULL_TEXT] : []), ...(result.p95 ? [`95th percentile ${seconds(result.p95)}`] : [])];
+            const title = notes.length ? ` title="${esc(notes.join('. '))}"` : '';
+            const mark = full ? `<span class="full-mark" role="img" aria-label="${esc(FULL_TEXT)}">↻</span>` : '';
+            return `<td class="cell${full ? ' full' : ''}"${style}${title}>${mark}${seconds(time)}${ratio ? `<span class="x">${ratioText(ratio)}</span>` : ''}</td>`;
         });
         const checked = excluded.has(test.id) ? '' : ' checked';
         const box = `<input type="checkbox" data-test="${esc(test.id)}"${checked} aria-label="Count ${esc(test.id)} in the score">`;
@@ -197,6 +221,7 @@ document.getElementById('details').addEventListener('change', (event) => {
 function render() {
     renderSelectors();
     const rows = scoredRows();
+    renderLegends(rows);
     renderSummary(rows);
     renderDetails(rows);
 }

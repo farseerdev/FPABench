@@ -4,20 +4,21 @@
 // dimension gets the new group, and calculate.sql builds every calculated table again. Timed until gross
 // sales of the old and the new group can be read.
 
-import { restore, members, sqlFile } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const CALCULATE = sqlFile('calculate.sql');
+import { restore, members } from '../db.mjs';
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
     },
 
     async run({ db, m, pick: { customer, group, target } }) {
-        await db.run(`UPDATE "dim Customer" SET "Customer Group" = ${m.id('Customer Group', target)} WHERE "Customer" = ${m.id('Customer', customer)}`);
-        await db.run(CALCULATE);
+        await db.write(async () => {
+            await db.run(`UPDATE "dim Customer" SET "Customer Group" = ${m.id('Customer Group', target)} WHERE "Customer" = ${m.id('Customer', customer)}`);
+        });
 
         const rows = await db.rows(`
             SELECT c."Customer Group" AS g, sum(s.v) AS v FROM "Gross Sales" s JOIN "flat Customer" c ON c."Customer" = s."Customer"

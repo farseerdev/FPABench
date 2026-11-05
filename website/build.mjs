@@ -307,7 +307,8 @@ function readResults(tests) {
                 const kept = {};
                 for (const [id, t] of Object.entries(r.tests)) {
                     if (!ids.has(id)) continue;
-                    kept[id] = { check: t.check, time: t.time, p95: t.p95 };
+                    if (t.recalc !== undefined && t.recalc !== 'full') fail(`${rel}: ${id} has recalc "${t.recalc}", and the only value is "full"`);
+                    kept[id] = { check: t.check, time: t.time, p95: t.p95, ...(t.recalc ? { recalc: t.recalc } : {}) };
                 }
                 rows.push({ machine, entry: id, scale: r.scale, tests: kept });
             }
@@ -351,14 +352,16 @@ for (const f of sizeFacts) {
 const resultsHtml = [
     '<p class="intro">FPABench measures how fast planning software loads data, recalculates a plan and answers reports. Every system runs the same P&amp;L model on the same data. FPABench is made by <a href="https://www.farseer.com">Farseer</a>, which builds a planning platform for finance teams. RAMA is the calculation engine inside Farseer and one of the entries. It follows the same rules as the others. <a href="about.html">About</a> says more.</p>',
     '<p class="intro"><strong>In plain words:</strong> finance teams build budgets and forecasts in planning software. When a number changes, every total that depends on it must update, and reports must open fast. FPABench makes up <strong>one realistic company</strong> and gives its data to every system. Then it times <strong>the everyday tasks</strong>: loading actuals, typing into the budget, opening reports and changing the plan. <strong>Why:</strong> vendors get <strong>one standard way to measure</strong> their system, and buyers get <strong>a fair way to compare tools</strong>.</p>',
-    '<blockquote class="demo"><p><strong>Read this first.</strong> All benchmarks are wrong in some way, and this one is too. DuckDB and ClickHouse are databases, and they have no way to recalculate only what a write changes. After each write they rebuild every table that depends on it. So their write and model change times are not a like-for-like match with a planning engine. <a href="method.html#limitations">The limitations</a> list every caveat.</p></blockquote>',
+    '<blockquote class="demo"><p><strong>Read this first.</strong> All benchmarks are wrong in some way, and this one is too. DuckDB, ClickHouse and PostgreSQL are databases, and they have no way to recalculate only what a write changes. DuckDB recalculates everything after each change, and results measured that way are shown grey and striped as "not supported - full recalc results". The DuckDB numbers at 10m and 100m were measured that way. The DuckDB numbers at 1b are from the earlier setup, with calculated tables in memory and only the affected tables rebuilt, so they carry no mark and have not been measured again. DuckDB has two minus points here. Calculating the derived tables inside one transaction costs far more than outside it: about 271 s against about 4 s per recalculation on 4 vCPU, with the cause not established. And DuckDB commits each statement by itself and has no materialized views or triggers, so the choice is atomic but slow, or fast but not atomic. The entry takes the second, with a calculated flag in its database, and calculates every table again on open after a crash. ClickHouse and PostgreSQL rebuild every table that depends on the write. So their write and model change times are not a like-for-like match with a planning engine. <a href="method.html#limitations">The limitations</a> list every caveat.</p></blockquote>',
     '<table class="selectors" id="selectors"></table>',
     '<noscript><p>The results need JavaScript.</p></noscript>',
     '<p class="method">The scale is the size of the dataset. Each size is named by about how many cells the model stores, so 10m holds about 10 million cells and 10b about 10 billion. Every system loads the same files. <a href="data.html#sizes">The data page</a> lists what each size holds.</p>',
     `<p class="method">Lower is better. ×1.00 is the fastest entry on a test. Tick one machine to compare the systems on it, or several to compare machines too, as in ClickBench. Every row shown is scored against the fastest row shown. The method's reference machine is a Google Cloud n2d-standard-4, and the published rankings use it alone. No system is tuned or limited to fewer threads. A failed test counts as much slower than the slowest success. <a href="method.html">The method</a> has the details.</p>`,
+    '<div id="legend"></div>',
     '<div id="summary"></div>',
     '<h2 id="details-heading">Detailed comparison</h2>',
     '<p class="method">Untick a test to leave it out of the score. <a href="tests.html">The tests</a> page says what each one does.</p>',
+    '<div id="details-legend"></div>',
     '<div id="details"></div>',
     `<script id="results-data" type="application/json">${JSON.stringify(results).replace(/</g, '\\u003c')}</script>`,
 ]

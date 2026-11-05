@@ -1,24 +1,25 @@
 // W5 Change a planning exchange rate, on DuckDB.
 //
 // A planner changes one currency's exchange rate for one plan month. The new rate replaces its row in the
-// input table, and every calculated table it reaches is built again. Timed until the cost of goods of the
+// input table, and every calculated table is built again. Timed until the cost of goods of the
 // country with that currency can be read for the month.
 
-import { restore, members, rebuild } from '../db.mjs';
-
-// The SQL this test runs, read once when the file loads, so no file read is timed.
-const REBUILD = rebuild('FX Rate IN');
+import { restore, members } from '../db.mjs';
 
 export default {
+    // DuckDB has no incremental calculation: this test recalculates every calculated table.
+    recalc: 'full',
+
     async setup(context) {
         context.db = await restore(context.work);
         context.m = await members(context.db);
     },
 
     async run({ db, m, pick: { at, country, value } }) {
-        await db.run(`INSERT OR REPLACE INTO "FX Rate IN" ("Currency", "Versions", "Years", "Months", v)
-                      VALUES (${m.id('Currency', at.Currency)}, ${m.id('Versions', at.Versions)}, ${m.id('Years', at.Years)}, ${m.id('Months', at.Months)}, ${value})`);
-        await db.run(REBUILD);
+        await db.write(async () => {
+            await db.run(`INSERT OR REPLACE INTO "FX Rate IN" ("Currency", "Versions", "Years", "Months", v)
+                          VALUES (${m.id('Currency', at.Currency)}, ${m.id('Versions', at.Versions)}, ${m.id('Years', at.Years)}, ${m.id('Months', at.Months)}, ${value})`);
+        });
 
         const [cogs] = await db.rows(`
             SELECT sum(s.v) AS v FROM "COGS" s JOIN "flat Customer" f ON f."Customer" = s."Customer"
