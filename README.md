@@ -25,7 +25,7 @@ FPABench follows the example of [ClickBench](https://github.com/ClickHouse/Click
 
 A consumer goods company sells food, drinks, home care and personal care products in six countries with four currencies. The model plans and reports its P&L per customer, product and month, from gross sales down to contribution margin and EBIT, in each country's currency and in euros. Actual, budget, two forecasts and a what-if sit side by side.
 
-The model is written in FML, the Financial Modeling Language. FML is a small language for planning models. [The model description](model/README.md) explains the business, the calculation and how to read FML.
+The model is written in FML, the Financial Modeling Language. FML is a small language for planning models. It predates the open specification, [FML 1.0](https://github.com/farseerdev/fml-specification-public), and is written in the dialect Farseer runs ([Farseer Implementation Profile](https://github.com/farseerdev/fml-specification-public/blob/main/spec/fml-farseer-profile-1.0.md)). The [FML Sandbox](https://fml.farseer.com) runs FML 1.0 in the browser. [The model description](model/README.md) explains the business, the calculation and how to read FML.
 
 ## The repo
 
