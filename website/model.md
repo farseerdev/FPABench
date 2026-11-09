@@ -65,7 +65,7 @@ Each of these is common in real planning models. Together they make one typed nu
 
 ## The model in FML
 
-The model is written in FML, the Financial Modeling Language. Each variable is a cube of numbers. It has a name, the dimensions it is broken down by, and a formula.
+The model is written in FML, the Financial Modeling Language. [FML 1.0](https://github.com/farseerdev/fml-specification-public) is an open specification, and the [FML Sandbox](https://fml.farseer.com) runs it in the browser. Each variable is a cube of numbers. It has a name, the dimensions it is broken down by, and a formula.
 
 {{fml-example}}
 

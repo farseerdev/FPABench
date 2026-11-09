@@ -431,7 +431,7 @@ ${scripts.map((s) => `<script src="${s}" defer></script>`).join('\n')}
 ${body}
 </main>
 <footer class="site-footer">
-<p>${escapeHtml(siteName)} ${escapeHtml(version || '')}. Made by <a href="https://www.farseer.com">Farseer</a>. Code is licensed under Apache-2.0. The model, the data and the documentation are licensed under CC BY 4.0.</p>
+<p>${escapeHtml(siteName)} ${escapeHtml(version || '')}. Made by <a href="https://www.farseer.com">Farseer</a>. The model is written in <a href="https://github.com/farseerdev/fml-specification-public">FML 1.0</a>, an open specification; try it in the <a href="https://fml.farseer.com">FML Sandbox</a>. Code is licensed under Apache-2.0. The model, the data and the documentation are licensed under CC BY 4.0.</p>
 </footer>
 </body>
 </html>
