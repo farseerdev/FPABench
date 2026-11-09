@@ -65,9 +65,11 @@ Each of these is common in real planning models. Together they make one typed nu
 
 ## The model in FML
 
-The model is written in FML, the Financial Modeling Language. [FML 1.0](https://github.com/farseerdev/fml-specification-public) is an open specification, and the [FML Sandbox](https://fml.farseer.com) runs it in the browser. Each variable is a cube of numbers. It has a name, the dimensions it is broken down by, and a formula.
+The model is written in FML, the Financial Modeling Language. Each variable is a cube of numbers. It has a name, the dimensions it is broken down by, and a formula.
 
 {{fml-example}}
+
+The model predates [FML 1.0](https://github.com/farseerdev/fml-specification-public), the open specification of the language, and is written in the dialect Farseer runs. It differs from FML 1.0 in a few places: time is two dimensions, `Years` and `Months`, with members such as `Y2026` and `M6`, and some variables use Farseer extensions (`@rollup formula`, `@optimizeCalculation`). The [Farseer Implementation Profile](https://github.com/farseerdev/fml-specification-public/blob/main/spec/fml-farseer-profile-1.0.md) of the specification describes them. The [FML Sandbox](https://fml.farseer.com) runs FML 1.0 in the browser.
 
 A variable without a formula is an input, loaded from files or typed by planners. Systems that do not read FML run a translation, and it must give the same numbers. The [full model description](../model/README.md) has the calculation rules, and the [model files](../model/) have every formula.
 
