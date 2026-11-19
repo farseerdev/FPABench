@@ -2,8 +2,8 @@
 //
 // Load the actuals of Y2026 M7 on top of the snapshot, then close M7 in the Actual version. Every file of the
 // increment is an IMPORT variable, which is read-only, so its cells go in through RAMA's native cell import,
-// as a data import in Farseer does. The two flags are typed with updateCells. Both commit in one
-// transaction. Timed until EBIT of Actual Y2026 M7 can be read by country, and the files are on disk.
+// as a data import in Farseer does. The two flags are typed with UPDATE_CELLS. They are two commands, and each
+// commits. Timed until EBIT of Actual Y2026 M7 can be read by country, and the files are on disk.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,12 +22,9 @@ export default {
         const fd = fs.openSync(file, 'w');
         for (const name of fs.readdirSync(path.join(cells.close, 'cells')).sort()) {
             const variable = name.slice(0, -'.csv'.length);
-            const { gid, dims } = db.ro((tx) => {
-                const h = tx.variableByName(variable);
-                const dimName = new Map(Array.from(tx.dimensions()).map((i) => [tx.dimensionByID(i).gid(), tx.dimensionByID(i).name()]));
-                return { gid: h.gid(), dims: Array.from(h.representation().tableGids).map((g) => dimName.get(g)) };
-            });
-            const gids = dims.map((d) => db.gids(d));
+            const { gid, dims } = await db.variable(variable);
+            const gids = [];
+            for (const d of dims) gids.push(await db.gids(d));
             const sums = new Map();
             let at = null;
             let value = 0;
@@ -56,11 +53,9 @@ export default {
             fs.writeSync(fd, buf);
         }
         fs.closeSync(fd);
-        // overwrite = true: a July cell replaces the value already there. The flags go in the same transaction.
-        db.rw((tx) => {
-            tx.importCellsFromCsvFile(file, true);
-            tx.updateCells([], pick.flags.map((f) => ({ type: 'VARIABLE', formula: cell(f.variable, f.at), value: f.value })), [], false);
-        });
+        // overwrite = true: a July cell replaces the value already there. The flags go in the command after it.
+        await db.importCsv(file, true);
+        await db.updateCells(pick.flags.map((f) => ({ type: 'VARIABLE', formula: cell(f.variable, f.at), value: f.value })));
         fs.rmSync(file, { force: true });
 
         return await db.rows('EBIT OUT', ['Country'], { Versions: 'Actual', Years: 'Y2026', Months: 'M7' });

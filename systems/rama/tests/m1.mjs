@@ -1,21 +1,22 @@
 // M1 Change a formula, on RAMA.
 //
-// The modeller changes the formula of Handling KG. modelImport takes the changed variable, as when Farseer
-// pushes a model, and the commit recalculates every cell that depends on it. Timed until logistics cost can
+// The modeller changes the formula of Handling KG. MODEL_IMPORT takes the changed variable, as when Farseer
+// pushes a model, and its commit recalculates every cell that depends on it. Timed until logistics cost can
 // be read by brand and country.
 
-import { restore, NO_DELETE, modelFile } from '../db.mjs';
+import { restore, modelFile, modelImportFile } from '../db.mjs';
 
-// The JSON this test sends, read once when the file loads, so no file read is timed.
+// The JSON this test sends, read once when the file loads. Setup writes it to the file the command reads.
 const CHANGE = modelFile('m1.json');
 
 export default {
     async setup(context) {
         context.db = restore(context.work);
+        context.change = modelImportFile(context.work, CHANGE);
     },
 
-    async run({ db }) {
-        db.rw((tx) => tx.modelImport(CHANGE, { dryRun: false, deleteEnabled: NO_DELETE }));
+    async run({ db, change }) {
+        await db.modelImport(change);
 
         return await db.rows('Logistics Cost', ['Brand', 'Country'], { Versions: 'FC 6+6', Years: 'Y2026' });
     },

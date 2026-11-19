@@ -1,22 +1,23 @@
 // M4 Allocate one more cost, on RAMA.
 //
 // The modeller adds a cost pool from the marketing staff's OPEX, allocates it to customers and brands, and
-// subtracts it in contribution margin III. modelImport takes the new and changed variables, in dependency
-// order, and the commit recalculates every cell that depends on them. Timed until contribution margin III
+// subtracts it in contribution margin III. MODEL_IMPORT takes the new and changed variables, in dependency
+// order, and its commit recalculates every cell that depends on them. Timed until contribution margin III
 // can be read by country.
 
-import { restore, NO_DELETE, modelFile } from '../db.mjs';
+import { restore, modelFile, modelImportFile } from '../db.mjs';
 
-// The JSON this test sends, read once when the file loads, so no file read is timed.
+// The JSON this test sends, read once when the file loads. Setup writes it to the file the command reads.
 const CHANGE = modelFile('m4.json');
 
 export default {
     async setup(context) {
         context.db = restore(context.work);
+        context.change = modelImportFile(context.work, CHANGE);
     },
 
-    async run({ db }) {
-        db.rw((tx) => tx.modelImport(CHANGE, { dryRun: false, deleteEnabled: NO_DELETE }));
+    async run({ db, change }) {
+        await db.modelImport(change);
 
         return await db.rows('Contribution Margin III by Country', ['Country'], { Versions: 'FC 6+6', Years: 'Y2026' });
     },

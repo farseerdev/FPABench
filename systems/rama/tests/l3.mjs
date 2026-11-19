@@ -12,7 +12,7 @@ export default {
     },
 
     async run({ db, work, pick }) {
-        db.rw((tx) => importCells(db, tx, work, [{ variable: 'IMPORT Unit Weight', at: { SKU: pick.sku }, value: pick.value }]));
+        await importCells(db, work, [{ variable: 'IMPORT Unit Weight', at: { SKU: pick.sku }, value: pick.value }]);
 
         return await db.rows('Logistics Cost', ['Country'], { Brand: pick.brand, Versions: 'FC 6+6', Years: 'Y2026' });
     },

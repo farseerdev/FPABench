@@ -1,8 +1,12 @@
-// What the RAMA tests share, in plain RAMA calls: the addon, the database folder, opening it, putting it
-// back to the snapshot, transactions, and reads. These are the calls the Farseer backend makes.
+// What the RAMA tests share: the addon, the database folder, opening it, putting it back to the snapshot,
+// and the commands. Every call on a database is one command: the JSON body the Farseer backend sends, run
+// through Database.runCommand, which is the entry newer RAMA builds have.
 //
-// RAMA recalculates the cells a write reaches when the write commits, so a write is visible as soon as
-// commit returns. Commits are durable, as in the backend: commit forces the write to disk.
+// A write command runs in a transaction of its own. RAMA recalculates the cells the write reaches and commits
+// to disk before the command answers, so a write is visible, and durable, as soon as it returns.
+//
+// The tests only use what session() returns, and session() only needs a function that runs one command body.
+// Another way to reach RAMA, such as a server, needs another such function and nothing else.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,10 +34,10 @@ export const system = {
 export const dbOf = (work) => path.join(work, 'rama-db');
 export const snapshotOf = (work) => path.join(work, 'rama-db.snapshot');
 
-/** modelImport only adds and changes. It never deletes rows, tables, columns or variables. */
+/** A model import only adds and changes. It never deletes rows, tables, columns or variables. */
 export const NO_DELETE = { rows: false, tables: false, columns: false, variables: false };
 
-// A command id for each write transaction, and its checksum, as the backend gives them.
+// A command id for each write command, and its checksum, as the backend gives them.
 let commandId = 0;
 
 /** A name in a RAMA formula, quoted. */
@@ -45,85 +49,119 @@ const filter = (d, m) => (Array.isArray(m) ? (m.length === 1 ? `${q(d)}>${q(m[0]
 /** The RAMA formula for the sum of a variable over a slice, such as sum("Volume", "Country">"DE"). */
 export const cell = (variable, where) => `sum(${[q(variable), ...Object.entries(where).map(([d, m]) => filter(d, m))].join(', ')})`;
 
-/**
- * Opens a database folder. Returns { db, rw, ro, rows, gids, gid, close }.
- * rw(fn) runs fn(tx) in a write transaction and commits it to disk. ro(fn) runs fn(tx) in a read transaction.
- */
+/** A file path as a command body takes it: with forward slashes. */
+const wirePath = (file) => file.replace(/\\/g, '/');
+
+/** Opens a database folder. Returns what session() returns. */
 export function open(work) {
-    const db = rama.openDB(dbOf(work));
-    return handles(db);
+    return session(...addon(rama.openDB(dbOf(work))));
 }
 
 /** Creates an empty database folder, with RAMA's builtin dimensions. */
 export function create(work) {
     rama.dropDB(dbOf(work));
-    const db = rama.createDB(dbOf(work), true);
-    return handles(db);
+    return session(...addon(rama.createDB(dbOf(work), true)));
 }
 
-function handles(db) {
-    // Member gids and names per dimension, read from RAMA once per open. A member added later, as in M2,
-    // is not in them, and no test reads one by name.
-    const byName = new Map();
-    const byGid = new Map();
-    const dimension = (tx, d) => {
-        if (!byName.has(d)) {
-            const data = tx.dimensionByName(d).data(false, null);
-            const gids = Array.from(data[1]);
-            const names = Array.from(data[2]);
-            byName.set(d, new Map(names.map((n, i) => [n, gids[i]])));
-            byGid.set(d, new Map(gids.map((g, i) => [g, names[i]])));
-        }
-        return { byName: byName.get(d), byGid: byGid.get(d) };
+/**
+ * RAMA in process, through the Node addon: a function that runs one command body and gives its answer, and
+ * one that closes the database.
+ */
+function addon(db) {
+    const send = async (body) => {
+        const outcome = await db.runCommand(Buffer.from(JSON.stringify(body), 'utf8'));
+        if (outcome.status !== 'executed') throw new Error(`${body.type} was not executed: ${outcome.status}`);
+        const bytes = Buffer.from(outcome.result.buffer, outcome.result.byteOffset, outcome.result.byteLength);
+        if (bytes.length >= 4 && bytes.readUInt32LE(0) === 0xfd2fb528) throw new Error(`${body.type} answered compressed, which this entry never asks for`);
+        return bytes.length ? JSON.parse(bytes.toString('utf8')) : {};
     };
-    const rw = (fn) => {
-        const tx = db.beginRWTransaction(commandId + 1);
-        let out;
-        try {
-            out = fn(tx);
-        } catch (e) {
-            tx.cancel();
-            throw e;
-        }
-        tx.commit((++commandId).toString(16).padStart(64, '0'), true);
-        return out;
+    return [send, () => db.close()];
+}
+
+/**
+ * The calls the tests make, over `send`, which runs one command body and gives its answer.
+ * Returns { read, write, modelImport, importCsv, updateCells, evaluate, rows, storedValues, variable, gids,
+ * memberNames, close }.
+ */
+function session(send, close) {
+    /** Runs a read command and gives its data. */
+    const read = async (body) => (await send(body)).data;
+    /** Runs a write command, with the next command id. It has committed to disk when it returns. */
+    const write = (body) => {
+        const id = ++commandId;
+        return send({ ...body, commandId: id, commandChecksumHex: id.toString(16).padStart(64, '0') });
     };
-    const ro = (fn) => {
-        const tx = db.beginROTransaction();
-        try {
-            return fn(tx);
-        } finally {
-            tx.finish();
-        }
+
+    // The tables, the variables, and the member gids and names per dimension, read from RAMA once per open, when
+    // first needed. A member added later, as in M2, is not in them, and no test reads one by name.
+    let tables = null;
+    let variables = null;
+    const members = new Map();
+    const allTables = async () => (tables ??= new Map((await read({ type: 'GET_DTABLES', gids: null, includeMembers: false, columnIds: null })).map((t) => [t.name, t])));
+    const table = async (d) => {
+        const t = (await allTables()).get(d);
+        if (!t) throw new Error(`no dimension ${d}`);
+        return t;
     };
+    /** The member gids and names of a dimension, in RAMA's order, read now. */
+    const readMembers = async (d) => {
+        const t = await table(d);
+        const column = (name) => t.columns.find((c) => c.name === name).id;
+        const [got] = await read({ type: 'GET_DTABLES', gids: [t.gid], includeMembers: true, columnIds: [column('gid'), column('name')] });
+        const at = (name) => got.data[got.columns.findIndex((c) => c.name === name)];
+        return { gids: at('gid'), names: at('name') };
+    };
+    const dimension = async (d) => {
+        if (!members.has(d)) {
+            const { gids, names } = await readMembers(d);
+            members.set(d, { byName: new Map(names.map((n, i) => [n, gids[i]])), byGid: new Map(gids.map((g, i) => [g, names[i]])) });
+        }
+        return members.get(d);
+    };
+    /** A variable: its gid, the names of its dimensions in the order RAMA keeps them, and whether it is a measure. */
+    const variable = async (name) => {
+        if (!variables) {
+            const gidName = new Map([...(await allTables()).values()].map((t) => [t.gid, t.name]));
+            variables = new Map((await read({ type: 'GET_VARIABLES', gids: null })).map((v) => [v.name, { gid: v.gid, dims: v.tableGids.map((g) => gidName.get(g)), measure: v.measure }]));
+        }
+        const v = variables.get(name);
+        if (!v) throw new Error(`no variable ${name}`);
+        return v;
+    };
+
     return {
-        db,
-        rw,
-        ro,
+        read,
+        write,
+        variable,
         /** Member name -> gid, for one dimension. */
-        gids: (d) => ro((tx) => dimension(tx, d).byName),
-        /** The gid of a member, for the native cell import. */
-        gid(tx, d, m) {
-            const g = dimension(tx, d).byName.get(m);
-            if (g === undefined) throw new Error(`no member ${m} in ${d}`);
-            return g;
-        },
+        gids: async (d) => (await dimension(d)).byName,
+        /** The names of a dimension's members, read from RAMA now. */
+        memberNames: async (d) => (await readMembers(d)).names,
+        /**
+         * Imports a model, or a change to one, from a JSON file, as when Farseer pushes a model. The command names
+         * its file by path, so the JSON is a file before the command runs.
+         */
+        modelImport: (file) => write({ type: 'MODEL_IMPORT', localFilePath: wirePath(file), options: { dryRun: false, deleteEnabled: NO_DELETE } }),
+        /** Imports cells from a file in RAMA's CSV: value, variable gid and member gids. The native cell import. */
+        importCsv: (file, overwrite) => write({ type: 'IMPORT_CELLS', localFilePath: wirePath(file), overwrite }),
+        /** Writes cells, as when a user types into a Farseer sheet. Each update is { type: 'VARIABLE', formula, value }. */
+        updateCells: (cellUpdates) => write({ type: 'UPDATE_CELLS', filters: [], cellUpdates, locks: [] }),
+        /** The values of formulas, in one EVALUATE command. `named` holds [name, filter] pairs the formulas may name. */
+        evaluate: async (formulas, named = []) => (await read({ type: 'EVALUATE', filters: named, queries: formulas.map((formula) => ({ type: 'VARIABLE', formula })), locks: [] })).map((r) => r.value),
         /**
          * Rows { key, value } of a stored variable summed over `by`, where the filters hold. With `by`, one
          * GROUPED_READ command gives the groups of `by` members that have a value, each folded by the variable's
-         * rollup in one scan. It runs outside any transaction, since the command opens one of its own. Without
-         * `by`, one query call reads the one cell.
+         * rollup in one scan. Without `by`, one EVALUATE command reads the one cell.
          */
-        async rows(variable, by = [], where = {}) {
+        async rows(name, by = [], where = {}) {
             if (by.length) {
-                const { gids, names } = ro((tx) => ({
-                    gids: by.map((d) => tx.dimensionByName(d).gid()),
-                    names: by.map((d) => dimension(tx, d).byGid),
-                }));
-                const body = { type: 'GROUPED_READ', groupTableGids: gids, formulas: [cell(variable, where)], filters: [] };
-                const outcome = await db.runCommand(Buffer.from(JSON.stringify(body), 'utf8'));
-                if (outcome.status !== 'executed') throw new Error(`GROUPED_READ was not executed: ${outcome.status}`);
-                const { memberGids, values } = JSON.parse(Buffer.from(outcome.result).toString('utf8')).data;
+                const groupTableGids = [];
+                const names = [];
+                for (const d of by) {
+                    groupTableGids.push((await table(d)).gid);
+                    names.push((await dimension(d)).byGid);
+                }
+                const { memberGids, values } = await read({ type: 'GROUPED_READ', groupTableGids, formulas: [cell(name, where)], filters: [] });
                 const out = [];
                 memberGids.forEach((g, i) => {
                     const v = values[0][i];
@@ -131,16 +169,26 @@ function handles(db) {
                 });
                 return out;
             }
-            return ro((tx) => {
-                // The filters are one named filter, defined once for the query call and named in the formula.
-                const shared = Object.entries(where).map(([d, m]) => filter(d, m));
-                const named = shared.length ? [['shared', `and(${shared.join(', ')})`]] : [];
-                const formula = `sum(${[q(variable), ...(shared.length ? ['shared'] : [])].join(', ')})`;
-                const [{ value }] = tx.query(named, [{ type: 'VARIABLE', formula }], []);
-                return value !== null && value !== undefined ? [{ key: {}, value }] : [];
-            });
+            // The filters are one named filter, defined once for the command and named in the formula.
+            const shared = Object.entries(where).map(([d, m]) => filter(d, m));
+            const named = shared.length ? [['shared', `and(${shared.join(', ')})`]] : [];
+            const formula = `sum(${[q(name), ...(shared.length ? ['shared'] : [])].join(', ')})`;
+            const [value] = await this.evaluate([formula], named);
+            return value !== null && value !== undefined ? [{ key: {}, value }] : [];
         },
-        close: () => db.close(),
+        /**
+         * The value of every stored cell of a variable, for the untimed checks. EXPORT_CELLS writes the cells to
+         * a CSV file with the value first, which is read line by line. A measure has no stored cells.
+         */
+        async storedValues(name) {
+            if ((await variable(name)).measure) return [];
+            const { filePath } = await read({ type: 'EXPORT_CELLS', formula: q(name), filters: [], tableGids: [], offset: 0, limit: 0 });
+            const values = [];
+            await eachLine(filePath, (fields) => values.push(fields[0] === '' ? null : Number(fields[0])));
+            fs.rmSync(filePath, { force: true });
+            return values;
+        },
+        close,
     };
 }
 
@@ -158,25 +206,37 @@ export function restore(work) {
 
 /**
  * Writes cells of read-only variables, such as IMPORT Unit Weight, through RAMA's native cell import, as a
- * data import in Farseer does. updateCells refuses them, as it refuses a user typing into a locked cell.
+ * data import in Farseer does. UPDATE_CELLS refuses them, as it refuses a user typing into a locked cell.
  * Each cell is { variable, at: { dim: member }, value }.
  */
-export function importCells(db, tx, work, cells) {
+export async function importCells(db, work, cells) {
     if (!cells.length) return;
     // Members go in the order RAMA keeps the variable's dimensions, which need not be the model's.
-    const dimName = new Map(Array.from(tx.dimensions()).map((i) => [tx.dimensionByID(i).gid(), tx.dimensionByID(i).name()]));
-    const lines = cells.map((c) => {
-        const h = tx.variableByName(c.variable);
-        const dims = Array.from(h.representation().tableGids).map((g) => dimName.get(g));
-        return `${c.value},${h.gid()},${dims.map((d) => db.gid(tx, d, c.at[d])).join(':')}`;
-    });
+    const lines = [];
+    for (const c of cells) {
+        const { gid, dims } = await db.variable(c.variable);
+        const key = [];
+        for (const d of dims) {
+            const g = (await db.gids(d)).get(c.at[d]);
+            if (g === undefined) throw new Error(`no member ${c.at[d]} in ${d}`);
+            key.push(g);
+        }
+        lines.push(`${c.value},${gid},${key.join(':')}`);
+    }
     const file = path.join(work, 'import.csv');
     fs.writeFileSync(file, lines.join('\n') + '\n');
-    tx.importCellsFromCsvFile(file, true);
+    await db.importCsv(file, true);
 }
 
-/** One of the JSON files in model/, made by model/lib/rama/generate.mjs from the model. It is the text modelImport takes. */
+/** One of the JSON files in model/, made by model/lib/rama/generate.mjs from the model. It is the JSON a model import takes. */
 export const modelFile = (name) => fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'model', name), 'utf8');
+
+/** The file in a work folder that a model import reads. Writes `json` to it and returns its path. */
+export function modelImportFile(work, json) {
+    const file = path.join(work, 'model-import.json');
+    fs.writeFileSync(file, json);
+    return file;
+}
 
 /** Each line of a CSV file after the header, as fields. Calls fn(fields, header). The file is streamed. */
 export async function eachLine(file, fn) {

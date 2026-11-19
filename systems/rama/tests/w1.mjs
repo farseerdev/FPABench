@@ -1,7 +1,7 @@
 // W1 Type one volume, on RAMA.
 //
 // A planner types one customer's volume for one SKU and plan month, in the biggest customer group of its
-// country. updateCells writes it, as when a user types into a Farseer sheet, and the commit recalculates
+// country. UPDATE_CELLS writes it, as when a user types into a Farseer sheet, and the commit recalculates
 // every cell it reaches. Timed until the country's EBIT for the year can be read.
 
 import { restore, cell } from '../db.mjs';
@@ -12,7 +12,7 @@ export default {
     },
 
     async run({ db, pick: { at, country, value } }) {
-        db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Volume Override IN', at), value }], [], false));
+        await db.updateCells([{ type: 'VARIABLE', formula: cell('Volume Override IN', at), value }]);
 
         return await db.rows('EBIT OUT', [], { Country: country, Versions: at.Versions, Years: at.Years });
     },

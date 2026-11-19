@@ -1,6 +1,6 @@
 // W4 Raise a brand's price, on RAMA.
 //
-// A planner raises one brand's price increase for the plan year. updateCells writes it, and the commit
+// A planner raises one brand's price increase for the plan year. UPDATE_CELLS writes it, and the commit
 // recalculates every cell it reaches. Timed until the brand's gross sales can be read by country and plan
 // month.
 
@@ -14,7 +14,7 @@ export default {
     },
 
     async run({ db, pick: { brand, value, months } }) {
-        db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Price Increase IN', { Brand: brand, Versions: 'FC 6+6', Years: 'Y2026' }), value }], [], false));
+        await db.updateCells([{ type: 'VARIABLE', formula: cell('Price Increase IN', { Brand: brand, Versions: 'FC 6+6', Years: 'Y2026' }), value }]);
 
         return await db.rows('Gross Sales', ['Country', 'Months'], { Brand: brand, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
     },

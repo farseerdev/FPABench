@@ -16,14 +16,10 @@ export default {
     async run({ db }) {
         const out = [];
         for (const v of CHECKS) {
-            db.ro((tx) => {
-                const h = tx.variableByName(v.name);
-                let k = 0;
-                for (const r of h.rows()) {
-                    const value = h.row(r)[0];
-                    if (value) out.push({ key: { check: v.name, row: String(k++) }, value });
-                }
-            });
+            let k = 0;
+            for (const value of await db.storedValues(v.name)) {
+                if (value) out.push({ key: { check: v.name, row: String(k++) }, value });
+            }
         }
         return out;
     },
