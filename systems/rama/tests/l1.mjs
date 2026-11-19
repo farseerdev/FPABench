@@ -1,14 +1,14 @@
 // L1 Initial load, on RAMA.
 //
-// Load the whole model and every input cell into an empty database. The model goes in through modelImport,
-// as when Farseer pushes a model. The input cells go in through RAMA's native cell import, streamed from the
-// cell files. Their commit calculates every formula they reach, as every write in RAMA does. Timed until EBIT in euros can be read for every
+// Load the whole model and every input cell into an empty database. The model goes in through MODEL_IMPORT,
+// as when Farseer pushes a model. The input cells go in through IMPORT_CELLS, RAMA's native cell import, streamed
+// from the cell files. Its commit calculates every formula they reach, as every write in RAMA does. Timed until EBIT in euros can be read for every
 // country, version, year and month, and the files are on disk. The database after the last load is the
 // snapshot every other test starts from.
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { create, dbOf, snapshotOf, NO_DELETE, modelFile, eachLine, readCsv } from '../db.mjs';
+import { create, dbOf, snapshotOf, modelFile, modelImportFile, eachLine, readCsv } from '../db.mjs';
 
 // The JSON this test sends, read once when the file loads, so no file read is timed.
 const MODEL = modelFile('model.json');
@@ -27,7 +27,7 @@ export default {
         const db = create(work);
         context.db = db;
 
-        // 2. Import the model in one modelImport, as when Farseer pushes a model. model/model.json holds every
+        // 2. Import the model in one MODEL_IMPORT, as when Farseer pushes a model. model/model.json holds every
         // dimension table with the members the model brings, Versions and Years included, and every variable
         // and formula. The data's own members, such as customers, are added from its dimensions/ files, each
         // with its parents. An empty parent is the parent's NULL member.
@@ -38,7 +38,10 @@ export default {
             const parents = table.columns.filter((c) => c.type === 'FOREIGN_KEY').map((c) => c.foreignKeyTableName);
             for (const r of readCsv(file)) table.rows.push([r[table.name], ...parents.map((p) => [r[p] || `NULL (${p})`])]);
         }
-        db.rw((tx) => tx.modelImport(JSON.stringify(model), { dryRun: false, deleteEnabled: NO_DELETE }));
+        // The command reads its JSON from a file, so the JSON is written to one first.
+        const modelJson = modelImportFile(work, JSON.stringify(model));
+        await db.modelImport(modelJson);
+        fs.rmSync(modelJson, { force: true });
 
         // 3. Import the input cells, one file per input variable. RAMA's CSV holds value, variable gid and member
         // gids, in the order RAMA keeps the variable's dimensions. The cell files are streamed into it.
@@ -47,12 +50,9 @@ export default {
         let buf = '';
         for (const name of fs.readdirSync(path.join(cells.base, 'cells')).sort()) {
             const variable = name.slice(0, -'.csv'.length);
-            const { gid, dims } = db.ro((tx) => {
-                const h = tx.variableByName(variable);
-                const dimName = new Map(Array.from(tx.dimensions()).map((i) => [tx.dimensionByID(i).gid(), tx.dimensionByID(i).name()]));
-                return { gid: h.gid(), dims: Array.from(h.representation().tableGids).map((g) => dimName.get(g)) };
-            });
-            const gids = dims.map((d) => db.gids(d));
+            const { gid, dims } = await db.variable(variable);
+            const gids = [];
+            for (const d of dims) gids.push(await db.gids(d));
             let at = null;
             let value = 0;
             await eachLine(path.join(cells.base, 'cells', name), (f, header) => {
@@ -77,7 +77,7 @@ export default {
         // overwrite = false: a second row for a cell already loaded throws, so a repeat fails instead of loading wrong.
         // The commit calculates every cell the input cells reach, which is the whole model. A recalc() after it
         // would calculate the whole model again: at 100m that took the load from 28 s to 40 s, with the same answers.
-        db.rw((tx) => tx.importCellsFromCsvFile(file, false));
+        await db.importCsv(file, false);
         fs.rmSync(file, { force: true });
 
         // 4. Read EBIT in euros for every country, version, year and month.
@@ -103,12 +103,9 @@ export default {
         };
         // Every CHECK variable is 0 in every stored cell.
         for (const v of CHECKS) {
-            zero[v.name] = db.ro((tx) => {
-                const h = tx.variableByName(v.name);
-                let total = 0;
-                for (const r of h.rows()) total += Math.abs(h.row(r)[0] ?? 0);
-                return [{ key: {}, value: total }];
-            });
+            let total = 0;
+            for (const value of await db.storedValues(v.name)) total += Math.abs(value ?? 0);
+            zero[v.name] = [{ key: {}, value: total }];
         }
         // The P&L adds up to EBIT, per country, version, year and month.
         zero['PL OUT - EBIT OUT'] = difference(await db.rows('PL OUT', all4), await db.rows('EBIT OUT', all4));
@@ -142,7 +139,7 @@ export default {
 
     // The database after the last load is the snapshot.
     async teardown({ db, work, failed }) {
-        db?.close();
+        await db?.close();
         if (failed) return;
         fs.rmSync(snapshotOf(work), { recursive: true, force: true });
         fs.cpSync(dbOf(work), snapshotOf(work), { recursive: true });

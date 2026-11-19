@@ -1,6 +1,6 @@
 // W7 Set a yearly target, on RAMA.
 //
-// A planner sets one customer group's volume target for one category and the plan year. updateCells writes
+// A planner sets one customer group's volume target for one category and the plan year. UPDATE_CELLS writes
 // it, and the commit recalculates every cell it reaches. The target is spread over the months like last
 // year's volume. Timed until the group's volume in the category can be read for the plan months.
 
@@ -12,7 +12,7 @@ export default {
     },
 
     async run({ db, pick: { group, category, months, value } }) {
-        db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Volume Target IN', { 'Customer Group': group, Category: category, Versions: 'FC 6+6', Years: 'Y2026' }), value }], [], false));
+        await db.updateCells([{ type: 'VARIABLE', formula: cell('Volume Target IN', { 'Customer Group': group, Category: category, Versions: 'FC 6+6', Years: 'Y2026' }), value }]);
 
         return await db.rows('Volume', [], { 'Customer Group': group, Category: category, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
     },

@@ -10,7 +10,7 @@ export default {
     },
 
     async run({ db, pick: { at, country, value } }) {
-        db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Volume Override IN', at), value }], [], false));
+        await db.updateCells([{ type: 'VARIABLE', formula: cell('Volume Override IN', at), value }]);
 
         return await db.rows('EBIT OUT', [], { Country: country, Versions: at.Versions, Years: at.Years });
     },

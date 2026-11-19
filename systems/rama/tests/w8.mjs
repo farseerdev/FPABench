@@ -1,7 +1,7 @@
 // W8 Flip a yearly bonus, on RAMA.
 //
 // A planner moves one customer group's growth threshold just across the group's growth, so its yearly bonus
-// switches on or off. updateCells writes it, and the commit recalculates every cell it reaches. Timed until
+// switches on or off. UPDATE_CELLS writes it, and the commit recalculates every cell it reaches. Timed until
 // the group's growth bonus for the year can be read.
 
 import { restore, cell } from '../db.mjs';
@@ -26,7 +26,7 @@ export default {
 
     async run({ db, pick: { group, value } }) {
         const at = { 'Customer Group': group, Versions: 'FC 6+6', Years: 'Y2026' };
-        db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('Growth Bonus Threshold IN', at), value }], [], false));
+        await db.updateCells([{ type: 'VARIABLE', formula: cell('Growth Bonus Threshold IN', at), value }]);
 
         return await db.rows('Growth Bonus', [], at);
     },

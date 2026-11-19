@@ -1,6 +1,6 @@
 // W5 Change a planning exchange rate, on RAMA.
 //
-// A planner changes one currency's exchange rate for one plan month. updateCells writes it, and the commit
+// A planner changes one currency's exchange rate for one plan month. UPDATE_CELLS writes it, and the commit
 // recalculates every cell it reaches. Timed until the cost of goods of the country with that currency can
 // be read for the month.
 
@@ -12,7 +12,7 @@ export default {
     },
 
     async run({ db, pick: { at, country, value } }) {
-        db.rw((tx) => tx.updateCells([], [{ type: 'VARIABLE', formula: cell('FX Rate IN', at), value }], [], false));
+        await db.updateCells([{ type: 'VARIABLE', formula: cell('FX Rate IN', at), value }]);
 
         return await db.rows('COGS', [], { Country: country, Versions: at.Versions, Years: at.Years, Months: at.Months });
     },

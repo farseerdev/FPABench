@@ -1,6 +1,6 @@
 // W2 Paste 1,000 volumes at once, on RAMA.
 //
-// A planner pastes 1,000 volumes into the plan months of one country. One updateCells call writes all of
+// A planner pastes 1,000 volumes into the plan months of one country. One UPDATE_CELLS command writes all of
 // them, and the commit recalculates every cell they reach. Timed until the country's volume over the plan
 // months can be read.
 
@@ -12,7 +12,7 @@ export default {
     },
 
     async run({ db, pick: { cells, country, months } }) {
-        db.rw((tx) => tx.updateCells([], cells.map(({ at, value }) => ({ type: 'VARIABLE', formula: cell('Volume Override IN', at), value })), [], false));
+        await db.updateCells(cells.map(({ at, value }) => ({ type: 'VARIABLE', formula: cell('Volume Override IN', at), value })));
 
         return await db.rows('Volume', [], { Country: country, Versions: 'FC 6+6', Years: 'Y2026', Months: months });
     },

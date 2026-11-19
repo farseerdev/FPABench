@@ -2,6 +2,12 @@
 
 Changes to the model, the data, the tests and the method, newest first. A change that can move a result raises the version.
 
+## 0.9-draft, 2026-11-19
+
+- The RAMA entry makes every call as a command through `Database.runCommand`: `MODEL_IMPORT`, `IMPORT_CELLS`, `UPDATE_CELLS`, `EVALUATE`, `GROUPED_READ`, and `GET_DTABLES`, `GET_VARIABLES` and `EXPORT_CELLS` for names and checks. Before, it opened transactions from JavaScript and called methods on them. Newer RAMA builds have only the command entry, so the old entry could not run on them. The pinned version runs the commands too.
+- A write command commits by itself. So L2 and M2, which make two writes each, now make two commits where they made one. Their times can move. R4 sends its formulas and gets their answers as JSON, where they were JavaScript values, and reads its member names through commands on each run, as it read them on each run before. On one build R4 was about 4% slower; which of the two costs it was not measured. The answers stay the same at 10m on all 29 tests.
+- `MODEL_IMPORT` reads its JSON from a file. A model change (M1 to M4) writes that file in setup, untimed, and RAMA reads it inside the timer. Before, the JSON text was handed over in memory, and M2 and M3 made it inside the timer. L1 writes the file inside the timer, where making the JSON was already timed. Every other test makes the same calls as before, on the same side of the timer.
+
 ## 0.9-draft, 2026-11-04
 
 - A new entry, `postgres-tables`: PostgreSQL 18 with one `UNLOGGED` table per calculated variable, built again after each change that reaches it (#42). The fixes from its review followed (#44, #45, #46, #49). Its calculated tables survive a clean stop, so its R8 starts without building them again, as `tests/method.md` allows for stored results.
